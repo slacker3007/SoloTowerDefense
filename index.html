@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Solo Tower Defense</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: #1a2233;
+        font-family: ui-monospace, "Cascadia Code", "Consolas", monospace;
+        color: #e8ecf4;
+      }
+      #game-root {
+        display: flex;
+        flex-direction: row;
+        align-items: flex-start;
+        min-height: 100vh;
+      }
+      #app {
+        flex: 0 0 auto;
+      }
+      #editor-panel {
+        flex: 0 0 288px;
+        width: 288px;
+        min-height: 100vh;
+        border-left: 1px solid #2a3548;
+        background: #141b28;
+        overflow-y: auto;
+      }
+      .editor-panel {
+        padding: 12px 14px 24px;
+        font-size: 13px;
+      }
+      .editor-panel__title {
+        margin: 0 0 6px;
+        font-size: 16px;
+        font-weight: 600;
+      }
+      .editor-panel__hint {
+        margin: 0 0 14px;
+        color: #8a96ac;
+        font-size: 11px;
+        line-height: 1.4;
+      }
+      .editor-panel__section {
+        margin-bottom: 16px;
+      }
+      .editor-panel__section h3 {
+        margin: 0 0 8px;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #9aa8c4;
+      }
+      .editor-panel__tool-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+      }
+      .editor-panel__tool-grid--six {
+        grid-template-columns: 1fr 1fr 1fr;
+      }
+      .editor-panel__cell-coord {
+        margin: 0 0 8px;
+        font-size: 12px;
+        color: #c8d4ec;
+      }
+      .role-radio-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px 14px;
+        margin: 0 0 10px;
+        font-size: 12px;
+      }
+      .role-radio {
+        cursor: pointer;
+        user-select: none;
+      }
+      .thumb-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin: 0 0 8px;
+      }
+      .thumb-block {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .thumb-block__cap {
+        font-size: 10px;
+        color: #9aa8c4;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+      }
+      .thumb-canvas {
+        display: block;
+        image-rendering: pixelated;
+        border-radius: 2px;
+        border: 1px solid #2f3d56;
+      }
+      .editor-panel__btn--small {
+        padding: 6px 8px;
+        font-size: 11px;
+      }
+      .editor-panel__picker-hint {
+        margin: 0 0 6px;
+        font-size: 11px;
+        color: #8a96ac;
+        line-height: 1.35;
+      }
+      .tile-picker-canvas {
+        display: block;
+        width: 100%;
+        max-width: 270px;
+        cursor: crosshair;
+        border-radius: 4px;
+        border: 1px solid #2f3d56;
+        image-rendering: pixelated;
+        background: #0d1118;
+      }
+      .editor-panel__btn-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-bottom: 8px;
+      }
+      .editor-panel__btn {
+        padding: 8px 10px;
+        border: 1px solid #3a4a66;
+        border-radius: 4px;
+        background: #1e2a40;
+        color: #e8ecf4;
+        font: inherit;
+        cursor: pointer;
+      }
+      .editor-panel__btn:hover {
+        background: #263248;
+      }
+      .editor-panel__btn--primary {
+        border-color: #3f7fb4;
+        background: #234467;
+      }
+      .editor-panel__btn--primary:hover {
+        background: #2c5278;
+      }
+      .editor-panel__btn--warn {
+        margin-top: 8px;
+        width: 100%;
+        border-color: #6a3a3a;
+        background: #2a1a1a;
+      }
+      .editor-tool-btn--active {
+        outline: 2px solid #5cb3ff;
+        outline-offset: 1px;
+        border-color: #5cb3ff;
+      }
+      .editor-panel__preset-row {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .preset-card {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+        padding: 8px;
+        border: 1px solid #2f3d56;
+        border-radius: 6px;
+        background: #1a2436;
+        cursor: pointer;
+        text-align: left;
+        font: inherit;
+        color: inherit;
+      }
+      .preset-card:hover {
+        border-color: #4a5d7a;
+      }
+      .preset-card--selected {
+        border-color: #5cb3ff;
+        background: #1a2838;
+      }
+      .preset-card__label {
+        font-size: 12px;
+        color: #b8c4dc;
+      }
+      .preset-card__canvas {
+        display: block;
+        image-rendering: pixelated;
+        border-radius: 2px;
+        background: #0d1118;
+      }
+      .editor-panel__status {
+        margin: 12px 0 0;
+        padding: 8px;
+        border-radius: 4px;
+        background: #0d1118;
+        color: #a8b4cc;
+        font-size: 11px;
+        line-height: 1.45;
+      }
+      .save-state {
+        display: inline-block;
+        margin-top: 6px;
+        font-size: 11px;
+        color: #8a96ac;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="game-root">
+      <div id="app"></div>
+      <aside id="editor-panel" hidden aria-label="Map editor panel"></aside>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

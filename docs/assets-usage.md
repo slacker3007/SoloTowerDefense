@@ -1,0 +1,144 @@
+# Tiny Swords Asset Usage Guide
+
+This project is prepared for Pixel Frog Tiny Swords assets from:
+
+- https://pixelfrog-assets.itch.io/tiny-swords
+- https://pixelfrog-assets.itch.io/tiny-swords/devlog/1138989/tilemap-guide
+
+## License notes
+
+- Allowed: personal and commercial use, including modified versions.
+- Credit: not required (but recommended).
+- Not allowed: redistributing/repackaging raw or modified asset files as an asset pack.
+
+## Recommended folder structure
+
+Current terrain integration uses these exact files:
+
+- `TinySwords/Terrain/Tileset/Tilemap_color1.png`
+- `TinySwords/Terrain/Tileset/Water Background color.png`
+- `TinySwords/Terrain/Tileset/Water Foam.png`
+- `TinySwords/Terrain/Tileset/Shadow.png`
+- `TinySwords/Buildings/Blue Buildings/Barracks.png`
+- `TinySwords/Buildings/Red Buildings/Barracks.png`
+
+If your filenames differ, update `src/game/assets.js`.
+
+## Tiles and grid
+
+- Project grid is `20x25`.
+- Tiny Swords tile guide uses `64x64` tiles and `10fps` animation.
+- Keep consistent tile size in `src/game/constants.js`.
+
+## Elevation model (three layers)
+
+Maps use a single **elevation** grid per cell:
+
+| Value | Layer |
+|-------|--------|
+| `0` | Water |
+| `1` | Island / grass (land) |
+| `2` | High ground (plateau on top of land) |
+
+Additional grids:
+
+- **`stairs`**: `0` or `1` — stairs overlay (not buildable when set).
+- **`buildings`**: `null` or a string key (`"barracks_blue"`, `"barracks_red"`) — occupied cells are not buildable.
+- **`tileOverrides`**: `null` or a frame index (number) — per-cell manual terrain frame from the autotile sheet (`terrainColor1`). When set, replaces autotile for that cell: shore layer if `elevation` is 1, plateau layer if `elevation` is 2.
+- **`decorations`**: `null` or `{ "sheet": "terrainColor1", "frame": number }` — one extra sprite drawn above terrain and below stairs/buildings (picker currently uses `terrainColor1` only).
+
+Derived masks for rendering and foam are computed in `src/game/maps/elevation.js` (`deriveLayers`).
+
+## Terrain layer order (rendering)
+
+Implemented in `src/scenes/GameScene.js` (`redrawTerrain`):
+
+1. Water background image on every cell
+2. Animated foam on water cells next to land (`waterFoam` from `deriveLayers`)
+3. Grass / shoreline tiles on all land cells (`elevation >= 1`) via `getShoreFrameIndex` in `src/game/maps/tileRules.js` (preset from `map.tilesets.shore`)
+4. Plateau overlay on `elevation >= 2` via `getHighGroundFrameIndex` (preset from `map.tilesets.plateau`; default `rocks` uses the right-hand rock-cliff tiles in `Tilemap_color1.png`). Either pass may use `map.tileOverrides[y][x]` when set.
+5. Stairs placeholder graphics
+6. Decoration sprites from `map.decorations` (sheet + frame), when the texture exists
+7. Building sprites from the `buildings` grid
+
+## Island and shoreline control points
+
+- Default island layout: `src/game/maps/map-001.js` (`islandInset`, fills `elevation`, `stairs`, `buildings`)
+- Mask derivation: `src/game/maps/elevation.js` (`deriveLayers`)
+- Shoreline autotile: `src/game/maps/tileRules.js` (`TILESET_PRESETS.shore`, `getShoreFrameIndex`; `getTerrainFrameIndex` is an alias)
+- Plateau autotile: `TILESET_PRESETS.plateau`, `getHighGroundFrameIndex`
+- Default map presets: `map.tilesets = { shore: "default", plateau: "rocks" }` in `src/game/maps/map-001.js`
+- Foam animation: `src/game/assets.js` (`createTinySwordsAnimations`)
+- Barracks positions: `buildings` grid + `points.homeBarracks` / `points.enemyBarracks` (kept in sync via `src/game/maps/mapUtils.js` — `syncBarracksPointsFromBuildings`)
+
+## In-game map editor
+
+Press **`E`** to toggle the editor (gameplay pauses while editing; **`P`** does not unpause during edit).
+
+| Key | Action |
+|-----|--------|
+| `1` | Paint water (`elevation` 0) |
+| `2` | Paint grass (`elevation` 1) |
+| `3` | Paint high ground (`elevation` 2) |
+| `4` | Stairs brush — click toggles stairs on land |
+| `5` | Move building — click barracks, then destination cell |
+| `6` | Select tool — click map to select one cell; hold `Shift` while clicking to add more cells |
+| `Ctrl+S` | Save map in browser storage (persists across refresh) |
+| `Ctrl+O` | Import map JSON (file picker) |
+
+UI: DOM side panel in `#editor-panel` (see `index.html` layout next to `#app`). Logic: `src/game/editor/MapEditor.js`, panel: `src/game/editor/EditorPanel.js`. **Select tool** + **Tile picker**: choose Terrain override or Decoration, click one or more cells on the map (Shift-add), then click a tile in the full `Tilemap_color1` strip. The panel includes a **Save map** button and saved/unsaved status; save writes to browser local storage and is auto-loaded on next refresh.
+
+**Tileset presets** — choose which region of `Tilemap_color1.png` drives autotiles:
+
+- **Shore**: `default` (left half, grass/water shoreline).
+- **Plateau**: `rocks` (right half, grass on rock cliffs) or `mirrorShore` (same frames as shore default).
+
+Add presets by extending `TILESET_PRESETS` in `src/game/maps/tileRules.js` (each entry: `byMask` map + `fallback` frame index).
+
+## Map JSON format (export / import)
+
+```json
+{
+  "id": "map-001",
+  "version": 1,
+  "width": 20,
+  "height": 25,
+  "bgColor": 2969469,
+  "points": {
+    "homeBarracks": { "x": 10, "y": 3 },
+    "enemyBarracks": { "x": 10, "y": 20 }
+  },
+  "tilesets": {
+    "shore": "default",
+    "plateau": "rocks"
+  },
+  "elevation": [[0, 0, 1]],
+  "stairs": [[0, 0, 0]],
+  "buildings": [[null, "barracks_blue", null]],
+  "tileOverrides": [[null, 10, null]],
+  "decorations": [[null, { "sheet": "terrainColor1", "frame": 42 }, null]]
+}
+```
+
+Import requires `version === 1` and dimensions matching the running grid (`20×25`). If `tilesets` is omitted, defaults `{ shore: "default", plateau: "rocks" }` are applied (`ensureMapTilesets` in `src/game/maps/mapUtils.js`).
+
+## Tuning guide
+
+- To make the island larger/smaller: change `islandInset` in `src/game/maps/map-001.js`.
+- To swap grass palette: replace `Tilemap_color1.png` path with another `Tilemap_colorX.png` in `src/game/assets.js`.
+- If shoreline frames look incorrect: edit `TILESET_PRESETS.shore.default.byMask` / `fallback` in `src/game/maps/tileRules.js`.
+- If plateau / rock frames look wrong: edit `TILESET_PRESETS.plateau.rocks` (or switch preset in the editor to `mirrorShore`).
+- To move barracks in data: set `buildings` cells and `points`, or use the in-game editor / JSON import.
+- To tune enemy spawn cadence and pressure: edit `redBarracksSpawner` in `src/game/balance.js`.
+- Red spawns currently target Blue directly (not path-following): `src/game/systems/EnemySystem.js`.
+
+## Sprite sheet integration
+
+- Sprite sheet registrations live in `src/game/assets.js`.
+- Adjust frame sizes if your sheet export uses different dimensions.
+- Create animation definitions using the exported `animationDefaults`.
+
+## Packaging reminder
+
+When publishing game builds, include only files needed by the game itself.
+Do not upload or distribute the whole raw Tiny Swords package as a standalone download.

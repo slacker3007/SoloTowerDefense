@@ -1,0 +1,428 @@
+﻿TinySwords\Buildings\Black Buildings\Archery.png
+TinySwords\Buildings\Black Buildings\Barracks.png
+TinySwords\Buildings\Black Buildings\Castle.png
+TinySwords\Buildings\Black Buildings\House1.png
+TinySwords\Buildings\Black Buildings\House2.png
+TinySwords\Buildings\Black Buildings\House3.png
+TinySwords\Buildings\Black Buildings\Monastery.png
+TinySwords\Buildings\Black Buildings\Tower.png
+TinySwords\Buildings\Blue Buildings\Archery.png
+TinySwords\Buildings\Blue Buildings\Barracks.png
+TinySwords\Buildings\Blue Buildings\Castle.png
+TinySwords\Buildings\Blue Buildings\House1.png
+TinySwords\Buildings\Blue Buildings\House2.png
+TinySwords\Buildings\Blue Buildings\House3.png
+TinySwords\Buildings\Blue Buildings\Monastery.png
+TinySwords\Buildings\Blue Buildings\Tower.png
+TinySwords\Buildings\Purple Buildings\Archery.png
+TinySwords\Buildings\Purple Buildings\Barracks.png
+TinySwords\Buildings\Purple Buildings\Castle.png
+TinySwords\Buildings\Purple Buildings\House1.png
+TinySwords\Buildings\Purple Buildings\House2.png
+TinySwords\Buildings\Purple Buildings\House3.png
+TinySwords\Buildings\Purple Buildings\Monastery.png
+TinySwords\Buildings\Purple Buildings\Tower.png
+TinySwords\Buildings\Red Buildings\Archery.png
+TinySwords\Buildings\Red Buildings\Barracks.png
+TinySwords\Buildings\Red Buildings\Castle.png
+TinySwords\Buildings\Red Buildings\House1.png
+TinySwords\Buildings\Red Buildings\House2.png
+TinySwords\Buildings\Red Buildings\House3.png
+TinySwords\Buildings\Red Buildings\Monastery.png
+TinySwords\Buildings\Red Buildings\Tower.png
+TinySwords\Buildings\Yellow Buildings\Archery.png
+TinySwords\Buildings\Yellow Buildings\Barracks.png
+TinySwords\Buildings\Yellow Buildings\Castle.png
+TinySwords\Buildings\Yellow Buildings\House1.png
+TinySwords\Buildings\Yellow Buildings\House2.png
+TinySwords\Buildings\Yellow Buildings\House3.png
+TinySwords\Buildings\Yellow Buildings\Monastery.png
+TinySwords\Buildings\Yellow Buildings\Tower.png
+TinySwords\Particle FX\Dust_01.png
+TinySwords\Particle FX\Dust_02.png
+TinySwords\Particle FX\Explosion_01.png
+TinySwords\Particle FX\Explosion_02.png
+TinySwords\Particle FX\Fire_01.png
+TinySwords\Particle FX\Fire_02.png
+TinySwords\Particle FX\Fire_03.png
+TinySwords\Particle FX\Particle FX.aseprite
+TinySwords\Particle FX\Water Splash.png
+TinySwords\Terrain\Decorations\Bushes\Bushe1.png
+TinySwords\Terrain\Decorations\Bushes\Bushe2.png
+TinySwords\Terrain\Decorations\Bushes\Bushe3.png
+TinySwords\Terrain\Decorations\Bushes\Bushe4.png
+TinySwords\Terrain\Decorations\Bushes\Bushes.aseprite
+TinySwords\Terrain\Decorations\Clouds\Clouds.aseprite
+TinySwords\Terrain\Decorations\Clouds\Clouds_01.png
+TinySwords\Terrain\Decorations\Clouds\Clouds_02.png
+TinySwords\Terrain\Decorations\Clouds\Clouds_03.png
+TinySwords\Terrain\Decorations\Clouds\Clouds_04.png
+TinySwords\Terrain\Decorations\Clouds\Clouds_05.png
+TinySwords\Terrain\Decorations\Clouds\Clouds_06.png
+TinySwords\Terrain\Decorations\Clouds\Clouds_07.png
+TinySwords\Terrain\Decorations\Clouds\Clouds_08.png
+TinySwords\Terrain\Decorations\Rocks in the Water\Water Rocks_01.aseprite
+TinySwords\Terrain\Decorations\Rocks in the Water\Water Rocks_01.png
+TinySwords\Terrain\Decorations\Rocks in the Water\Water Rocks_02.aseprite
+TinySwords\Terrain\Decorations\Rocks in the Water\Water Rocks_02.png
+TinySwords\Terrain\Decorations\Rocks in the Water\Water Rocks_03.aseprite
+TinySwords\Terrain\Decorations\Rocks in the Water\Water Rocks_03.png
+TinySwords\Terrain\Decorations\Rocks in the Water\Water Rocks_04.aseprite
+TinySwords\Terrain\Decorations\Rocks in the Water\Water Rocks_04.png
+TinySwords\Terrain\Decorations\Rocks\Rock1.png
+TinySwords\Terrain\Decorations\Rocks\Rock2.png
+TinySwords\Terrain\Decorations\Rocks\Rock3.png
+TinySwords\Terrain\Decorations\Rocks\Rock4.png
+TinySwords\Terrain\Decorations\Rubber Duck\Rubber Duck.aseprite
+TinySwords\Terrain\Decorations\Rubber Duck\Rubber duck.png
+TinySwords\Terrain\Resources\Gold\Gold Resource\Gold Resource.aseprite
+TinySwords\Terrain\Resources\Gold\Gold Resource\Gold_Resource.png
+TinySwords\Terrain\Resources\Gold\Gold Resource\Gold_Resource_Highlight.png
+TinySwords\Terrain\Resources\Gold\Gold Stones\Gold Stone 1.png
+TinySwords\Terrain\Resources\Gold\Gold Stones\Gold Stone 1_Highlight.png
+TinySwords\Terrain\Resources\Gold\Gold Stones\Gold Stone 2.png
+TinySwords\Terrain\Resources\Gold\Gold Stones\Gold Stone 2_Highlight.png
+TinySwords\Terrain\Resources\Gold\Gold Stones\Gold Stone 3.png
+TinySwords\Terrain\Resources\Gold\Gold Stones\Gold Stone 3_Highlight.png
+TinySwords\Terrain\Resources\Gold\Gold Stones\Gold Stone 4.png
+TinySwords\Terrain\Resources\Gold\Gold Stones\Gold Stone 4_Highlight.png
+TinySwords\Terrain\Resources\Gold\Gold Stones\Gold Stone 5.png
+TinySwords\Terrain\Resources\Gold\Gold Stones\Gold Stone 5_Highlight.png
+TinySwords\Terrain\Resources\Gold\Gold Stones\Gold Stone 6.png
+TinySwords\Terrain\Resources\Gold\Gold Stones\Gold Stone 6_Highlight.png
+TinySwords\Terrain\Resources\Gold\Gold Stones\Gold Stones.aseprite
+TinySwords\Terrain\Resources\Meat\Meat Resource\Meat Resource.png
+TinySwords\Terrain\Resources\Meat\Sheep\Sheep.aseprite
+TinySwords\Terrain\Resources\Meat\Sheep\Sheep_Grass.png
+TinySwords\Terrain\Resources\Meat\Sheep\Sheep_Idle.png
+TinySwords\Terrain\Resources\Meat\Sheep\Sheep_Move.png
+TinySwords\Terrain\Resources\Tools\Tool_01.png
+TinySwords\Terrain\Resources\Tools\Tool_02.png
+TinySwords\Terrain\Resources\Tools\Tool_03.png
+TinySwords\Terrain\Resources\Tools\Tool_04.png
+TinySwords\Terrain\Resources\Wood\Trees\Stump 1.png
+TinySwords\Terrain\Resources\Wood\Trees\Stump 2.png
+TinySwords\Terrain\Resources\Wood\Trees\Stump 3.png
+TinySwords\Terrain\Resources\Wood\Trees\Stump 4.png
+TinySwords\Terrain\Resources\Wood\Trees\Tree1.png
+TinySwords\Terrain\Resources\Wood\Trees\Tree2.png
+TinySwords\Terrain\Resources\Wood\Trees\Tree3.png
+TinySwords\Terrain\Resources\Wood\Trees\Tree4.png
+TinySwords\Terrain\Resources\Wood\Trees\Trees.aseprite
+TinySwords\Terrain\Resources\Wood\Wood Resource\Wood Resource.png
+TinySwords\Terrain\Tileset\Shadow.png
+TinySwords\Terrain\Tileset\Tilemap_color1.png
+TinySwords\Terrain\Tileset\Tilemap_color2.png
+TinySwords\Terrain\Tileset\Tilemap_color3.png
+TinySwords\Terrain\Tileset\Tilemap_color4.png
+TinySwords\Terrain\Tileset\Tilemap_color5.png
+TinySwords\Terrain\Tileset\Water Background color.png
+TinySwords\Terrain\Tileset\Water Foam.aseprite
+TinySwords\Terrain\Tileset\Water Foam.png
+TinySwords\UI Elements\UI Banners from the store page\Banner\Banner.png
+TinySwords\UI Elements\UI Banners from the store page\Banner\Slots.png
+TinySwords\UI Elements\UI Banners from the store page\Ribbons\Ribbon_Black.png
+TinySwords\UI Elements\UI Banners from the store page\Ribbons\Ribbon_Blue.png
+TinySwords\UI Elements\UI Banners from the store page\Ribbons\Ribbon_Purple.png
+TinySwords\UI Elements\UI Banners from the store page\Ribbons\Ribbon_Red.png
+TinySwords\UI Elements\UI Banners from the store page\Ribbons\Ribbon_Yellow.png
+TinySwords\UI Elements\UI Elements\Banners\Banner.png
+TinySwords\UI Elements\UI Elements\Banners\Banner_Slots.png
+TinySwords\UI Elements\UI Elements\Bars\BigBar_Base.png
+TinySwords\UI Elements\UI Elements\Bars\BigBar_Fill.png
+TinySwords\UI Elements\UI Elements\Bars\SmallBar_Base.png
+TinySwords\UI Elements\UI Elements\Bars\SmallBar_Fill.png
+TinySwords\UI Elements\UI Elements\Buttons\BigBlueButton_Pressed.png
+TinySwords\UI Elements\UI Elements\Buttons\BigBlueButton_Regular.png
+TinySwords\UI Elements\UI Elements\Buttons\BigRedButton_Pressed.png
+TinySwords\UI Elements\UI Elements\Buttons\BigRedButton_Regular.png
+TinySwords\UI Elements\UI Elements\Buttons\SmallBlueRoundButton_Pressed.png
+TinySwords\UI Elements\UI Elements\Buttons\SmallBlueRoundButton_Regular.png
+TinySwords\UI Elements\UI Elements\Buttons\SmallBlueSquareButton_Pressed.png
+TinySwords\UI Elements\UI Elements\Buttons\SmallBlueSquareButton_Regular.png
+TinySwords\UI Elements\UI Elements\Buttons\SmallRedRoundButton_Pressed.png
+TinySwords\UI Elements\UI Elements\Buttons\SmallRedRoundButton_Regular.png
+TinySwords\UI Elements\UI Elements\Buttons\SmallRedSquareButton_Pressed.png
+TinySwords\UI Elements\UI Elements\Buttons\SmallRedSquareButton_Regular.png
+TinySwords\UI Elements\UI Elements\Buttons\TinyRoundBlueButton.png
+TinySwords\UI Elements\UI Elements\Buttons\TinyRoundRedButton.png
+TinySwords\UI Elements\UI Elements\Buttons\TinySquareBlueButton.png
+TinySwords\UI Elements\UI Elements\Buttons\TinySquareRedButton.png
+TinySwords\UI Elements\UI Elements\Cursors\Cursor_01.png
+TinySwords\UI Elements\UI Elements\Cursors\Cursor_02.png
+TinySwords\UI Elements\UI Elements\Cursors\Cursor_03.png
+TinySwords\UI Elements\UI Elements\Cursors\Cursor_04.png
+TinySwords\UI Elements\UI Elements\Human Avatars\Avatars_01.png
+TinySwords\UI Elements\UI Elements\Human Avatars\Avatars_02.png
+TinySwords\UI Elements\UI Elements\Human Avatars\Avatars_03.png
+TinySwords\UI Elements\UI Elements\Human Avatars\Avatars_04.png
+TinySwords\UI Elements\UI Elements\Human Avatars\Avatars_05.png
+TinySwords\UI Elements\UI Elements\Human Avatars\Avatars_06.png
+TinySwords\UI Elements\UI Elements\Human Avatars\Avatars_07.png
+TinySwords\UI Elements\UI Elements\Human Avatars\Avatars_08.png
+TinySwords\UI Elements\UI Elements\Human Avatars\Avatars_09.png
+TinySwords\UI Elements\UI Elements\Human Avatars\Avatars_10.png
+TinySwords\UI Elements\UI Elements\Human Avatars\Avatars_11.png
+TinySwords\UI Elements\UI Elements\Human Avatars\Avatars_12.png
+TinySwords\UI Elements\UI Elements\Human Avatars\Avatars_13.png
+TinySwords\UI Elements\UI Elements\Human Avatars\Avatars_14.png
+TinySwords\UI Elements\UI Elements\Human Avatars\Avatars_15.png
+TinySwords\UI Elements\UI Elements\Human Avatars\Avatars_16.png
+TinySwords\UI Elements\UI Elements\Human Avatars\Avatars_17.png
+TinySwords\UI Elements\UI Elements\Human Avatars\Avatars_18.png
+TinySwords\UI Elements\UI Elements\Human Avatars\Avatars_19.png
+TinySwords\UI Elements\UI Elements\Human Avatars\Avatars_20.png
+TinySwords\UI Elements\UI Elements\Human Avatars\Avatars_21.png
+TinySwords\UI Elements\UI Elements\Human Avatars\Avatars_22.png
+TinySwords\UI Elements\UI Elements\Human Avatars\Avatars_23.png
+TinySwords\UI Elements\UI Elements\Human Avatars\Avatars_24.png
+TinySwords\UI Elements\UI Elements\Human Avatars\Avatars_25.png
+TinySwords\UI Elements\UI Elements\Icons\Icon_01.png
+TinySwords\UI Elements\UI Elements\Icons\Icon_02.png
+TinySwords\UI Elements\UI Elements\Icons\Icon_03.png
+TinySwords\UI Elements\UI Elements\Icons\Icon_04.png
+TinySwords\UI Elements\UI Elements\Icons\Icon_05.png
+TinySwords\UI Elements\UI Elements\Icons\Icon_06.png
+TinySwords\UI Elements\UI Elements\Icons\Icon_07.png
+TinySwords\UI Elements\UI Elements\Icons\Icon_08.png
+TinySwords\UI Elements\UI Elements\Icons\Icon_09.png
+TinySwords\UI Elements\UI Elements\Icons\Icon_10.png
+TinySwords\UI Elements\UI Elements\Icons\Icon_11.png
+TinySwords\UI Elements\UI Elements\Icons\Icon_12.png
+TinySwords\UI Elements\UI Elements\Papers\RegularPaper.png
+TinySwords\UI Elements\UI Elements\Papers\SpecialPaper.png
+TinySwords\UI Elements\UI Elements\Ribbons\BigRibbons.png
+TinySwords\UI Elements\UI Elements\Ribbons\SmallRibbons.png
+TinySwords\UI Elements\UI Elements\Swords\Swords.png
+TinySwords\UI Elements\UI Elements\Wood Table\WoodTable.png
+TinySwords\UI Elements\UI Elements\Wood Table\WoodTable_Slots.png
+TinySwords\Units\Black Units\Archer\Archer_Idle.png
+TinySwords\Units\Black Units\Archer\Archer_Run.png
+TinySwords\Units\Black Units\Archer\Archer_Shoot.png
+TinySwords\Units\Black Units\Archer\Arrow.png
+TinySwords\Units\Black Units\Lancer\Lancer_Down_Attack.png
+TinySwords\Units\Black Units\Lancer\Lancer_Down_Defence.png
+TinySwords\Units\Black Units\Lancer\Lancer_DownRight_Attack.png
+TinySwords\Units\Black Units\Lancer\Lancer_DownRight_Defence.png
+TinySwords\Units\Black Units\Lancer\Lancer_Idle.png
+TinySwords\Units\Black Units\Lancer\Lancer_Right_Attack.png
+TinySwords\Units\Black Units\Lancer\Lancer_Right_Defence.png
+TinySwords\Units\Black Units\Lancer\Lancer_Run.png
+TinySwords\Units\Black Units\Lancer\Lancer_Up_Attack.png
+TinySwords\Units\Black Units\Lancer\Lancer_Up_Defence.png
+TinySwords\Units\Black Units\Lancer\Lancer_UpRight_Attack.png
+TinySwords\Units\Black Units\Lancer\Lancer_UpRight_Defence.png
+TinySwords\Units\Black Units\Monk\Heal.png
+TinySwords\Units\Black Units\Monk\Heal_Effect.png
+TinySwords\Units\Black Units\Monk\Idle.png
+TinySwords\Units\Black Units\Monk\Run.png
+TinySwords\Units\Black Units\Pawn\Pawn_Idle Axe.png
+TinySwords\Units\Black Units\Pawn\Pawn_Idle Gold.png
+TinySwords\Units\Black Units\Pawn\Pawn_Idle Hammer.png
+TinySwords\Units\Black Units\Pawn\Pawn_Idle Knife.png
+TinySwords\Units\Black Units\Pawn\Pawn_Idle Meat.png
+TinySwords\Units\Black Units\Pawn\Pawn_Idle Pickaxe.png
+TinySwords\Units\Black Units\Pawn\Pawn_Idle Wood.png
+TinySwords\Units\Black Units\Pawn\Pawn_Idle.png
+TinySwords\Units\Black Units\Pawn\Pawn_Interact Axe.png
+TinySwords\Units\Black Units\Pawn\Pawn_Interact Hammer.png
+TinySwords\Units\Black Units\Pawn\Pawn_Interact Knife.png
+TinySwords\Units\Black Units\Pawn\Pawn_Interact Pickaxe.png
+TinySwords\Units\Black Units\Pawn\Pawn_Run Axe.png
+TinySwords\Units\Black Units\Pawn\Pawn_Run Gold.png
+TinySwords\Units\Black Units\Pawn\Pawn_Run Hammer.png
+TinySwords\Units\Black Units\Pawn\Pawn_Run Knife.png
+TinySwords\Units\Black Units\Pawn\Pawn_Run Meat.png
+TinySwords\Units\Black Units\Pawn\Pawn_Run Pickaxe.png
+TinySwords\Units\Black Units\Pawn\Pawn_Run Wood.png
+TinySwords\Units\Black Units\Pawn\Pawn_Run.png
+TinySwords\Units\Black Units\Warrior\Warrior_Attack1.png
+TinySwords\Units\Black Units\Warrior\Warrior_Attack2.png
+TinySwords\Units\Black Units\Warrior\Warrior_Guard.png
+TinySwords\Units\Black Units\Warrior\Warrior_Idle.png
+TinySwords\Units\Black Units\Warrior\Warrior_Run.png
+TinySwords\Units\Blue Units\Archer\Archer_Idle.png
+TinySwords\Units\Blue Units\Archer\Archer_Run.png
+TinySwords\Units\Blue Units\Archer\Archer_Shoot.png
+TinySwords\Units\Blue Units\Archer\Arrow.png
+TinySwords\Units\Blue Units\Lancer\Lancer_Down_Attack.png
+TinySwords\Units\Blue Units\Lancer\Lancer_Down_Defence.png
+TinySwords\Units\Blue Units\Lancer\Lancer_DownRight_Attack.png
+TinySwords\Units\Blue Units\Lancer\Lancer_DownRight_Defence.png
+TinySwords\Units\Blue Units\Lancer\Lancer_Idle.png
+TinySwords\Units\Blue Units\Lancer\Lancer_Right_Attack.png
+TinySwords\Units\Blue Units\Lancer\Lancer_Right_Defence.png
+TinySwords\Units\Blue Units\Lancer\Lancer_Run.png
+TinySwords\Units\Blue Units\Lancer\Lancer_Up_Attack.png
+TinySwords\Units\Blue Units\Lancer\Lancer_Up_Defence.png
+TinySwords\Units\Blue Units\Lancer\Lancer_UpRight_Attack.png
+TinySwords\Units\Blue Units\Lancer\Lancer_UpRight_Defence.png
+TinySwords\Units\Blue Units\Monk\Heal.png
+TinySwords\Units\Blue Units\Monk\Heal_Effect.png
+TinySwords\Units\Blue Units\Monk\Idle.png
+TinySwords\Units\Blue Units\Monk\Run.png
+TinySwords\Units\Blue Units\Pawn\Pawn_Idle Axe.png
+TinySwords\Units\Blue Units\Pawn\Pawn_Idle Gold.png
+TinySwords\Units\Blue Units\Pawn\Pawn_Idle Hammer.png
+TinySwords\Units\Blue Units\Pawn\Pawn_Idle Knife.png
+TinySwords\Units\Blue Units\Pawn\Pawn_Idle Meat.png
+TinySwords\Units\Blue Units\Pawn\Pawn_Idle Pickaxe.png
+TinySwords\Units\Blue Units\Pawn\Pawn_Idle Wood.png
+TinySwords\Units\Blue Units\Pawn\Pawn_Idle.png
+TinySwords\Units\Blue Units\Pawn\Pawn_Interact Axe.png
+TinySwords\Units\Blue Units\Pawn\Pawn_Interact Hammer.png
+TinySwords\Units\Blue Units\Pawn\Pawn_Interact Knife.png
+TinySwords\Units\Blue Units\Pawn\Pawn_Interact Pickaxe.png
+TinySwords\Units\Blue Units\Pawn\Pawn_Run Axe.png
+TinySwords\Units\Blue Units\Pawn\Pawn_Run Gold.png
+TinySwords\Units\Blue Units\Pawn\Pawn_Run Hammer.png
+TinySwords\Units\Blue Units\Pawn\Pawn_Run Knife.png
+TinySwords\Units\Blue Units\Pawn\Pawn_Run Meat.png
+TinySwords\Units\Blue Units\Pawn\Pawn_Run Pickaxe.png
+TinySwords\Units\Blue Units\Pawn\Pawn_Run Wood.png
+TinySwords\Units\Blue Units\Pawn\Pawn_Run.png
+TinySwords\Units\Blue Units\Warrior\Warrior_Attack1.png
+TinySwords\Units\Blue Units\Warrior\Warrior_Attack2.png
+TinySwords\Units\Blue Units\Warrior\Warrior_Guard.png
+TinySwords\Units\Blue Units\Warrior\Warrior_Idle.png
+TinySwords\Units\Blue Units\Warrior\Warrior_Run.png
+TinySwords\Units\Purple Units\Archer\Archer_Idle.png
+TinySwords\Units\Purple Units\Archer\Archer_Run.png
+TinySwords\Units\Purple Units\Archer\Archer_Shoot.png
+TinySwords\Units\Purple Units\Archer\Arrow.png
+TinySwords\Units\Purple Units\Lancer\Lancer_Down_Attack.png
+TinySwords\Units\Purple Units\Lancer\Lancer_Down_Defence.png
+TinySwords\Units\Purple Units\Lancer\Lancer_DownRight_Attack.png
+TinySwords\Units\Purple Units\Lancer\Lancer_DownRight_Defence.png
+TinySwords\Units\Purple Units\Lancer\Lancer_Idle.png
+TinySwords\Units\Purple Units\Lancer\Lancer_Right_Attack.png
+TinySwords\Units\Purple Units\Lancer\Lancer_Right_Defence.png
+TinySwords\Units\Purple Units\Lancer\Lancer_Run.png
+TinySwords\Units\Purple Units\Lancer\Lancer_Up_Attack.png
+TinySwords\Units\Purple Units\Lancer\Lancer_Up_Defence.png
+TinySwords\Units\Purple Units\Lancer\Lancer_UpRight_Attack.png
+TinySwords\Units\Purple Units\Lancer\Lancer_UpRight_Defence.png
+TinySwords\Units\Purple Units\Monk\Heal.png
+TinySwords\Units\Purple Units\Monk\Heal_Effect.png
+TinySwords\Units\Purple Units\Monk\Idle.png
+TinySwords\Units\Purple Units\Monk\Run.png
+TinySwords\Units\Purple Units\Pawn\Pawn_Idle Axe.png
+TinySwords\Units\Purple Units\Pawn\Pawn_Idle Gold.png
+TinySwords\Units\Purple Units\Pawn\Pawn_Idle Hammer.png
+TinySwords\Units\Purple Units\Pawn\Pawn_Idle Knife.png
+TinySwords\Units\Purple Units\Pawn\Pawn_Idle Meat.png
+TinySwords\Units\Purple Units\Pawn\Pawn_Idle Pickaxe.png
+TinySwords\Units\Purple Units\Pawn\Pawn_Idle Wood.png
+TinySwords\Units\Purple Units\Pawn\Pawn_Idle.png
+TinySwords\Units\Purple Units\Pawn\Pawn_Interact Axe.png
+TinySwords\Units\Purple Units\Pawn\Pawn_Interact Hammer.png
+TinySwords\Units\Purple Units\Pawn\Pawn_Interact Knife.png
+TinySwords\Units\Purple Units\Pawn\Pawn_Interact Pickaxe.png
+TinySwords\Units\Purple Units\Pawn\Pawn_Run Axe.png
+TinySwords\Units\Purple Units\Pawn\Pawn_Run Gold.png
+TinySwords\Units\Purple Units\Pawn\Pawn_Run Hammer.png
+TinySwords\Units\Purple Units\Pawn\Pawn_Run Knife.png
+TinySwords\Units\Purple Units\Pawn\Pawn_Run Meat.png
+TinySwords\Units\Purple Units\Pawn\Pawn_Run Pickaxe.png
+TinySwords\Units\Purple Units\Pawn\Pawn_Run Wood.png
+TinySwords\Units\Purple Units\Pawn\Pawn_Run.png
+TinySwords\Units\Purple Units\Warrior\Warrior_Attack1.png
+TinySwords\Units\Purple Units\Warrior\Warrior_Attack2.png
+TinySwords\Units\Purple Units\Warrior\Warrior_Guard.png
+TinySwords\Units\Purple Units\Warrior\Warrior_Idle.png
+TinySwords\Units\Purple Units\Warrior\Warrior_Run.png
+TinySwords\Units\Red Units\Archer\Archer_Idle.png
+TinySwords\Units\Red Units\Archer\Archer_Run.png
+TinySwords\Units\Red Units\Archer\Archer_Shoot.png
+TinySwords\Units\Red Units\Archer\Arrow.png
+TinySwords\Units\Red Units\Lancer\Lancer_Down_Attack.png
+TinySwords\Units\Red Units\Lancer\Lancer_Down_Defence.png
+TinySwords\Units\Red Units\Lancer\Lancer_DownRight_Attack.png
+TinySwords\Units\Red Units\Lancer\Lancer_DownRight_Defence.png
+TinySwords\Units\Red Units\Lancer\Lancer_Idle.png
+TinySwords\Units\Red Units\Lancer\Lancer_Right_Attack.png
+TinySwords\Units\Red Units\Lancer\Lancer_Right_Defence.png
+TinySwords\Units\Red Units\Lancer\Lancer_Run.png
+TinySwords\Units\Red Units\Lancer\Lancer_Up_Attack.png
+TinySwords\Units\Red Units\Lancer\Lancer_Up_Defence.png
+TinySwords\Units\Red Units\Lancer\Lancer_UpRight_Attack.png
+TinySwords\Units\Red Units\Lancer\Lancer_UpRight_Defence.png
+TinySwords\Units\Red Units\Monk\Heal.png
+TinySwords\Units\Red Units\Monk\Heal_Effect.png
+TinySwords\Units\Red Units\Monk\Idle.png
+TinySwords\Units\Red Units\Monk\Run.png
+TinySwords\Units\Red Units\Pawn\Pawn_Idle Axe.png
+TinySwords\Units\Red Units\Pawn\Pawn_Idle Gold.png
+TinySwords\Units\Red Units\Pawn\Pawn_Idle Hammer.png
+TinySwords\Units\Red Units\Pawn\Pawn_Idle Knife.png
+TinySwords\Units\Red Units\Pawn\Pawn_Idle Meat.png
+TinySwords\Units\Red Units\Pawn\Pawn_Idle Pickaxe.png
+TinySwords\Units\Red Units\Pawn\Pawn_Idle Wood.png
+TinySwords\Units\Red Units\Pawn\Pawn_Idle.png
+TinySwords\Units\Red Units\Pawn\Pawn_Interact Axe.png
+TinySwords\Units\Red Units\Pawn\Pawn_Interact Hammer.png
+TinySwords\Units\Red Units\Pawn\Pawn_Interact Knife.png
+TinySwords\Units\Red Units\Pawn\Pawn_Interact Pickaxe.png
+TinySwords\Units\Red Units\Pawn\Pawn_Run Axe.png
+TinySwords\Units\Red Units\Pawn\Pawn_Run Gold.png
+TinySwords\Units\Red Units\Pawn\Pawn_Run Hammer.png
+TinySwords\Units\Red Units\Pawn\Pawn_Run Knife.png
+TinySwords\Units\Red Units\Pawn\Pawn_Run Meat.png
+TinySwords\Units\Red Units\Pawn\Pawn_Run Pickaxe.png
+TinySwords\Units\Red Units\Pawn\Pawn_Run Wood.png
+TinySwords\Units\Red Units\Pawn\Pawn_Run.png
+TinySwords\Units\Red Units\Warrior\Warrior_Attack1.png
+TinySwords\Units\Red Units\Warrior\Warrior_Attack2.png
+TinySwords\Units\Red Units\Warrior\Warrior_Guard.png
+TinySwords\Units\Red Units\Warrior\Warrior_Idle.png
+TinySwords\Units\Red Units\Warrior\Warrior_Run.png
+TinySwords\Units\Units (aseprite in Blue only)\Archer.aseprite
+TinySwords\Units\Units (aseprite in Blue only)\Lancer.aseprite
+TinySwords\Units\Units (aseprite in Blue only)\Monk.aseprite
+TinySwords\Units\Units (aseprite in Blue only)\Pawn.aseprite
+TinySwords\Units\Units (aseprite in Blue only)\Warrior.aseprite
+TinySwords\Units\Yellow Units\Archer\Archer_Idle.png
+TinySwords\Units\Yellow Units\Archer\Archer_Run.png
+TinySwords\Units\Yellow Units\Archer\Archer_Shoot.png
+TinySwords\Units\Yellow Units\Archer\Arrow.png
+TinySwords\Units\Yellow Units\Lancer\Lancer_Down_Attack.png
+TinySwords\Units\Yellow Units\Lancer\Lancer_Down_Defence.png
+TinySwords\Units\Yellow Units\Lancer\Lancer_DownRight_Attack.png
+TinySwords\Units\Yellow Units\Lancer\Lancer_DownRight_Defence.png
+TinySwords\Units\Yellow Units\Lancer\Lancer_Idle.png
+TinySwords\Units\Yellow Units\Lancer\Lancer_Right_Attack.png
+TinySwords\Units\Yellow Units\Lancer\Lancer_Right_Defence.png
+TinySwords\Units\Yellow Units\Lancer\Lancer_Run.png
+TinySwords\Units\Yellow Units\Lancer\Lancer_Up_Attack.png
+TinySwords\Units\Yellow Units\Lancer\Lancer_Up_Defence.png
+TinySwords\Units\Yellow Units\Lancer\Lancer_UpRight_Attack.png
+TinySwords\Units\Yellow Units\Lancer\Lancer_UpRight_Defence.png
+TinySwords\Units\Yellow Units\Monk\Heal.png
+TinySwords\Units\Yellow Units\Monk\Heal_Effect.png
+TinySwords\Units\Yellow Units\Monk\Idle.png
+TinySwords\Units\Yellow Units\Monk\Run.png
+TinySwords\Units\Yellow Units\Pawn\Pawn_Idle Axe.png
+TinySwords\Units\Yellow Units\Pawn\Pawn_Idle Gold.png
+TinySwords\Units\Yellow Units\Pawn\Pawn_Idle Hammer.png
+TinySwords\Units\Yellow Units\Pawn\Pawn_Idle Knife.png
+TinySwords\Units\Yellow Units\Pawn\Pawn_Idle Meat.png
+TinySwords\Units\Yellow Units\Pawn\Pawn_Idle Pickaxe.png
+TinySwords\Units\Yellow Units\Pawn\Pawn_Idle Wood.png
+TinySwords\Units\Yellow Units\Pawn\Pawn_Idle.png
+TinySwords\Units\Yellow Units\Pawn\Pawn_Interact Axe.png
+TinySwords\Units\Yellow Units\Pawn\Pawn_Interact Hammer.png
+TinySwords\Units\Yellow Units\Pawn\Pawn_Interact Knife.png
+TinySwords\Units\Yellow Units\Pawn\Pawn_Interact Pickaxe.png
+TinySwords\Units\Yellow Units\Pawn\Pawn_Run Axe.png
+TinySwords\Units\Yellow Units\Pawn\Pawn_Run Gold.png
+TinySwords\Units\Yellow Units\Pawn\Pawn_Run Hammer.png
+TinySwords\Units\Yellow Units\Pawn\Pawn_Run Knife.png
+TinySwords\Units\Yellow Units\Pawn\Pawn_Run Meat.png
+TinySwords\Units\Yellow Units\Pawn\Pawn_Run Pickaxe.png
+TinySwords\Units\Yellow Units\Pawn\Pawn_Run Wood.png
+TinySwords\Units\Yellow Units\Pawn\Pawn_Run.png
+TinySwords\Units\Yellow Units\Warrior\Warrior_Attack1.png
+TinySwords\Units\Yellow Units\Warrior\Warrior_Attack2.png
+TinySwords\Units\Yellow Units\Warrior\Warrior_Guard.png
+TinySwords\Units\Yellow Units\Warrior\Warrior_Idle.png
+TinySwords\Units\Yellow Units\Warrior\Warrior_Run.png
