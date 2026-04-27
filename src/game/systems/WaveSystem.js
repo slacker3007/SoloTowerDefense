@@ -32,7 +32,9 @@ export class WaveSystem {
     }
 
     this.spawner.timer = 0;
-    this.enemySystem.spawnEnemy(this.spawner.enemyDefinition);
-    this.spawner.totalSpawned += 1;
+    const spawned = this.enemySystem.spawnEnemy(this.spawner.enemyDefinition);
+    if (spawned) {
+      this.spawner.totalSpawned += 1;
+    }
   }
 }

@@ -47,10 +47,11 @@ export class GameScene extends Phaser.Scene {
     this.redrawTerrain();
 
     this.enemySystem = new EnemySystem(this, {
+      map: this.map,
       pathCells: path001,
       spawnCell: this.map.points.enemyBarracks,
       targetCell: this.map.points.homeBarracks,
-      moveMode: "direct",
+      moveMode: "pathfinding",
     });
     this.towerSystem = new TowerSystem(this, this.map);
     this.combatSystem = new CombatSystem(this, this.towerSystem, this.enemySystem);
