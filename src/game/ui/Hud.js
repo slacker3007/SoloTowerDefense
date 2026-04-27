@@ -15,7 +15,8 @@ export class Hud {
   render(state) {
     this.text.setText(
       `Gold: ${state.gold}   Lives: ${state.lives}   Wave: ${state.wave}\n` +
-        `[Click] Place tower (30)  [P] Pause  [R] Restart  [G] Grid  [E] Map editor (6 = select cell)`
+        `[Click] Place tower (30)  [P] Pause  [R] Restart  [G] View BFS route  [E] Map editor: terrain, path mask, select+mark path · Ctrl+S\n` +
+        `[Wheel] Zoom  [Shift+Wheel] Pan map  [Middle drag] Pan map`
     );
   }
 }

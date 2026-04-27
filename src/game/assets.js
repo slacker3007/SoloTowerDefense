@@ -11,6 +11,31 @@ export const spriteSheets = [
     frameConfig: { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE },
   },
   {
+    key: "terrainColor2",
+    path: `${terrainRoot}/Tilemap_color2.png`,
+    frameConfig: { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE },
+  },
+  {
+    key: "terrainColor3",
+    path: `${terrainRoot}/Tilemap_color3.png`,
+    frameConfig: { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE },
+  },
+  {
+    key: "terrainColor4",
+    path: `${terrainRoot}/Tilemap_color4.png`,
+    frameConfig: { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE },
+  },
+  {
+    key: "terrainColor5",
+    path: `${terrainRoot}/Tilemap_color5.png`,
+    frameConfig: { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE },
+  },
+  {
+    key: "terrainColor6",
+    path: `${terrainRoot}/Tilemap_color6.png`,
+    frameConfig: { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE },
+  },
+  {
     key: "waterFoamSheet",
     path: `${terrainRoot}/Water Foam.png`,
     frameConfig: { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE },
@@ -53,30 +78,6 @@ export function preloadTinySwords(scene) {
 }
 
 export function createTinySwordsAnimations(scene) {
-  if (!scene.textures.exists("waterFoamSheet")) {
-    return;
-  }
-
-  const texture = scene.textures.get("waterFoamSheet");
-  const frameNames = texture.getFrameNames();
-  const validFrames = frameNames
-    .map((name) => Number(name))
-    .filter((value) => Number.isFinite(value) && value >= 0)
-    .sort((a, b) => a - b);
-
-  if (validFrames.length === 0) {
-    return;
-  }
-
-  if (!scene.anims.exists("water-foam-loop")) {
-    scene.anims.create({
-      key: "water-foam-loop",
-      frames: validFrames.map((frame) => ({ key: "waterFoamSheet", frame })),
-      frameRate: animationDefaults.frameRate,
-      repeat: animationDefaults.repeat,
-    });
-  }
-
   if (scene.textures.exists("redWarriorRunSheet") && !scene.anims.exists("red-warrior-run")) {
     const warriorFrameCount = scene.textures.get("redWarriorRunSheet").frameTotal - 1;
     scene.anims.create({
@@ -92,5 +93,5 @@ export function createTinySwordsAnimations(scene) {
 }
 
 export function hasTinySwordsFolderHint(scene) {
-  return scene.textures.exists("terrainColor1") && scene.textures.exists("waterBackground");
+  return scene.textures.exists("terrainColor1");
 }

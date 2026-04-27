@@ -1,8 +1,15 @@
 import Phaser from "phaser";
-import { STARTING_GOLD, STARTING_LIVES, TILE_SIZE } from "../game/constants";
+import {
+  CAMERA_ZOOM_MAX,
+  CAMERA_ZOOM_MIN,
+  GAME_HEIGHT,
+  GAME_WIDTH,
+  STARTING_GOLD,
+  STARTING_LIVES,
+  TILE_SIZE,
+} from "../game/constants";
 import { createTinySwordsAnimations, hasTinySwordsFolderHint } from "../game/assets";
 import { map001 } from "../game/maps/map-001";
-import { path001 } from "../game/maps/path-001";
 import { deriveLayers } from "../game/maps/elevation";
 import {
   cellToWorld,
@@ -11,6 +18,7 @@ import {
   isInsideGrid,
   worldToCell,
 } from "../game/maps/tileRules";
+import { DEFAULT_TERRAIN_SHEET, normalizeTerrainTileOverride } from "../game/maps/tileOverrideSchema";
 import { EnemySystem } from "../game/systems/EnemySystem";
 import { TowerSystem } from "../game/systems/TowerSystem";
 import { CombatSystem } from "../game/systems/CombatSystem";
@@ -20,11 +28,25 @@ import { DebugOverlay } from "../game/debug/DebugOverlay";
 import { balance } from "../game/balance";
 import { MapEditor } from "../game/editor/MapEditor";
 import { EditorPanel } from "../game/editor/EditorPanel";
-import { ensureMapOverrideGrids, ensureMapTilesets } from "../game/maps/mapUtils";
+import { ensureMapOverrideGrids, ensureMapTilesets, ensurePathMaskGrid } from "../game/maps/mapUtils";
+
+/**
+ * @param {unknown} ov
+ * @returns {{ sheet: string, frame: number } | null}
+ */
+function resolvedTerrainOverride(ov) {
+  return normalizeTerrainTileOverride(ov);
+}
 
 export class GameScene extends Phaser.Scene {
   constructor() {
     super("game");
+    this._mapPixelW = 0;
+    this._mapPixelH = 0;
+    /** @type {boolean} */
+    this._cameraPanning = false;
+    this._lastPanX = 0;
+    this._lastPanY = 0;
   }
 
   create() {
@@ -40,28 +62,40 @@ export class GameScene extends Phaser.Scene {
 
     ensureMapTilesets(this.map);
     ensureMapOverrideGrids(this.map);
+    ensurePathMaskGrid(this.map);
     this.editor = new MapEditor(this, this.map);
     this.editorPanel = new EditorPanel(this.editor);
 
+    this.worldRoot = this.add.container(0, 0);
     this.terrainContainer = this.add.container(0, 0);
+    this.worldRoot.add(this.terrainContainer);
     this.redrawTerrain();
 
     this.enemySystem = new EnemySystem(this, {
       map: this.map,
-      pathCells: path001,
       spawnCell: this.map.points.enemyBarracks,
       targetCell: this.map.points.homeBarracks,
-      moveMode: "pathfinding",
     });
     this.towerSystem = new TowerSystem(this, this.map);
     this.combatSystem = new CombatSystem(this, this.towerSystem, this.enemySystem);
     this.waveSystem = new WaveSystem(this.enemySystem);
     this.hud = new Hud(this);
-    this.debugOverlay = new DebugOverlay(this, path001);
+    this.debugOverlay = new DebugOverlay(this);
     this.debugOverlay.redraw();
+    this.worldRoot.add(this.debugOverlay.graphics);
 
     this.waveSystem.startAutoSpawner(balance.redBarracksSpawner);
     this.gameState.wave = this.waveSystem.waveIndex;
+
+    this._mapPixelW = this.map.width * TILE_SIZE;
+    this._mapPixelH = this.map.height * TILE_SIZE;
+    this.cameras.main.removeBounds();
+
+    this.cameras.main.ignore(this.hud.text);
+    this.uiCamera = this.cameras.add(0, 0, GAME_WIDTH, GAME_HEIGHT, false, "ui");
+    this.uiCamera.setScroll(0, 0);
+    this.uiCamera.setZoom(1);
+    this.uiCamera.ignore(this.worldRoot);
 
     this.bindInput();
     this.hud.render(this.gameState);
@@ -85,11 +119,42 @@ export class GameScene extends Phaser.Scene {
   }
 
   syncEnemyBarracksTargets() {
+    this.enemySystem.syncFromMap(this.map);
     this.enemySystem.setBarracksTargets(this.map.points.enemyBarracks, this.map.points.homeBarracks);
+    this.debugOverlay.redraw();
+  }
+
+  _clampCameraScroll() {
+    const cam = this.cameras.main;
+    const visW = cam.width / cam.zoom;
+    const visH = cam.height / cam.zoom;
+    const minSX = Math.min(0, this._mapPixelW - visW);
+    const maxSX = Math.max(0, this._mapPixelW - visW);
+    const minSY = Math.min(0, this._mapPixelH - visH);
+    const maxSY = Math.max(0, this._mapPixelH - visH);
+    cam.setScroll(Phaser.Math.Clamp(cam.scrollX, minSX, maxSX), Phaser.Math.Clamp(cam.scrollY, minSY, maxSY));
+  }
+
+  /**
+   * @param {Phaser.Input.Pointer} pointer
+   * @returns {boolean}
+   */
+  _isPanPointer(pointer) {
+    const ev = /** @type {MouseEvent | undefined} */ (pointer.event);
+    const buttons = typeof ev?.buttons === "number" ? ev.buttons : 0;
+    return pointer.middleButtonDown() || (buttons & 4) === 4;
   }
 
   bindInput() {
     this.input.on("pointerdown", (pointer) => {
+      if (this._isPanPointer(pointer)) {
+        const ev = /** @type {MouseEvent | undefined} */ (pointer.event);
+        ev?.preventDefault();
+        this._cameraPanning = true;
+        this._lastPanX = pointer.x;
+        this._lastPanY = pointer.y;
+        return;
+      }
       if (this.editor.handlePointerDown(pointer)) {
         return;
       }
@@ -100,15 +165,58 @@ export class GameScene extends Phaser.Scene {
       const placed = this.towerSystem.tryPlaceTower(cell.x, cell.y, this.gameState);
       if (placed) {
         this.hud.render(this.gameState);
+        this.debugOverlay.redraw();
       }
     });
 
     this.input.on("pointermove", (pointer) => {
+      if (this._cameraPanning && !this._isPanPointer(pointer)) {
+        this._cameraPanning = false;
+      }
+      if (this._cameraPanning) {
+        const cam = this.cameras.main;
+        const dx = pointer.x - this._lastPanX;
+        const dy = pointer.y - this._lastPanY;
+        this._lastPanX = pointer.x;
+        this._lastPanY = pointer.y;
+        cam.scrollX -= dx / cam.zoom;
+        cam.scrollY -= dy / cam.zoom;
+        this._clampCameraScroll();
+        return;
+      }
       this.editor.handlePointerMove(pointer);
     });
 
     this.input.on("pointerup", (pointer) => {
+      if (!this._isPanPointer(pointer)) {
+        this._cameraPanning = false;
+      }
       this.editor.handlePointerUp(pointer);
+    });
+
+    this.input.on("wheel", (pointer, _over, deltaX, deltaY) => {
+      const cam = this.cameras.main;
+      const e = /** @type {UIEvent & { shiftKey?: boolean } | undefined} */ (pointer.event);
+      if (e?.shiftKey) {
+        const k = 0.25 / cam.zoom;
+        cam.scrollX += deltaX * k;
+        cam.scrollY += deltaY * k;
+        this._clampCameraScroll();
+        return;
+      }
+      const oldZoom = cam.zoom;
+      const newZoom = Phaser.Math.Clamp(oldZoom * (1 - deltaY * 0.001), CAMERA_ZOOM_MIN, CAMERA_ZOOM_MAX);
+      if (Math.abs(newZoom - oldZoom) < 1e-6) {
+        return;
+      }
+      const before = new Phaser.Math.Vector2();
+      const after = new Phaser.Math.Vector2();
+      cam.getWorldPoint(pointer.x, pointer.y, before);
+      cam.setZoom(newZoom);
+      cam.getWorldPoint(pointer.x, pointer.y, after);
+      cam.scrollX += before.x - after.x;
+      cam.scrollY += before.y - after.y;
+      this._clampCameraScroll();
     });
 
     this.input.keyboard.on("keydown-G", () => {
@@ -140,39 +248,9 @@ export class GameScene extends Phaser.Scene {
     const hasSheet = hasTinySwordsFolderHint(this);
     ensureMapTilesets(this.map);
     ensureMapOverrideGrids(this.map);
+    ensurePathMaskGrid(this.map);
     const shoreKey = this.map.tilesets.shore;
     const plateauKey = this.map.tilesets.plateau;
-
-    for (let y = 0; y < this.map.height; y += 1) {
-      for (let x = 0; x < this.map.width; x += 1) {
-        const px = x * TILE_SIZE;
-        const py = y * TILE_SIZE;
-
-        if (hasSheet) {
-          const img = this.add.image(px + TILE_SIZE / 2, py + TILE_SIZE / 2, "waterBackground");
-          this.terrainContainer.add(img);
-        } else {
-          const fallback = this.add.rectangle(px + TILE_SIZE / 2, py + TILE_SIZE / 2, TILE_SIZE, TILE_SIZE, 0x2d4f7d);
-          fallback.setOrigin(0.5, 0.5);
-          this.terrainContainer.add(fallback);
-        }
-      }
-    }
-
-    if (hasSheet && this.textures.exists("waterFoamSheet") && this.anims.exists("water-foam-loop")) {
-      for (let y = 0; y < this.map.height; y += 1) {
-        for (let x = 0; x < this.map.width; x += 1) {
-          if (layers.waterFoam[y][x] !== 1) {
-            continue;
-          }
-          const px = x * TILE_SIZE;
-          const py = y * TILE_SIZE;
-          const foam = this.add.sprite(px + TILE_SIZE / 2, py + TILE_SIZE / 2, "waterFoamSheet", 0);
-          foam.play("water-foam-loop");
-          this.terrainContainer.add(foam);
-        }
-      }
-    }
 
     for (let y = 0; y < this.map.height; y += 1) {
       for (let x = 0; x < this.map.width; x += 1) {
@@ -184,12 +262,13 @@ export class GameScene extends Phaser.Scene {
 
         if (hasSheet) {
           const elev = this.map.elevation[y][x];
-          const ov = this.map.tileOverrides[y][x];
+          const ov = resolvedTerrainOverride(this.map.tileOverrides[y][x]);
           const frame =
-            elev < 2 && ov != null && typeof ov === "number"
-              ? ov
+            elev < 2 && ov != null
+              ? ov.frame
               : getShoreFrameIndex(layers.islandMask, x, y, this.map.width, this.map.height, shoreKey);
-          const spr = this.add.sprite(px + TILE_SIZE / 2, py + TILE_SIZE / 2, "terrainColor1", frame ?? 0);
+          const sheetKey = elev < 2 && ov != null && this.textures.exists(ov.sheet) ? ov.sheet : DEFAULT_TERRAIN_SHEET;
+          const spr = this.add.sprite(px + TILE_SIZE / 2, py + TILE_SIZE / 2, sheetKey, frame ?? 0);
           this.terrainContainer.add(spr);
         } else {
           const fallback = this.add.rectangle(px + TILE_SIZE / 2, py + TILE_SIZE / 2, TILE_SIZE, TILE_SIZE, 0x7fa05f);
@@ -208,12 +287,13 @@ export class GameScene extends Phaser.Scene {
         const py = y * TILE_SIZE;
         if (hasSheet) {
           const elev = this.map.elevation[y][x];
-          const ov = this.map.tileOverrides[y][x];
+          const ov = resolvedTerrainOverride(this.map.tileOverrides[y][x]);
           const frame =
-            elev === 2 && ov != null && typeof ov === "number"
-              ? ov
+            elev === 2 && ov != null
+              ? ov.frame
               : getHighGroundFrameIndex(layers.highGround, x, y, this.map.width, this.map.height, plateauKey);
-          const spr = this.add.sprite(px + TILE_SIZE / 2, py + TILE_SIZE / 2, "terrainColor1", frame ?? 0);
+          const sheetKey = elev === 2 && ov != null && this.textures.exists(ov.sheet) ? ov.sheet : DEFAULT_TERRAIN_SHEET;
+          const spr = this.add.sprite(px + TILE_SIZE / 2, py + TILE_SIZE / 2, sheetKey, frame ?? 0);
           spr.setAlpha(0.98);
           this.terrainContainer.add(spr);
         } else {
@@ -284,6 +364,20 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
+    if (this.editor?.enabled && this.map.pathMask) {
+      const pathGfx = this.add.graphics();
+      pathGfx.fillStyle(0xf5d742, 0.22);
+      for (let y = 0; y < this.map.height; y += 1) {
+        for (let x = 0; x < this.map.width; x += 1) {
+          if (this.map.pathMask[y]?.[x] === 1) {
+            pathGfx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+          }
+        }
+      }
+      pathGfx.setDepth(4);
+      this.terrainContainer.add(pathGfx);
+    }
+
     const selectedCells = this.editor?.enabled ? this.editor.getSelectedCells() : [];
     if (selectedCells.length > 0) {
       const selGfx = this.add.graphics();
@@ -299,6 +393,8 @@ export class GameScene extends Phaser.Scene {
       selGfx.setDepth(50);
       this.terrainContainer.add(selGfx);
     }
+
+    this.debugOverlay?.redraw();
   }
 
   update(_time, delta) {

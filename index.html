@@ -61,7 +61,8 @@
         grid-template-columns: 1fr 1fr;
         gap: 6px;
       }
-      .editor-panel__tool-grid--six {
+      .editor-panel__tool-grid--six,
+      .editor-panel__tool-grid--seven {
         grid-template-columns: 1fr 1fr 1fr;
       }
       .editor-panel__cell-coord {
@@ -106,6 +107,10 @@
       .editor-panel__btn--small {
         padding: 6px 8px;
         font-size: 11px;
+      }
+      .editor-panel__btn--wide {
+        flex: 1 1 100%;
+        min-width: min(100%, 200px);
       }
       .editor-panel__picker-hint {
         margin: 0 0 6px;

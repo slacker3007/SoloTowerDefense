@@ -1,4 +1,5 @@
-import { createNullGrid } from "./elevation";
+import { createElevation, createNullGrid } from "./elevation";
+import { cloneTerrainTileOverride, normalizeTerrainTileOverride } from "./tileOverrideSchema";
 
 /**
  * @param {{ tilesets?: { shore?: string, plateau?: string } }} map
@@ -17,7 +18,7 @@ export function ensureMapTilesets(map) {
 }
 
 /**
- * @param {{ height: number, width: number, tileOverrides?: (number|null)[][], decorations?: unknown[][] }} map
+ * @param {{ height: number, width: number, tileOverrides?: unknown[][], decorations?: unknown[][] }} map
  */
 export function ensureMapOverrideGrids(map) {
   if (!map.tileOverrides || !Array.isArray(map.tileOverrides) || map.tileOverrides.length !== map.height) {
@@ -25,6 +26,32 @@ export function ensureMapOverrideGrids(map) {
   }
   if (!map.decorations || !Array.isArray(map.decorations) || map.decorations.length !== map.height) {
     map.decorations = createNullGrid(map.height, map.width);
+  }
+  for (let y = 0; y < map.height; y += 1) {
+    for (let x = 0; x < map.width; x += 1) {
+      map.tileOverrides[y][x] = normalizeTerrainTileOverride(map.tileOverrides[y][x]);
+    }
+  }
+}
+
+/**
+ * @param {object} map
+ */
+export function ensurePathMaskGrid(map) {
+  if (!Array.isArray(map.pathMask) || map.pathMask.length !== map.height) {
+    map.pathMask = createElevation(map.height, map.width, 0);
+    return;
+  }
+  for (let y = 0; y < map.height; y += 1) {
+    const row = map.pathMask[y];
+    if (!Array.isArray(row) || row.length !== map.width) {
+      map.pathMask = createElevation(map.height, map.width, 0);
+      return;
+    }
+    for (let x = 0; x < map.width; x += 1) {
+      const v = row[x];
+      map.pathMask[y][x] = v === 1 ? 1 : 0;
+    }
   }
 }
 
@@ -49,9 +76,19 @@ export function copyMapStateFrom(target, source) {
       target.elevation[y][x] = source.elevation[y][x];
       target.stairs[y][x] = source.stairs[y][x];
       target.buildings[y][x] = source.buildings[y][x];
-      target.tileOverrides[y][x] = source.tileOverrides[y][x];
+      target.tileOverrides[y][x] = cloneTerrainTileOverride(
+        normalizeTerrainTileOverride(source.tileOverrides[y][x]),
+      );
       const dec = source.decorations[y][x];
       target.decorations[y][x] = dec && typeof dec === "object" ? { sheet: dec.sheet, frame: dec.frame } : null;
+    }
+  }
+  ensurePathMaskGrid(source);
+  ensurePathMaskGrid(target);
+  for (let y = 0; y < target.height; y += 1) {
+    for (let x = 0; x < target.width; x += 1) {
+      const v = source.pathMask?.[y]?.[x] === 1 ? 1 : 0;
+      target.pathMask[y][x] = v;
     }
   }
   ensureMapTilesets(target);

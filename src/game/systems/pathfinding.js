@@ -12,6 +12,24 @@ function cellKey(cell) {
 }
 
 /**
+ * Cardinal steps ordered so ties prefer moving closer to goal (same BFS length, better visuals).
+ * @param {number} cx
+ * @param {number} cy
+ * @param {{ x: number, y: number }} goalCell
+ */
+function neighborsTowardGoal(cx, cy, goalCell) {
+  return CARDINAL_NEIGHBORS.slice().sort((a, b) => {
+    const distA = Math.abs(cx + a.x - goalCell.x) + Math.abs(cy + a.y - goalCell.y);
+    const distB = Math.abs(cx + b.x - goalCell.x) + Math.abs(cy + b.y - goalCell.y);
+    if (distA !== distB) {
+      return distA - distB;
+    }
+    const rank = (d) => (d.x === 1 ? 0 : d.y === -1 ? 1 : d.x === -1 ? 2 : 3);
+    return rank(a) - rank(b);
+  });
+}
+
+/**
  * @param {{ x: number, y: number }} startCell
  * @param {{ x: number, y: number }} goalCell
  * @param {(cellX: number, cellY: number) => boolean} isWalkable
@@ -39,7 +57,7 @@ export function findGridPath(startCell, goalCell, isWalkable, grid) {
       break;
     }
 
-    for (const delta of CARDINAL_NEIGHBORS) {
+    for (const delta of neighborsTowardGoal(current.x, current.y, goalCell)) {
       const nx = current.x + delta.x;
       const ny = current.y + delta.y;
       if (!isInsideGrid(nx, ny, grid.width, grid.height)) {

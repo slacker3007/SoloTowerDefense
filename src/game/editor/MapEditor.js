@@ -1,10 +1,13 @@
 import { createFreshMap001 } from "../maps/map-001";
+import { buildDefaultPathMask, pathMaskFromLegacyEnemyPath, tryParsePathMaskFromJson } from "../maps/enemyPath";
 import {
   copyMapStateFrom,
   ensureMapOverrideGrids,
   ensureMapTilesets,
+  ensurePathMaskGrid,
   syncBarracksPointsFromBuildings,
 } from "../maps/mapUtils";
+import { normalizeTerrainTileOverride, TERRAIN_TILE_SHEETS } from "../maps/tileOverrideSchema";
 
 const MAP_JSON_VERSION = 1;
 const DEFAULT_PICKER_SHEET = "terrainColor1";
@@ -20,10 +23,13 @@ export class MapEditor {
     this.map = map;
     ensureMapTilesets(this.map);
     ensureMapOverrideGrids(this.map);
+    ensurePathMaskGrid(this.map);
 
     this.enabled = false;
-    /** @type {"paint" | "moveBuilding" | "select"} */
+    /** @type {"paint" | "moveBuilding" | "select" | "pathMask"} */
     this.tool = "paint";
+    /** When true, path mask brush erases (sets 0). */
+    this.pathMaskErase = false;
     /** @type {"elevation" | "stairs"} */
     this.paintKind = "elevation";
     /** @type {0 | 1 | 2} */
@@ -136,9 +142,7 @@ export class MapEditor {
     this._domPanel?.setVisible(value);
     this._notifyChange();
     this.scene.hud?.render(gs);
-    if (!value) {
-      this.scene.redrawTerrain();
-    }
+    this.scene.redrawTerrain();
   }
 
   toggle() {
@@ -151,6 +155,7 @@ export class MapEditor {
       this.movePickCell = null;
     }
     this._notifyChange();
+    this.scene.redrawTerrain();
   }
 
   setElevationBrush(level) {
@@ -158,23 +163,59 @@ export class MapEditor {
     this.paintKind = "elevation";
     this.paintElevation = /** @type {0|1|2} */ (level);
     this._notifyChange();
+    this.scene.redrawTerrain();
   }
 
   setStairsBrush() {
     this.tool = "paint";
     this.paintKind = "stairs";
     this._notifyChange();
+    this.scene.redrawTerrain();
   }
 
   setMoveBuildingTool() {
     this.tool = "moveBuilding";
     this.movePickCell = null;
     this._notifyChange();
+    this.scene.redrawTerrain();
   }
 
   setSelectTool() {
     this.tool = "select";
     this.movePickCell = null;
+    this._notifyChange();
+    this.scene.redrawTerrain();
+  }
+
+  setPathMaskBrush() {
+    this.tool = "pathMask";
+    this.movePickCell = null;
+    this._notifyChange();
+    this.scene.redrawTerrain();
+  }
+
+  /**
+   * @param {boolean} erase If true, brush removes path; if false, brush paints path.
+   */
+  setPathMaskErase(erase) {
+    this.pathMaskErase = Boolean(erase);
+    this._notifyChange();
+  }
+
+  /**
+   * @param {boolean} value 1 = path, 0 = not path
+   */
+  setPathMaskOnSelected(value) {
+    if (this.getSelectedCount() === 0) {
+      return;
+    }
+    ensurePathMaskGrid(this.map);
+    for (const { x, y } of this.getSelectedCells()) {
+      this.map.pathMask[y][x] = value ? 1 : 0;
+    }
+    this.scene.redrawTerrain();
+    this._markDirty();
+    this.scene.syncEnemyBarracksTargets();
     this._notifyChange();
   }
 
@@ -183,6 +224,17 @@ export class MapEditor {
    */
   setPickerRole(role) {
     this.pickerRole = role;
+    this._notifyChange();
+  }
+
+  /**
+   * @param {string} sheetKey terrainColor1 … terrainColor5
+   */
+  setPickerSheet(sheetKey) {
+    if (!TERRAIN_TILE_SHEETS.includes(sheetKey)) {
+      return;
+    }
+    this.pickerSheet = sheetKey;
     this._notifyChange();
   }
 
@@ -226,7 +278,7 @@ export class MapEditor {
 
     for (const { x, y } of this.getSelectedCells()) {
       if (this.pickerRole === "terrain") {
-        this.map.tileOverrides[y][x] = frame;
+        this.map.tileOverrides[y][x] = { sheet: this.pickerSheet, frame };
       } else {
         this.map.decorations[y][x] = { sheet: this.pickerSheet, frame };
       }
@@ -374,6 +426,8 @@ export class MapEditor {
       this.setMoveBuildingTool();
     } else if (event.key === "6") {
       this.setSelectTool();
+    } else if (event.key === "7") {
+      this.setPathMaskBrush();
     }
   }
 
@@ -505,7 +559,7 @@ export class MapEditor {
         }
         for (let x = 0; x < this.map.width; x += 1) {
           const v = row[x];
-          this.map.tileOverrides[y][x] = typeof v === "number" && Number.isFinite(v) ? v : null;
+          this.map.tileOverrides[y][x] = normalizeTerrainTileOverride(v);
         }
       }
     } else {
@@ -540,14 +594,47 @@ export class MapEditor {
 
     syncBarracksPointsFromBuildings(this.map);
     ensureMapTilesets(this.map);
+    this._importPathMaskFromData(d);
     this.selectedCell = null;
     this.selectedCellKeys.clear();
+    this.scene.redrawTerrain();
     return true;
+  }
+
+  /**
+   * @param {Record<string, unknown>} d
+   */
+  _importPathMaskFromData(d) {
+    const s = this.map.points.enemyBarracks;
+    const t = this.map.points.homeBarracks;
+    const w = this.map.width;
+    const h = this.map.height;
+    const parsed = tryParsePathMaskFromJson(d.pathMask, w, h);
+    if (parsed) {
+      this.map.pathMask = parsed;
+    } else if (d.enemyPath != null) {
+      const leg = pathMaskFromLegacyEnemyPath(
+        d.enemyPath,
+        w,
+        h,
+        s,
+        t,
+      );
+      if (leg) {
+        this.map.pathMask = leg;
+      } else {
+        this.map.pathMask = buildDefaultPathMask(s, t, w, h);
+      }
+    } else {
+      this.map.pathMask = buildDefaultPathMask(s, t, w, h);
+    }
+    ensurePathMaskGrid(this.map);
   }
 
   exportJson() {
     ensureMapTilesets(this.map);
     ensureMapOverrideGrids(this.map);
+    ensurePathMaskGrid(this.map);
     const payload = this._buildSerializableMapPayload();
 
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
@@ -560,6 +647,7 @@ export class MapEditor {
   }
 
   _buildSerializableMapPayload() {
+    ensurePathMaskGrid(this.map);
     return {
       id: this.map.id,
       version: MAP_JSON_VERSION,
@@ -577,10 +665,11 @@ export class MapEditor {
       elevation: this.map.elevation.map((row) => [...row]),
       stairs: this.map.stairs.map((row) => [...row]),
       buildings: this.map.buildings.map((row) => [...row]),
-      tileOverrides: this.map.tileOverrides.map((row) => [...row]),
+      tileOverrides: this.map.tileOverrides.map((row) => row.map((cell) => normalizeTerrainTileOverride(cell))),
       decorations: this.map.decorations.map((row) =>
         row.map((cell) => (cell && typeof cell === "object" ? { sheet: cell.sheet, frame: cell.frame } : null)),
       ),
+      pathMask: this.map.pathMask.map((row) => [...row]),
     };
   }
 
@@ -609,6 +698,12 @@ export class MapEditor {
       return true;
     }
 
+    if (this.tool === "pathMask") {
+      this._isPainting = true;
+      this._applyPathMaskAt(cell.x, cell.y, pointer);
+      return true;
+    }
+
     this._isPainting = true;
     this._applyPaintAt(cell.x, cell.y);
     return true;
@@ -619,7 +714,17 @@ export class MapEditor {
    * @returns {boolean}
    */
   handlePointerMove(pointer) {
-    if (!this.enabled || !this._isPainting || this.tool !== "paint") {
+    if (!this.enabled) {
+      return false;
+    }
+    if (this._isPainting && this.tool === "pathMask" && pointer.leftButtonDown()) {
+      const cell = this.scene.pointerToCell(pointer);
+      if (cell) {
+        this._applyPathMaskAt(cell.x, cell.y, pointer);
+      }
+      return true;
+    }
+    if (!this._isPainting || this.tool !== "paint") {
       return false;
     }
     if (!pointer.leftButtonDown()) {
@@ -666,6 +771,21 @@ export class MapEditor {
 
     this.scene.redrawTerrain();
     this._markDirty();
+  }
+
+  /**
+   * @param {number} x
+   * @param {number} y
+   * @param {import("phaser").Input.Pointer} [pointer]
+   */
+  _applyPathMaskAt(x, y, pointer) {
+    ensurePathMaskGrid(this.map);
+    const ev = /** @type {MouseEvent & { shiftKey?: boolean } | undefined} */ (pointer?.event);
+    const erase = this.pathMaskErase || Boolean(ev?.shiftKey);
+    this.map.pathMask[y][x] = erase ? 0 : 1;
+    this.scene.redrawTerrain();
+    this._markDirty();
+    this.scene.syncEnemyBarracksTargets();
   }
 
   _handleMoveBuildingClick(x, y) {

@@ -7,3 +7,7 @@ export const GAME_HEIGHT = GRID_ROWS * TILE_SIZE;
 
 export const STARTING_GOLD = 100;
 export const STARTING_LIVES = 20;
+
+/** Main camera mouse-wheel zoom (Phaser unitless zoom factor) */
+export const CAMERA_ZOOM_MIN = 0.5;
+export const CAMERA_ZOOM_MAX = 2;

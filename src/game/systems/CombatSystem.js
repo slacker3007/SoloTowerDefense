@@ -32,13 +32,17 @@ export class CombatSystem {
 
       if (target) {
         tower.cooldownRemaining = tower.cooldown;
+        const sprite = this.scene.add.circle(tower.x, tower.y, 4, 0xf5d742);
+        if (this.scene.worldRoot) {
+          this.scene.worldRoot.add(sprite);
+        }
         const projectile = {
           x: tower.x,
           y: tower.y,
           speed: 460,
           target,
           damage: tower.damage,
-          sprite: this.scene.add.circle(tower.x, tower.y, 4, 0xf5d742),
+          sprite,
         };
         this.projectiles.push(projectile);
       }

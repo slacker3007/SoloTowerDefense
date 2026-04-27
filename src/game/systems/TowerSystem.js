@@ -18,6 +18,10 @@ export class TowerSystem {
     gameState.gold -= this.towerCost;
     this.cellOccupancy.add(key);
     const world = cellToWorld(cellX, cellY);
+    const sprite = this.scene.add.rectangle(world.x, world.y, 30, 30, 0x44762d);
+    if (this.scene.worldRoot) {
+      this.scene.worldRoot.add(sprite);
+    }
     const tower = {
       x: world.x,
       y: world.y,
@@ -25,7 +29,7 @@ export class TowerSystem {
       damage: 20,
       cooldown: 0.5,
       cooldownRemaining: 0,
-      sprite: this.scene.add.rectangle(world.x, world.y, 30, 30, 0x44762d),
+      sprite,
     };
 
     this.towers.push(tower);
