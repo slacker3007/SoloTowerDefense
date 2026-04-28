@@ -49,6 +49,7 @@ export class GameScene extends Phaser.Scene {
     this._cameraPanning = false;
     this._lastPanX = 0;
     this._lastPanY = 0;
+    this.selectedBuilding = null;
   }
 
   create() {
@@ -85,7 +86,15 @@ export class GameScene extends Phaser.Scene {
     this.towerSystem = new TowerSystem(this, this.map);
     this.combatSystem = new CombatSystem(this, this.towerSystem, this.enemySystem);
     this.waveSystem = new WaveSystem(this.enemySystem);
-    this.hud = new Hud(this);
+    this.hud = new Hud(this, {
+      maxLives: STARTING_LIVES,
+      onMenuClick: () => this.togglePause(),
+      onBuildClick: () => {
+        if (this.selectedBuilding) {
+          console.log("Build action clicked for:", this.selectedBuilding.label);
+        }
+      },
+    });
     this.debugOverlay = new DebugOverlay(this);
     this.debugOverlay.redraw();
     this.worldRoot.add(this.debugOverlay.graphics);
@@ -97,7 +106,7 @@ export class GameScene extends Phaser.Scene {
     this._mapPixelH = this.map.height * TILE_SIZE;
     this.cameras.main.removeBounds();
 
-    this.cameras.main.ignore(this.hud.text);
+    this.cameras.main.ignore(this.hud.getUiObjects());
     this.uiCamera = this.cameras.add(0, 0, GAME_WIDTH, GAME_HEIGHT, false, "ui");
     this.uiCamera.setScroll(0, 0);
     this.uiCamera.setZoom(1);
@@ -105,7 +114,14 @@ export class GameScene extends Phaser.Scene {
 
     this.bindInput();
     ensureUnitHpOverlay(this);
-    this.hud.render(this.gameState);
+    this.syncHudForEditorMode();
+    this.hud.render(
+      this.gameState,
+      this.towerSystem.towers.length,
+      STARTING_LIVES,
+      this.selectedBuilding,
+      this.getMinimapData(),
+    );
   }
 
   shutdown() {
@@ -129,20 +145,133 @@ export class GameScene extends Phaser.Scene {
     return cell;
   }
 
+  /**
+   * @param {number} cellX
+   * @param {number} cellY
+   * @returns {Record<string, unknown> | null}
+   */
+  getTowerAtCell(cellX, cellY) {
+    const world = cellToWorld(cellX, cellY);
+    return (
+      this.towerSystem.towers.find(
+        (tower) => Math.abs(tower.x - world.x) <= TILE_SIZE * 0.25 && Math.abs(tower.y - world.y) <= TILE_SIZE * 0.25,
+      ) ?? null
+    );
+  }
+
+  /**
+   * @param {number} cellX
+   * @param {number} cellY
+   * @returns {string | null}
+   */
+  getBarracksKeyAtCell(cellX, cellY) {
+    return this.map.buildings?.[cellY]?.[cellX] ?? null;
+  }
+
+  /**
+   * @param {number} cellX
+   * @param {number} cellY
+   * @returns {boolean}
+   */
+  selectBuildingAtCell(cellX, cellY) {
+    const tower = this.getTowerAtCell(cellX, cellY);
+    if (tower) {
+      this.selectedBuilding = {
+        kind: "tower",
+        label: "Tower",
+        cellX,
+        cellY,
+      };
+      return true;
+    }
+
+    const barracksKey = this.getBarracksKeyAtCell(cellX, cellY);
+    if (barracksKey === "barracks_blue") {
+      this.selectedBuilding = {
+        kind: "barracks",
+        label: "Blue Barracks",
+        cellX,
+        cellY,
+        hpCurrent: this.gameState.lives,
+        hpMax: STARTING_LIVES,
+      };
+      return true;
+    }
+    if (barracksKey === "barracks_red") {
+      this.selectedBuilding = {
+        kind: "barracks",
+        label: "Red Barracks",
+        cellX,
+        cellY,
+      };
+      return true;
+    }
+
+    this.selectedBuilding = null;
+    return false;
+  }
+
+  getMinimapData() {
+    const cam = this.cameras.main;
+    const margins = this.hud?.getOcclusionMargins?.() ?? { top: 0, bottom: 0, left: 0, right: 0 };
+    const towers = this.towerSystem.towers.map((tower) => ({ x: tower.x, y: tower.y }));
+    const friendlyBarracks = [];
+    const enemyBarracks = [];
+    for (let y = 0; y < this.map.height; y += 1) {
+      for (let x = 0; x < this.map.width; x += 1) {
+        const key = this.map.buildings?.[y]?.[x];
+        if (key !== "barracks_blue" && key !== "barracks_red") {
+          continue;
+        }
+        const pos = cellToWorld(x, y);
+        if (key === "barracks_blue") {
+          friendlyBarracks.push(pos);
+        } else {
+          enemyBarracks.push(pos);
+        }
+      }
+    }
+    const viewportWidth = Math.max(1, (cam.width - margins.left - margins.right) / cam.zoom);
+    const viewportHeight = Math.max(1, (cam.height - margins.top - margins.bottom) / cam.zoom);
+    return {
+      mapWidth: this._mapPixelW,
+      mapHeight: this._mapPixelH,
+      towers,
+      friendlyBarracks,
+      enemyBarracks,
+      viewport: {
+        x: cam.scrollX + margins.left / cam.zoom,
+        y: cam.scrollY + margins.top / cam.zoom,
+        width: viewportWidth,
+        height: viewportHeight,
+      },
+    };
+  }
+
   syncEnemyBarracksTargets() {
     this.enemySystem.syncFromMap(this.map);
     this.enemySystem.setBarracksTargets(this.map.points.enemyBarracks, this.map.points.homeBarracks);
     this.debugOverlay.redraw();
   }
 
+  syncHudForEditorMode() {
+    const editorEnabled = Boolean(this.editor?.enabled);
+    this.hud?.setTopVisible(true);
+    this.hud?.setBottomVisible(!editorEnabled);
+    this._clampCameraScroll();
+  }
+
   _clampCameraScroll() {
     const cam = this.cameras.main;
-    const visW = cam.width / cam.zoom;
-    const visH = cam.height / cam.zoom;
-    const minSX = Math.min(0, this._mapPixelW - visW);
-    const maxSX = Math.max(0, this._mapPixelW - visW);
-    const minSY = Math.min(0, this._mapPixelH - visH);
-    const maxSY = Math.max(0, this._mapPixelH - visH);
+    const margins = this.hud?.getOcclusionMargins?.() ?? { top: 0, bottom: 0, left: 0, right: 0 };
+    const visW = Math.max(1, (cam.width - margins.left - margins.right) / cam.zoom);
+    const visH = Math.max(1, (cam.height - margins.top - margins.bottom) / cam.zoom);
+    const leftVisible = margins.left / cam.zoom;
+    const topVisible = margins.top / cam.zoom;
+    const minSX = Math.min(0, this._mapPixelW - visW) - leftVisible;
+    const maxSX = Math.max(0, this._mapPixelW - visW) - leftVisible;
+    const minSY = Math.min(0, this._mapPixelH - visH) - topVisible;
+    const maxSY = Math.max(0, this._mapPixelH - visH) - topVisible;
     cam.setScroll(Phaser.Math.Clamp(cam.scrollX, minSX, maxSX), Phaser.Math.Clamp(cam.scrollY, minSY, maxSY));
   }
 
@@ -172,12 +301,43 @@ export class GameScene extends Phaser.Scene {
       if (this.gameState.paused) {
         return;
       }
-      const cell = worldToCell(pointer.worldX, pointer.worldY);
+      const cell = this.pointerToCell(pointer);
+      if (!cell) {
+        this.selectedBuilding = null;
+        this.hud.render(
+          this.gameState,
+          this.towerSystem.towers.length,
+          STARTING_LIVES,
+          this.selectedBuilding,
+          this.getMinimapData(),
+        );
+        return;
+      }
+
+      const selected = this.selectBuildingAtCell(cell.x, cell.y);
+      if (selected) {
+        this.hud.render(
+          this.gameState,
+          this.towerSystem.towers.length,
+          STARTING_LIVES,
+          this.selectedBuilding,
+          this.getMinimapData(),
+        );
+        return;
+      }
+
       const placed = this.towerSystem.tryPlaceTower(cell.x, cell.y, this.gameState);
       if (placed) {
-        this.hud.render(this.gameState);
+        this.hud.render(this.gameState, this.towerSystem.towers.length, STARTING_LIVES);
         this.debugOverlay.redraw();
       }
+      this.hud.render(
+        this.gameState,
+        this.towerSystem.towers.length,
+        STARTING_LIVES,
+        this.selectedBuilding,
+        this.getMinimapData(),
+      );
     });
 
     this.input.on("pointermove", (pointer) => {
@@ -238,8 +398,7 @@ export class GameScene extends Phaser.Scene {
       if (this.editor.enabled) {
         return;
       }
-      this.gameState.paused = !this.gameState.paused;
-      this.hud.render(this.gameState);
+      this.togglePause();
     });
 
     this.input.keyboard.on("keydown-R", () => {
@@ -248,7 +407,29 @@ export class GameScene extends Phaser.Scene {
 
     this.input.keyboard.on("keydown-E", () => {
       this.editor.toggle();
+      this.syncHudForEditorMode();
+      this.hud.render(
+        this.gameState,
+        this.towerSystem.towers.length,
+        STARTING_LIVES,
+        this.selectedBuilding,
+        this.getMinimapData(),
+      );
     });
+  }
+
+  togglePause() {
+    if (this.editor.enabled) {
+      return;
+    }
+    this.gameState.paused = !this.gameState.paused;
+    this.hud.render(
+      this.gameState,
+      this.towerSystem.towers.length,
+      STARTING_LIVES,
+      this.selectedBuilding,
+      this.getMinimapData(),
+    );
   }
 
   redrawTerrain() {
@@ -466,6 +647,16 @@ export class GameScene extends Phaser.Scene {
     this.gameState.wave = this.waveSystem.waveIndex;
     this._homeHpBar?.setRatio(this.gameState.lives / STARTING_LIVES);
     this._homeHpBar?.setValues(this.gameState.lives, STARTING_LIVES);
-    this.hud.render(this.gameState);
+    if (this.selectedBuilding?.kind === "barracks" && this.selectedBuilding?.label === "Blue Barracks") {
+      this.selectedBuilding.hpCurrent = this.gameState.lives;
+      this.selectedBuilding.hpMax = STARTING_LIVES;
+    }
+    this.hud.render(
+      this.gameState,
+      this.towerSystem.towers.length,
+      STARTING_LIVES,
+      this.selectedBuilding,
+      this.getMinimapData(),
+    );
   }
 }
