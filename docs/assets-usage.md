@@ -30,6 +30,20 @@ If your filenames differ, update `src/game/assets.js`.
 - Tiny Swords tile guide uses `64x64` tiles and `10fps` animation.
 - Keep consistent tile size in `src/game/constants.js`.
 
+## UI: BigBar (blue barracks HP)
+
+- **Base:** `TinySwords/UI Elements/UI Elements/Bars/BigBar_Base.png` — **320×64** pixels, i.e. **(5×64)×64**: one row of five **64×64** cells.
+- **Which cells are art (1-based columns):** column **1** = left cap, column **3** = tileable middle, column **5** = right cap. Columns **2** and **4** are **empty spacers** in the PNG; do not use them as visible frames.
+- **Phaser frames (0-based):** **0** = left, **2** = middle (repeat for bar width), **4** = right. Skip frames **1** and **3**.
+- **Fill:** `BigBar_Fill.png` is **64×64**; drawn inside the base recess (see `src/game/ui/BlueBarracksHpBar.js`).
+
+## UI: SmallBar (enemy unit HP)
+
+- **Base:** `TinySwords/UI Elements/UI Elements/Bars/SmallBar_Base.png` — **320×64** pixels, i.e. **(5×64)×64**.
+- **Phaser frames (0-based):** **0** = left cap, **2** = tileable middle, **4** = right cap. Frames **1** and **3** are spacer cells.
+- **Fill:** `SmallBar_Fill.png` is **64×64**; the painted fill band is a thin strip around **y=30..32**, so rendering uses source crop + display scaling.
+- **Implementation:** enemy bars use `src/game/ui/UnitHpBar.js` and are attached in `src/game/systems/EnemySystem.js`.
+
 ## Elevation model (three layers)
 
 Maps use a single **elevation** grid per cell:

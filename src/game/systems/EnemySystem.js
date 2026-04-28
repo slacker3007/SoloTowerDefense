@@ -1,6 +1,9 @@
 import { buildDefaultPathMask, computeRouteFromPathMask } from "../maps/enemyPath";
 import { ensurePathMaskGrid } from "../maps/mapUtils";
 import { cellToWorld, worldToCell } from "../maps/tileRules";
+import { createUnitHpBar } from "../ui/UnitHpBar";
+
+const ENEMY_HP_BAR_Y_OFFSET = 52;
 
 export class EnemySystem {
   constructor(scene, options = {}) {
@@ -96,11 +99,20 @@ export class EnemySystem {
       pathCells: path,
       alive: true,
       escaped: false,
+      hpBar: null,
     };
     this._warnedNoPath = false;
 
     if (this.scene.worldRoot) {
       this.scene.worldRoot.add(enemy.sprite);
+    }
+    enemy.hpBar = createUnitHpBar(this.scene, {
+      style: "small",
+      worldX: startWorld.x,
+      worldY: startWorld.y - ENEMY_HP_BAR_Y_OFFSET,
+    });
+    if (enemy.hpBar) {
+      enemy.hpBar.setRatio(1);
     }
     this.enemies.push(enemy);
     return enemy;
@@ -120,6 +132,7 @@ export class EnemySystem {
       if (distance < enemy.speed * deltaSeconds) {
         enemy.sprite.x = target.x;
         enemy.sprite.y = target.y;
+        enemy.hpBar?.setWorldPosition(enemy.sprite.x, enemy.sprite.y - ENEMY_HP_BAR_Y_OFFSET);
         const advanced = this._advanceWaypoint(enemy);
         if (!advanced) {
           enemy.escaped = true;
@@ -134,6 +147,7 @@ export class EnemySystem {
       if (typeof enemy.sprite.setFlipX === "function") {
         enemy.sprite.setFlipX(nx < 0);
       }
+      enemy.hpBar?.setWorldPosition(enemy.sprite.x, enemy.sprite.y - ENEMY_HP_BAR_Y_OFFSET);
     }
   }
 
@@ -143,8 +157,10 @@ export class EnemySystem {
     }
 
     enemy.hp -= amount;
+    enemy.hpBar?.setRatio(enemy.hp / enemy.maxHp);
     if (enemy.hp <= 0) {
       enemy.alive = false;
+      enemy.hpBar?.destroy();
       enemy.sprite.destroy();
       return true;
     }
@@ -156,6 +172,7 @@ export class EnemySystem {
     const escaped = this.enemies.filter((enemy) => enemy.escaped && enemy.alive);
     for (const enemy of escaped) {
       enemy.alive = false;
+      enemy.hpBar?.destroy();
       enemy.sprite.destroy();
     }
     return escaped.length;

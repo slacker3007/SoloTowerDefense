@@ -36,6 +36,8 @@ export class MapEditor {
     this.paintElevation = 1;
     /** @type {{ x: number, y: number } | null} */
     this.movePickCell = null;
+    /** @type {string} */
+    this.moveStatus = "";
     /** @type {{ x: number, y: number } | null} */
     this.selectedCell = null;
     this.selectedCellKeys = new Set();
@@ -100,6 +102,14 @@ export class MapEditor {
     return this.selectedCellKeys.size;
   }
 
+  getMovePickCell() {
+    return this.movePickCell ? { ...this.movePickCell } : null;
+  }
+
+  getMoveStatus() {
+    return this.moveStatus;
+  }
+
   /**
    * @param {import("./EditorPanel.js").EditorPanel} panel
    */
@@ -153,6 +163,9 @@ export class MapEditor {
     this.tool = tool;
     if (tool === "moveBuilding") {
       this.movePickCell = null;
+      this.moveStatus = "Move: click a barracks";
+    } else {
+      this.moveStatus = "";
     }
     this._notifyChange();
     this.scene.redrawTerrain();
@@ -176,6 +189,7 @@ export class MapEditor {
   setMoveBuildingTool() {
     this.tool = "moveBuilding";
     this.movePickCell = null;
+    this.moveStatus = "Move: click a barracks";
     this._notifyChange();
     this.scene.redrawTerrain();
   }
@@ -183,6 +197,7 @@ export class MapEditor {
   setSelectTool() {
     this.tool = "select";
     this.movePickCell = null;
+    this.moveStatus = "";
     this._notifyChange();
     this.scene.redrawTerrain();
   }
@@ -190,6 +205,7 @@ export class MapEditor {
   setPathMaskBrush() {
     this.tool = "pathMask";
     this.movePickCell = null;
+    this.moveStatus = "";
     this._notifyChange();
     this.scene.redrawTerrain();
   }
@@ -793,10 +809,14 @@ export class MapEditor {
 
     if (this.movePickCell == null) {
       if (b == null) {
+        this.moveStatus = "Move: click a cell with a building";
+        this._notifyChange();
         return;
       }
       this.movePickCell = { x, y };
+      this.moveStatus = `Move: picked (${x}, ${y}) — click destination`;
       this._notifyChange();
+      this.scene.redrawTerrain();
       return;
     }
 
@@ -804,27 +824,36 @@ export class MapEditor {
     const moving = this.map.buildings[from.y][from.x];
     if (moving == null) {
       this.movePickCell = null;
+      this.moveStatus = "Move: picked building missing, pick again";
       this._notifyChange();
+      this.scene.redrawTerrain();
       return;
     }
 
     if (x === from.x && y === from.y) {
       this.movePickCell = null;
+      this.moveStatus = "Move: selection cleared";
       this._notifyChange();
+      this.scene.redrawTerrain();
       return;
     }
 
     if (this.map.buildings[y][x] != null) {
+      this.moveStatus = "Move blocked: destination has a building";
+      this._notifyChange();
       return;
     }
 
     if (this.map.elevation[y][x] < 1 || this.map.stairs[y][x] === 1) {
+      this.moveStatus = "Move blocked: destination must be land without stairs";
+      this._notifyChange();
       return;
     }
 
     this.map.buildings[from.y][from.x] = null;
     this.map.buildings[y][x] = moving;
     this.movePickCell = null;
+    this.moveStatus = `Move complete: (${from.x}, ${from.y}) -> (${x}, ${y})`;
     syncBarracksPointsFromBuildings(this.map);
     this.scene.redrawTerrain();
     this.scene.syncEnemyBarracksTargets();

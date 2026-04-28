@@ -24,6 +24,8 @@ import { TowerSystem } from "../game/systems/TowerSystem";
 import { CombatSystem } from "../game/systems/CombatSystem";
 import { WaveSystem } from "../game/systems/WaveSystem";
 import { Hud } from "../game/ui/Hud";
+import { blueBarracksHpBarYOffset, createBlueBarracksHpBar } from "../game/ui/BlueBarracksHpBar";
+import { destroyUnitHpOverlay, ensureUnitHpOverlay, syncUnitHpBars } from "../game/ui/UnitHpBar";
 import { DebugOverlay } from "../game/debug/DebugOverlay";
 import { balance } from "../game/balance";
 import { MapEditor } from "../game/editor/MapEditor";
@@ -68,7 +70,11 @@ export class GameScene extends Phaser.Scene {
 
     this.worldRoot = this.add.container(0, 0);
     this.terrainContainer = this.add.container(0, 0);
+    this.blueBarracksHpRoot = this.add.container(0, 0);
     this.worldRoot.add(this.terrainContainer);
+    this.worldRoot.add(this.blueBarracksHpRoot);
+    /** @type {{ container: Phaser.GameObjects.Container, setRatio: (r: number) => void, setValues: (current: number, max: number) => void, destroy: () => void } | null} */
+    this._homeHpBar = null;
     this.redrawTerrain();
 
     this.enemySystem = new EnemySystem(this, {
@@ -98,12 +104,17 @@ export class GameScene extends Phaser.Scene {
     this.uiCamera.ignore(this.worldRoot);
 
     this.bindInput();
+    ensureUnitHpOverlay(this);
     this.hud.render(this.gameState);
   }
 
   shutdown() {
+    this._homeHpBar?.destroy();
+    this._homeHpBar = null;
+    this.blueBarracksHpRoot?.destroy(true);
     this.editorPanel?.destroy();
     this.editor.destroy();
+    destroyUnitHpOverlay(this);
   }
 
   /**
@@ -394,10 +405,49 @@ export class GameScene extends Phaser.Scene {
       this.terrainContainer.add(selGfx);
     }
 
+    const movePick = this.editor?.enabled ? this.editor.getMovePickCell?.() : null;
+    if (movePick && isInsideGrid(movePick.x, movePick.y, this.map.width, this.map.height)) {
+      const pickedGfx = this.add.graphics();
+      const px = movePick.x * TILE_SIZE;
+      const py = movePick.y * TILE_SIZE;
+      pickedGfx.fillStyle(0x5cb3ff, 0.2);
+      pickedGfx.fillRect(px + 2, py + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+      pickedGfx.lineStyle(3, 0x5cb3ff, 1);
+      pickedGfx.strokeRect(px + 2, py + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+      pickedGfx.setDepth(52);
+      this.terrainContainer.add(pickedGfx);
+    }
+
     this.debugOverlay?.redraw();
+    this.refreshBlueBarracksHpBar();
+  }
+
+  refreshBlueBarracksHpBar() {
+    this._homeHpBar?.destroy();
+    this._homeHpBar = null;
+    this.blueBarracksHpRoot.removeAll(true);
+
+    const hb = this.map.points?.homeBarracks;
+    if (!hb || typeof hb.x !== "number" || typeof hb.y !== "number") {
+      return;
+    }
+    if (!this.textures.exists("bigBarBase") || !this.textures.exists("bigBarFill")) {
+      return;
+    }
+
+    const pos = cellToWorld(hb.x, hb.y);
+    const api = createBlueBarracksHpBar(this, pos.x, pos.y - blueBarracksHpBarYOffset());
+    if (!api) {
+      return;
+    }
+    this.blueBarracksHpRoot.add(api.container);
+    this._homeHpBar = api;
+    api.setRatio(this.gameState.lives / STARTING_LIVES);
+    api.setValues(this.gameState.lives, STARTING_LIVES);
   }
 
   update(_time, delta) {
+    syncUnitHpBars(this);
     if (this.gameState.paused) {
       return;
     }
@@ -414,6 +464,8 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.gameState.wave = this.waveSystem.waveIndex;
+    this._homeHpBar?.setRatio(this.gameState.lives / STARTING_LIVES);
+    this._homeHpBar?.setValues(this.gameState.lives, STARTING_LIVES);
     this.hud.render(this.gameState);
   }
 }

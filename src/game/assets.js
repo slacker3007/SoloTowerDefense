@@ -3,6 +3,7 @@ import { TILE_SIZE } from "./constants";
 const tinySwordsRoot = "TinySwords";
 
 const terrainRoot = `${tinySwordsRoot}/Terrain/Tileset`;
+const barsRoot = `${tinySwordsRoot}/UI Elements/UI Elements/Bars`;
 
 export const spriteSheets = [
   {
@@ -50,12 +51,20 @@ export const spriteSheets = [
     path: `${tinySwordsRoot}/Units/Red Units/Warrior/Warrior_Run.png`,
     frameConfig: { frameWidth: 192, frameHeight: 192 },
   },
+  /** BigBar_Base 320×64 = (5×64)×64: frames 0=left, 2=tile middle (repeat), 4=right; 1 and 3 are blank. */
+  {
+    key: "bigBarBase",
+    path: `${barsRoot}/BigBar_Base.png`,
+    frameConfig: { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE },
+  },
 ];
 
 export const standaloneImages = [
   { key: "waterBackground", path: `${terrainRoot}/Water Background color.png` },
   { key: "blueBarracks", path: `${tinySwordsRoot}/Buildings/Blue Buildings/Barracks.png` },
   { key: "redBarracks", path: `${tinySwordsRoot}/Buildings/Red Buildings/Barracks.png` },
+  { key: "blueTower", path: `${tinySwordsRoot}/Buildings/Blue Buildings/Tower.png` },
+  { key: "bigBarFill", path: `${barsRoot}/BigBar_Fill.png` },
 ];
 
 export const animationDefaults = {

@@ -672,9 +672,8 @@ export class EditorPanel {
 
     let moveLine = "";
     if (e.tool === "moveBuilding") {
-      moveLine = e.movePickCell
-        ? `Move: picked (${e.movePickCell.x}, ${e.movePickCell.y}) — click destination`
-        : "Move: click a barracks";
+      const picked = e.getMovePickCell();
+      moveLine = e.getMoveStatus() || (picked ? `Move: picked (${picked.x}, ${picked.y}) — click destination` : "Move: click a barracks");
     }
 
     let selLine = "";

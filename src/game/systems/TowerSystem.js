@@ -11,14 +11,25 @@ export class TowerSystem {
 
   tryPlaceTower(cellX, cellY, gameState) {
     const key = `${cellX},${cellY}`;
-    if (!isBuildable(this.map, cellX, cellY) || this.cellOccupancy.has(key) || gameState.gold < this.towerCost) {
+    const buildable = isBuildable(this.map, cellX, cellY);
+    const onEnemyPath = this.map.pathMask?.[cellY]?.[cellX] === 1;
+    const occupied = this.cellOccupancy.has(key);
+    const enoughGold = gameState.gold >= this.towerCost;
+    if (!buildable || onEnemyPath || occupied || !enoughGold) {
       return false;
     }
 
     gameState.gold -= this.towerCost;
     this.cellOccupancy.add(key);
     const world = cellToWorld(cellX, cellY);
-    const sprite = this.scene.add.rectangle(world.x, world.y, 30, 30, 0x44762d);
+    let sprite;
+    if (this.scene.textures.exists("blueTower")) {
+      sprite = this.scene.add.image(world.x, world.y, "blueTower");
+      sprite.setDisplaySize(36, 36);
+      sprite.setDepth(18);
+    } else {
+      sprite = this.scene.add.rectangle(world.x, world.y, 30, 30, 0x3d69d6);
+    }
     if (this.scene.worldRoot) {
       this.scene.worldRoot.add(sprite);
     }
