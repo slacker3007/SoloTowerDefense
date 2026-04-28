@@ -9,7 +9,7 @@ import {
   TILE_SIZE,
 } from "../game/constants";
 import { createTinySwordsAnimations, hasTinySwordsFolderHint } from "../game/assets";
-import { map001 } from "../game/maps/map-001";
+import { createFreshMap001 } from "../game/maps/map-001";
 import { deriveLayers } from "../game/maps/elevation";
 import {
   cellToWorld,
@@ -53,7 +53,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   create() {
-    this.map = map001;
+    this.map = createFreshMap001();
     this.gameState = {
       gold: STARTING_GOLD,
       lives: STARTING_LIVES,
@@ -66,7 +66,7 @@ export class GameScene extends Phaser.Scene {
     ensureMapTilesets(this.map);
     ensureMapOverrideGrids(this.map);
     ensurePathMaskGrid(this.map);
-    this.editor = new MapEditor(this, this.map);
+    this.editor = new MapEditor(this, this.map, { hydrateFromStorage: false });
     this.editorPanel = new EditorPanel(this.editor);
 
     this.worldRoot = this.add.container(0, 0);

@@ -1,1 +1,1 @@
-in editor moving buildings is broken - we need to improve so we can select a building it is mark with highlight and we place in new position
+FIxed - in editor moving buildings is broken - we need to improve so we can select a building it is mark with highlight and we place in new position

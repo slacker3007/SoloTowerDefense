@@ -17,6 +17,8 @@ export class Hud {
     this._actionButtons = [];
     this._topVisible = true;
     this._bottomVisible = true;
+    this._lockedWidth = scene.scale.width;
+    this._lockedHeight = scene.scale.height;
 
     this.topBackground = scene.add.rectangle(0, 0, scene.scale.width, this.topBarHeight, 0x000000, 0.72);
     this.topBackground.setOrigin(0, 0);
@@ -105,8 +107,7 @@ export class Hud {
       this.towersText,
       ...this.bottomUiObjects,
     ];
-    this.layout(scene.scale.width, scene.scale.height);
-    this.scene.scale.on("resize", this.handleResize, this);
+    this.layout(this._lockedWidth, this._lockedHeight);
   }
 
   createButton(label, interactive, onClick = null) {
@@ -137,11 +138,7 @@ export class Hud {
     return Math.max(min, Math.min(max, value));
   }
 
-  handleResize(gameSize) {
-    this.layout(gameSize.width, gameSize.height);
-  }
-
-  layout(width, height) {
+  layout(width = this._lockedWidth, height = this._lockedHeight) {
     this.applyVisibilityState();
     const topHeight = this.clamp(Math.round(height * 0.072), 48, 96);
     const maxBottom = Math.max(150, height - topHeight - 96);
@@ -179,30 +176,63 @@ export class Hud {
     this.hpText.setPosition(this.goldText.x - this.goldText.width - statGap, centerY);
 
     const bottomY = Math.max(0, height - activeBottomHeight);
-    const panelPadding = 14;
-    const minimapW = this.clamp(Math.round(width * 0.2), 120, 220);
-    const minimapH = this.clamp(Math.round(this.bottomBarHeight * 0.6), 90, Math.max(90, this.bottomBarHeight - panelPadding * 2));
+    let panelPadding = this.clamp(Math.round(width * 0.015), 8, 14);
+    const compactBottom = width < 760 || this.bottomBarHeight < 190;
+    if (compactBottom) {
+      panelPadding = Math.max(6, panelPadding - 2);
+    }
+
+    const minimapW = this.clamp(Math.round(width * 0.2), compactBottom ? 96 : 120, 220);
+    const minimapH = this.clamp(
+      Math.round(this.bottomBarHeight * (compactBottom ? 0.5 : 0.6)),
+      compactBottom ? 78 : 90,
+      Math.max(compactBottom ? 78 : 90, this.bottomBarHeight - panelPadding * 2),
+    );
     this.minimapFrame.setSize(minimapW, minimapH);
     this.minimapFrame.setPosition(panelPadding, bottomY + panelPadding);
 
-    const selectionX = this.minimapFrame.x + this.minimapFrame.width + 18;
+    let selectionGap = compactBottom ? 10 : 18;
+    let selectionX = this.minimapFrame.x + this.minimapFrame.width + selectionGap;
     this.selectedTitleText.setPosition(selectionX, bottomY + panelPadding + selectedTitleSize * 0.8);
     this.selectedHpText.setPosition(selectionX, this.selectedTitleText.y + selectedInfoSize * 1.7);
     this.selectedCellText.setPosition(selectionX, this.selectedHpText.y + selectedInfoSize * 1.5);
 
     const gridCols = 4;
-    let gridCellW = this.clamp(Math.round(width * 0.085), 58, 96);
+    let gridCellW = this.clamp(Math.round(width * 0.085), compactBottom ? 50 : 58, 96);
     const gridCellH = this.clamp(Math.round(this.bottomBarHeight * 0.17), 34, 52);
     let gridGapX = this.clamp(Math.round(gridCellW * 0.1), 4, 10);
     const gridGapY = this.clamp(Math.round(gridCellH * 0.18), 5, 10);
-    const maxGridWidth = Math.max(220, width - panelPadding * 2);
+    const maxGridWidth = Math.max(200, width - panelPadding * 2);
     const requiredGridWidth = gridCols * gridCellW + (gridCols - 1) * gridGapX;
     if (requiredGridWidth > maxGridWidth) {
-      gridCellW = Math.max(52, Math.floor((maxGridWidth - (gridCols - 1) * gridGapX) / gridCols));
+      gridCellW = Math.max(46, Math.floor((maxGridWidth - (gridCols - 1) * gridGapX) / gridCols));
       gridGapX = this.clamp(Math.round(gridCellW * 0.08), 3, 8);
     }
     const actionFontSize = this.clamp(Math.round(gridCellH * 0.38), 12, 16);
-    const gridStartX = width - panelPadding - gridCols * gridCellW - (gridCols - 1) * gridGapX;
+    let gridStartX = width - panelPadding - gridCols * gridCellW - (gridCols - 1) * gridGapX;
+    const gridLeftBound = this.minimapFrame.x + this.minimapFrame.width + panelPadding;
+    if (gridStartX < gridLeftBound) {
+      const freeW = Math.max(180, width - panelPadding - gridLeftBound);
+      gridCellW = Math.max(42, Math.floor((freeW - (gridCols - 1) * gridGapX) / gridCols));
+      gridStartX = width - panelPadding - gridCols * gridCellW - (gridCols - 1) * gridGapX;
+      selectionGap = compactBottom ? 6 : 10;
+      selectionX = this.minimapFrame.x + this.minimapFrame.width + selectionGap;
+      this.selectedTitleText.setPosition(selectionX, this.selectedTitleText.y);
+      this.selectedHpText.setPosition(selectionX, this.selectedHpText.y);
+      this.selectedCellText.setPosition(selectionX, this.selectedCellText.y);
+    }
+
+    const selectionRightBound = gridStartX - panelPadding;
+    const selectionFits = selectionRightBound - selectionX >= 130;
+    if (!selectionFits) {
+      this.selectedCellText.setVisible(false);
+      this.selectedHpText.setVisible(true);
+      this.selectedTitleText.setVisible(true);
+    } else {
+      if (this._bottomVisible) {
+        this.selectedCellText.setVisible(true);
+      }
+    }
     const gridStartY = bottomY + panelPadding;
     for (let i = 0; i < this._actionButtons.length; i += 1) {
       const col = i % gridCols;
@@ -214,7 +244,7 @@ export class Hud {
         .setStyle({
         fontSize: `${actionFontSize}px`,
         padding: {
-          x: this.clamp(Math.round(gridCellW * 0.12), 6, 12),
+          x: this.clamp(Math.round(gridCellW * 0.12), 5, 12),
           y: this.clamp(Math.round(gridCellH * 0.15), 4, 8),
         },
       });
@@ -242,12 +272,12 @@ export class Hud {
 
   setBottomVisible(visible) {
     this._bottomVisible = Boolean(visible);
-    this.layout(this.scene.scale.width, this.scene.scale.height);
+    this.layout();
   }
 
   setTopVisible(visible) {
     this._topVisible = Boolean(visible);
-    this.layout(this.scene.scale.width, this.scene.scale.height);
+    this.layout();
   }
 
   getUiObjects() {
@@ -271,7 +301,7 @@ export class Hud {
     this.goldText.setText(`Gold: ${state.gold}`);
     this.towersText.setText(`Towers: ${towerCount}`);
     this.updateSelectionText();
-    this.layout(this.scene.scale.width, this.scene.scale.height);
+    this.layout();
   }
 
   updateSelectionText() {

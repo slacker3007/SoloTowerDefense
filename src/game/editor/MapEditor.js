@@ -17,8 +17,9 @@ export class MapEditor {
   /**
    * @param {*} scene Phaser scene with gameState, map, redrawTerrain, syncEnemyBarracksTargets, pointerToCell, hud
    * @param {*} map
+   * @param {{ hydrateFromStorage?: boolean }} [options]
    */
-  constructor(scene, map) {
+  constructor(scene, map, options = {}) {
     this.scene = scene;
     this.map = map;
     ensureMapTilesets(this.map);
@@ -69,7 +70,8 @@ export class MapEditor {
     this._boundKeyDown = (event) => this._onKeyDown(event);
     scene.input.keyboard?.on("keydown", this._boundKeyDown);
 
-    this._loadMapFromStorage();
+    this._hydrateFromStorage = Boolean(options.hydrateFromStorage);
+    this._didHydrateFromStorage = false;
   }
 
   _cellKey(x, y) {
@@ -146,6 +148,10 @@ export class MapEditor {
     if (value) {
       this._pausedBeforeEditor = gs.paused;
       gs.paused = true;
+      if (this._hydrateFromStorage && !this._didHydrateFromStorage) {
+        this._didHydrateFromStorage = true;
+        this._loadMapFromStorage();
+      }
     } else {
       gs.paused = this._pausedBeforeEditor;
     }
@@ -394,6 +400,12 @@ export class MapEditor {
       }
       const ok = this.importMapData(parsed.map);
       if (!ok) {
+        const fresh = createFreshMap001();
+        copyMapStateFrom(this.map, fresh);
+        syncBarracksPointsFromBuildings(this.map);
+        this.scene.redrawTerrain();
+        this.scene.syncEnemyBarracksTargets();
+        localStorage.removeItem(MAP_STORAGE_KEY);
         return;
       }
       this.isDirty = false;

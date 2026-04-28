@@ -93,5 +93,3 @@ function mapFromSerialized(data) {
 export function createFreshMap001() {
   return mapFromSerialized(JSON.parse(JSON.stringify(defaultMapJson)));
 }
-
-export const map001 = createFreshMap001();

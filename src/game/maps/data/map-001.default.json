@@ -7,14 +7,13 @@
   "points": {
     "homeBarracks": {
       "x": 10,
-      "y": 3
+      "y": 2
     },
     "enemyBarracks": {
       "x": 10,
-      "y": 20
+      "y": 19
     }
   },
-  "pathMask": [[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]],
   "tilesets": {
     "shore": "default",
     "plateau": "rocks"
@@ -74,31 +73,9 @@
       1,
       1,
       2,
-      2,
-      2,
-      2,
-      2,
-      1,
-      1,
-      1,
-      1,
-      1,
-      0,
-      0
-    ],
-    [
-      0,
-      0,
-      1,
-      1,
-      1,
-      1,
-      1,
       1,
       2,
-      2,
-      2,
-      2,
+      1,
       2,
       1,
       1,
@@ -117,11 +94,33 @@
       1,
       1,
       1,
+      1,
       2,
       2,
       2,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
       2,
-      2,
+      1,
+      1,
       1,
       1,
       1,
@@ -140,10 +139,10 @@
       1,
       1,
       2,
+      1,
+      1,
       2,
-      2,
-      2,
-      2,
+      1,
       1,
       1,
       1,
@@ -737,7 +736,7 @@
       0,
       0,
       0,
-      1,
+      0,
       0,
       0,
       0,
@@ -1124,28 +1123,6 @@
     ]
   ],
   "buildings": [
-    [
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null
-    ],
     [
       null,
       null,
@@ -1673,6 +1650,28 @@
       null,
       null,
       null
+    ],
+    [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
     ]
   ],
   "tileOverrides": [
@@ -1723,8 +1722,341 @@
     [
       null,
       null,
+      {
+        "sheet": "terrainColor1",
+        "frame": 5
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 6
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 6
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 6
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 6
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 6
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 6
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 6
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 6
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 6
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 6
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 6
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 33
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 33
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 33
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 7
+      },
+      null,
+      null
+    ],
+    [
       null,
       null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      {
+        "sheet": "terrainColor6",
+        "frame": 15
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 15
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 15
+      },
+      null,
+      null,
+      null
+    ],
+    [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      {
+        "sheet": "terrainColor6",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 15
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 15
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 15
+      },
+      null,
+      null,
+      null
+    ],
+    [
+      null,
+      null,
+      null,
+      {
+        "sheet": "terrainColor1",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 15
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 15
+      },
+      null,
+      null,
+      null
+    ],
+    [
+      null,
+      null,
+      null,
+      {
+        "sheet": "terrainColor1",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 15
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 15
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 15
+      },
+      null,
+      null,
+      null
+    ],
+    [
+      null,
+      null,
+      null,
+      {
+        "sheet": "terrainColor6",
+        "frame": 15
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 15
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 15
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 15
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 15
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 15
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 15
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 15
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 15
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 15
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 15
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 15
+      },
+      null,
+      null,
+      null
+    ],
+    [
+      null,
+      null,
+      null,
+      {
+        "sheet": "terrainColor6",
+        "frame": 15
+      },
       null,
       null,
       null,
@@ -1746,29 +2078,10 @@
       null,
       null,
       null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null
-    ],
-    [
-      null,
-      null,
-      null,
-      null,
+      {
+        "sheet": "terrainColor6",
+        "frame": 15
+      },
       null,
       null,
       null,
@@ -1790,6 +2103,131 @@
       null,
       null,
       null,
+      {
+        "sheet": "terrainColor6",
+        "frame": 15
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 10
+      },
+      null,
+      null,
+      null
+    ],
+    [
+      null,
+      null,
+      null,
+      {
+        "sheet": "terrainColor6",
+        "frame": 15
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 10
+      },
+      null,
+      null,
+      null
+    ],
+    [
       null,
       null,
       null,
@@ -1804,6 +2242,15 @@
       null,
       null,
       null,
+      null,
+      {
+        "sheet": "terrainColor1",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 10
+      },
       null,
       null,
       null
@@ -1825,29 +2272,10 @@
       null,
       null,
       null,
-      null,
-      null,
-      null,
-      null
-    ],
-    [
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
+      {
+        "sheet": "terrainColor6",
+        "frame": 10
+      },
       null,
       null,
       null
@@ -1856,20 +2284,62 @@
       null,
       null,
       null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
+      {
+        "sheet": "terrainColor1",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 10
+      },
       null,
       null,
       null
@@ -1878,20 +2348,62 @@
       null,
       null,
       null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
+      {
+        "sheet": "terrainColor6",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 10
+      },
       null,
       null,
       null
@@ -1900,95 +2412,10 @@
       null,
       null,
       null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null
-    ],
-    [
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null
-    ],
-    [
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null
-    ],
-    [
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null
-    ],
-    [
-      null,
-      null,
-      null,
-      null,
+      {
+        "sheet": "terrainColor6",
+        "frame": 10
+      },
       null,
       null,
       null,
@@ -2010,7 +2437,69 @@
       null,
       null,
       null,
+      {
+        "sheet": "terrainColor6",
+        "frame": 10
+      },
       null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      null,
+      null,
+      {
+        "sheet": "terrainColor1",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 15
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 10
+      },
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      {
+        "sheet": "terrainColor1",
+        "frame": 15
+      },
+      null,
+      null
+    ],
+    [
+      null,
+      null,
+      null,
+      {
+        "sheet": "terrainColor6",
+        "frame": 15
+      },
       null,
       null,
       null,
@@ -2032,29 +2521,10 @@
       null,
       null,
       null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null
-    ],
-    [
-      null,
-      null,
-      null,
-      null,
+      {
+        "sheet": "terrainColor6",
+        "frame": 15
+      },
       null,
       null,
       null,
@@ -2076,80 +2546,38 @@
       null,
       null,
       null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null
-    ],
-    [
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null
-    ],
-    [
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null
-    ],
-    [
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
+      {
+        "sheet": "terrainColor6",
+        "frame": 15
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 15
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 15
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 15
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 15
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 15
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 15
+      },
+      {
+        "sheet": "terrainColor6",
+        "frame": 10
+      },
       null,
       null,
       null,
@@ -2287,10 +2715,1016 @@
       null,
       null,
       null,
+      {
+        "sheet": "terrainColor1",
+        "frame": 38
+      },
       null,
       null,
       null,
       null,
+      null
+    ],
+    [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      {
+        "sheet": "terrainColor1",
+        "frame": 16
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 42
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 42
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 42
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 17
+      },
+      null,
+      null
+    ],
+    [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      {
+        "sheet": "terrainColor1",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 10
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 39
+      },
+      null,
+      null,
+      {
+        "sheet": "terrainColor1",
+        "frame": 17
+      },
+      null,
+      null
+    ],
+    [
+      null,
+      null,
+      null,
+      {
+        "sheet": "terrainColor1",
+        "frame": 24
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 24
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 24
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 24
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 24
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 24
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 24
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 24
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 24
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 24
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 25
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 48
+      },
+      null,
+      null,
+      {
+        "sheet": "terrainColor1",
+        "frame": 17
+      },
+      null,
+      null
+    ],
+    [
+      null,
+      null,
+      {
+        "sheet": "terrainColor1",
+        "frame": 17
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 42
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 42
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 42
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 42
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 42
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 42
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 42
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 42
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 42
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 42
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 43
+      },
+      null,
+      null,
+      null,
+      {
+        "sheet": "terrainColor1",
+        "frame": 17
+      },
+      null,
+      null
+    ],
+    [
+      null,
+      null,
+      {
+        "sheet": "terrainColor1",
+        "frame": 17
+      },
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      {
+        "sheet": "terrainColor1",
+        "frame": 13
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 22
+      },
+      null,
+      null,
+      null,
+      null,
+      null,
+      {
+        "sheet": "terrainColor1",
+        "frame": 17
+      },
+      null,
+      null
+    ],
+    [
+      null,
+      null,
+      {
+        "sheet": "terrainColor1",
+        "frame": 17
+      },
+      null,
+      {
+        "sheet": "terrainColor1",
+        "frame": 5
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 6
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 6
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 6
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 6
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 6
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 6
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 6
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 6
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 6
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 6
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 6
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 6
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 16
+      },
+      null,
+      null
+    ],
+    [
+      null,
+      null,
+      {
+        "sheet": "terrainColor1",
+        "frame": 17
+      },
+      null,
+      {
+        "sheet": "terrainColor1",
+        "frame": 23
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 24
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 24
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 24
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 24
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 24
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 24
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 24
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 24
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 24
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 24
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 24
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 24
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 16
+      },
+      null,
+      null
+    ],
+    [
+      null,
+      null,
+      {
+        "sheet": "terrainColor1",
+        "frame": 17
+      },
+      null,
+      {
+        "sheet": "terrainColor1",
+        "frame": 41
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 42
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 42
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 42
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 42
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 42
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 42
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 42
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 42
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 42
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 42
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 42
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 42
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 17
+      },
+      null,
+      null
+    ],
+    [
+      null,
+      null,
+      {
+        "sheet": "terrainColor1",
+        "frame": 17
+      },
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      {
+        "sheet": "terrainColor1",
+        "frame": 17
+      },
+      null,
+      null
+    ],
+    [
+      null,
+      null,
+      {
+        "sheet": "terrainColor1",
+        "frame": 14
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 6
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 6
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 6
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 6
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 6
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 6
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 6
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 6
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 6
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 6
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 6
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 6
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 7
+      },
+      null,
+      {
+        "sheet": "terrainColor1",
+        "frame": 17
+      },
+      null,
+      null
+    ],
+    [
+      null,
+      null,
+      {
+        "sheet": "terrainColor1",
+        "frame": 14
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 24
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 24
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 24
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 24
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 24
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 24
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 24
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 24
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 24
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 24
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 24
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 24
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 25
+      },
+      null,
+      {
+        "sheet": "terrainColor1",
+        "frame": 17
+      },
+      null,
+      null
+    ],
+    [
+      null,
+      null,
+      {
+        "sheet": "terrainColor1",
+        "frame": 17
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 42
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 42
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 42
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 42
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 42
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 42
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 42
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 42
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 42
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 42
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 42
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 42
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 43
+      },
+      null,
+      {
+        "sheet": "terrainColor1",
+        "frame": 17
+      },
+      null,
+      null
+    ],
+    [
+      null,
+      null,
+      {
+        "sheet": "terrainColor1",
+        "frame": 17
+      },
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      {
+        "sheet": "terrainColor1",
+        "frame": 17
+      },
+      null,
+      null
+    ],
+    [
+      null,
+      null,
+      {
+        "sheet": "terrainColor1",
+        "frame": 17
+      },
+      null,
+      {
+        "sheet": "terrainColor1",
+        "frame": 5
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 6
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 6
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 6
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 6
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 6
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 6
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 6
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 6
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 6
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 6
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 6
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 6
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 16
+      },
+      null,
+      null
+    ],
+    [
+      null,
+      null,
+      {
+        "sheet": "terrainColor1",
+        "frame": 26
+      },
+      null,
+      {
+        "sheet": "terrainColor1",
+        "frame": 23
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 24
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 24
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 24
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 24
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 24
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 24
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 24
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 24
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 24
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 24
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 24
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 24
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 25
+      },
+      null,
+      null
+    ],
+    [
+      null,
+      null,
+      {
+        "sheet": "terrainColor1",
+        "frame": 44
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 31
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 41
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 42
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 42
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 42
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 42
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 42
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 42
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 42
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 42
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 42
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 42
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 42
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 42
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 43
+      },
+      null,
+      null
+    ],
+    [
+      null,
+      null,
+      {
+        "sheet": "terrainColor1",
+        "frame": 40
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 31
+      },
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      {
+        "sheet": "terrainColor1",
+        "frame": 40
+      },
+      null,
+      null
+    ],
+    [
+      null,
+      null,
+      {
+        "sheet": "terrainColor1",
+        "frame": 40
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 31
+      },
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      {
+        "sheet": "terrainColor1",
+        "frame": 31
+      },
+      null,
+      null
+    ],
+    [
+      null,
+      null,
+      {
+        "sheet": "terrainColor1",
+        "frame": 40
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 31
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 31
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 31
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 31
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 31
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 31
+      },
+      {
+        "sheet": "terrainColor1",
+        "frame": 31
+      },
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      {
+        "sheet": "terrainColor1",
+        "frame": 31
+      },
       null,
       null
     ],
@@ -2359,424 +3793,558 @@
       null,
       null,
       null
+    ]
+  ],
+  "pathMask": [
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
     ],
     [
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
     ],
     [
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
     ],
     [
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
     ],
     [
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      1,
+      1,
+      1,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0
     ],
     [
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      1,
+      0,
+      0,
+      0,
+      0
     ],
     [
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0
     ],
     [
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null
+      0,
+      0,
+      0,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      0,
+      0,
+      0,
+      0
     ],
     [
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
     ],
     [
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
     ],
     [
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
     ],
     [
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null
+      0,
+      0,
+      0,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      0,
+      0,
+      0
     ],
     [
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0
     ],
     [
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0
     ],
     [
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0
     ],
     [
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null
+      0,
+      0,
+      0,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      0,
+      0,
+      0
     ],
     [
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
     ],
     [
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
     ],
     [
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
     ],
     [
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
     ]
   ]
 }
