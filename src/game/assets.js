@@ -71,6 +71,7 @@ export const standaloneImages = [
   { key: "blueTower", path: `${tinySwordsRoot}/Buildings/Blue Buildings/Tower.png` },
   { key: "buildIcon01", path: `${tinySwordsRoot}/UI Elements/UI Elements/Icons/Icon_01.png` },
   { key: "buildIcon05", path: `${tinySwordsRoot}/UI Elements/UI Elements/Icons/Icon_05.png` },
+  { key: "buildIcon06", path: `${tinySwordsRoot}/UI Elements/UI Elements/Icons/Icon_06.png` },
   { key: "hammerIcon08", path: `${tinySwordsRoot}/UI Elements/UI Elements/Icons/Icon_08.png` },
   { key: "sellIcon03", path: `${tinySwordsRoot}/UI Elements/UI Elements/Icons/Icon_03.png` },
   { key: "bigBarFill", path: `${barsRoot}/BigBar_Fill.png` },

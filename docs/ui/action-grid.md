@@ -56,7 +56,7 @@ Action definitions should use:
   actionId: "craftTower",
   label: "",          // use empty string for icon-only button
   enabled: true,
-  iconKey: "buildIcon05", // optional
+  iconKey: "buildIcon06", // optional
 }
 ```
 
@@ -71,7 +71,7 @@ Placement rules:
 - `barracksMain`
   - `(1,1)`: Icon_01 (`buildIcon01`) -> `openCraftMenu`
 - `barracksCraftMenu`
-  - `(1,1)`: Icon_05 (`buildIcon05`) -> `craftTower`
+  - `(1,1)`: Icon_06 (`buildIcon06`) -> `craftTower`
   - `(3,4)`: Icon_08 (`hammerIcon08`) -> `backFromCraft`
 - `towerMenu`
   - `(1,1)`: Sell (`sellTower`)

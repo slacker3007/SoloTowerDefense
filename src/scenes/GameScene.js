@@ -286,10 +286,11 @@ export class GameScene extends Phaser.Scene {
     }
     if (selected.kind === "barracks" && selected.label === "Blue Barracks") {
       if (this._hudActionMode === "barracksCraftMenu") {
-        this.hud.setActionSlots(this.buildHudActionSlots([
-          { innerRow: 1, innerCol: 1, actionId: "craftTower", label: "", enabled: true, iconKey: "buildIcon05" },
+        const slots = this.buildHudActionSlots([
+          { innerRow: 1, innerCol: 1, actionId: "craftTower", label: "", enabled: true, iconKey: "buildIcon06" },
           { innerRow: 3, innerCol: 4, actionId: "backFromCraft", label: "", enabled: true, iconKey: "hammerIcon08" },
-        ]));
+        ]);
+        this.hud.setActionSlots(slots);
         return;
       }
       this.hud.setActionSlots(this.buildHudActionSlots([
@@ -473,6 +474,16 @@ export class GameScene extends Phaser.Scene {
         return;
       }
       if (this.gameState.paused) {
+        return;
+      }
+      const margins = this.hud?.getOcclusionMargins?.() ?? { top: 0, bottom: 0, left: 0, right: 0 };
+      const viewW = this.scale.width;
+      const viewH = this.scale.height;
+      const inTopHud = margins.top > 0 && pointer.y <= margins.top;
+      const inBottomHud = margins.bottom > 0 && pointer.y >= viewH - margins.bottom;
+      const inLeftHud = margins.left > 0 && pointer.x <= margins.left;
+      const inRightHud = margins.right > 0 && pointer.x >= viewW - margins.right;
+      if (inTopHud || inBottomHud || inLeftHud || inRightHud) {
         return;
       }
       if (this._pendingPlacement?.type === "tower") {
