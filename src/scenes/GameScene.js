@@ -50,6 +50,9 @@ export class GameScene extends Phaser.Scene {
     this._lastPanX = 0;
     this._lastPanY = 0;
     this.selectedBuilding = null;
+    this._hudActionMode = "empty";
+    this._pendingPlacement = null;
+    this._towerGhost = null;
   }
 
   create() {
@@ -89,11 +92,6 @@ export class GameScene extends Phaser.Scene {
     this.hud = new Hud(this, {
       maxLives: STARTING_LIVES,
       onMenuClick: () => this.togglePause(),
-      onBuildClick: () => {
-        if (this.selectedBuilding) {
-          console.log("Build action clicked for:", this.selectedBuilding.label);
-        }
-      },
     });
     this.debugOverlay = new DebugOverlay(this);
     this.debugOverlay.redraw();
@@ -115,6 +113,7 @@ export class GameScene extends Phaser.Scene {
     this.bindInput();
     ensureUnitHpOverlay(this);
     this.syncHudForEditorMode();
+    this.updateHudActions();
     this.hud.render(
       this.gameState,
       this.towerSystem.towers.length,
@@ -125,6 +124,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   shutdown() {
+    this.clearTowerPlacement();
     this._homeHpBar?.destroy();
     this._homeHpBar = null;
     this.blueBarracksHpRoot?.destroy(true);
@@ -151,12 +151,7 @@ export class GameScene extends Phaser.Scene {
    * @returns {Record<string, unknown> | null}
    */
   getTowerAtCell(cellX, cellY) {
-    const world = cellToWorld(cellX, cellY);
-    return (
-      this.towerSystem.towers.find(
-        (tower) => Math.abs(tower.x - world.x) <= TILE_SIZE * 0.25 && Math.abs(tower.y - world.y) <= TILE_SIZE * 0.25,
-      ) ?? null
-    );
+    return this.towerSystem.getTowerAtCell(cellX, cellY);
   }
 
   /**
@@ -209,6 +204,129 @@ export class GameScene extends Phaser.Scene {
 
     this.selectedBuilding = null;
     return false;
+  }
+
+  setHudActionMode(mode) {
+    this._hudActionMode = mode;
+    this.updateHudActions();
+  }
+
+  updateHudActions() {
+    if (!this.hud) {
+      return;
+    }
+    if (this._pendingPlacement?.type === "tower") {
+      this.hud.setActionSlots([]);
+      return;
+    }
+    const selected = this.selectedBuilding;
+    if (!selected) {
+      this.hud.setActionSlots([]);
+      return;
+    }
+    if (selected.kind === "barracks" && selected.label === "Blue Barracks") {
+      if (this._hudActionMode === "barracksCraftMenu") {
+        this.hud.setActionSlots([
+          { label: "Tower", enabled: true, onClick: () => this.handleHudAction("craftTower"), iconKey: "buildIcon01" },
+          { label: "Back", enabled: true, onClick: () => this.handleHudAction("backFromCraft") },
+        ]);
+        return;
+      }
+      this.hud.setActionSlots([
+        {
+          label: "Hammer",
+          enabled: true,
+          onClick: () => this.handleHudAction("openCraftMenu"),
+          iconKey: "hammerIcon08",
+        },
+      ]);
+      return;
+    }
+    if (selected.kind === "tower") {
+      this.hud.setActionSlots([
+        { label: "Sell", enabled: true, onClick: () => this.handleHudAction("sellTower"), iconKey: "sellIcon03" },
+        { label: "Back", enabled: true, onClick: () => this.handleHudAction("clearSelection") },
+      ]);
+      return;
+    }
+    this.hud.setActionSlots([]);
+  }
+
+  handleHudAction(action) {
+    if (action === "openCraftMenu") {
+      this.setHudActionMode("barracksCraftMenu");
+      return;
+    }
+    if (action === "craftTower") {
+      this.startTowerPlacement();
+      return;
+    }
+    if (action === "backFromCraft") {
+      this.setHudActionMode("barracksMain");
+      return;
+    }
+    if (action === "clearSelection") {
+      this.selectedBuilding = null;
+      this.setHudActionMode("empty");
+      this.hud.render(this.gameState, this.towerSystem.towers.length, STARTING_LIVES, this.selectedBuilding, this.getMinimapData());
+      return;
+    }
+    if (action === "sellTower" && this.selectedBuilding?.kind === "tower") {
+      const refund = this.towerSystem.removeTowerAtCell(this.selectedBuilding.cellX, this.selectedBuilding.cellY);
+      if (refund > 0) {
+        this.gameState.gold += refund;
+        this.selectedBuilding = null;
+        this.setHudActionMode("empty");
+        this.debugOverlay.redraw();
+        this.hud.render(
+          this.gameState,
+          this.towerSystem.towers.length,
+          STARTING_LIVES,
+          this.selectedBuilding,
+          this.getMinimapData(),
+        );
+      }
+    }
+  }
+
+  startTowerPlacement() {
+    this._pendingPlacement = { type: "tower" };
+    this._hudActionMode = "empty";
+    this.selectedBuilding = null;
+    const pointer = this.input.activePointer;
+    if (this.textures.exists("blueTower")) {
+      this._towerGhost = this.add.image(pointer.worldX, pointer.worldY, "blueTower");
+      this._towerGhost.setDisplaySize(36, 36);
+      this._towerGhost.setDepth(19);
+      this._towerGhost.setAlpha(0.6);
+    } else {
+      this._towerGhost = this.add.rectangle(pointer.worldX, pointer.worldY, 30, 30, 0x3d69d6, 0.7);
+      this._towerGhost.setDepth(19);
+    }
+    if (this.worldRoot) {
+      this.worldRoot.add(this._towerGhost);
+    }
+    this.updateHudActions();
+  }
+
+  clearTowerPlacement() {
+    this._pendingPlacement = null;
+    this._towerGhost?.destroy?.();
+    this._towerGhost = null;
+  }
+
+  updateTowerGhost(pointer) {
+    if (!this._pendingPlacement || !this._towerGhost) {
+      return;
+    }
+    const cell = this.pointerToCell(pointer);
+    if (!cell) {
+      this._towerGhost.setVisible(false);
+      return;
+    }
+    this._towerGhost.setVisible(true);
+    const world = cellToWorld(cell.x, cell.y);
+    this._towerGhost.setPosition(world.x, world.y);
   }
 
   getMinimapData() {
@@ -301,9 +419,31 @@ export class GameScene extends Phaser.Scene {
       if (this.gameState.paused) {
         return;
       }
+      if (this._pendingPlacement?.type === "tower") {
+        const cell = this.pointerToCell(pointer);
+        if (!cell) {
+          return;
+        }
+        const placed = this.towerSystem.tryPlaceTower(cell.x, cell.y, this.gameState);
+        if (!placed) {
+          return;
+        }
+        this.clearTowerPlacement();
+        this.setHudActionMode("empty");
+        this.debugOverlay.redraw();
+        this.hud.render(
+          this.gameState,
+          this.towerSystem.towers.length,
+          STARTING_LIVES,
+          this.selectedBuilding,
+          this.getMinimapData(),
+        );
+        return;
+      }
       const cell = this.pointerToCell(pointer);
       if (!cell) {
         this.selectedBuilding = null;
+        this.setHudActionMode("empty");
         this.hud.render(
           this.gameState,
           this.towerSystem.towers.length,
@@ -316,6 +456,13 @@ export class GameScene extends Phaser.Scene {
 
       const selected = this.selectBuildingAtCell(cell.x, cell.y);
       if (selected) {
+        if (this.selectedBuilding?.kind === "barracks" && this.selectedBuilding?.label === "Blue Barracks") {
+          this.setHudActionMode("barracksMain");
+        } else if (this.selectedBuilding?.kind === "tower") {
+          this.setHudActionMode("towerMenu");
+        } else {
+          this.setHudActionMode("empty");
+        }
         this.hud.render(
           this.gameState,
           this.towerSystem.towers.length,
@@ -326,11 +473,7 @@ export class GameScene extends Phaser.Scene {
         return;
       }
 
-      const placed = this.towerSystem.tryPlaceTower(cell.x, cell.y, this.gameState);
-      if (placed) {
-        this.hud.render(this.gameState, this.towerSystem.towers.length, STARTING_LIVES);
-        this.debugOverlay.redraw();
-      }
+      this.setHudActionMode("empty");
       this.hud.render(
         this.gameState,
         this.towerSystem.towers.length,
@@ -355,6 +498,7 @@ export class GameScene extends Phaser.Scene {
         this._clampCameraScroll();
         return;
       }
+      this.updateTowerGhost(pointer);
       this.editor.handlePointerMove(pointer);
     });
 
@@ -408,6 +552,7 @@ export class GameScene extends Phaser.Scene {
     this.input.keyboard.on("keydown-E", () => {
       this.editor.toggle();
       this.syncHudForEditorMode();
+      this.updateHudActions();
       this.hud.render(
         this.gameState,
         this.towerSystem.towers.length,
@@ -647,6 +792,7 @@ export class GameScene extends Phaser.Scene {
     this.gameState.wave = this.waveSystem.waveIndex;
     this._homeHpBar?.setRatio(this.gameState.lives / STARTING_LIVES);
     this._homeHpBar?.setValues(this.gameState.lives, STARTING_LIVES);
+    this.updateHudActions();
     if (this.selectedBuilding?.kind === "barracks" && this.selectedBuilding?.label === "Blue Barracks") {
       this.selectedBuilding.hpCurrent = this.gameState.lives;
       this.selectedBuilding.hpMax = STARTING_LIVES;

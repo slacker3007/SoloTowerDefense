@@ -47,6 +47,11 @@ export const spriteSheets = [
     frameConfig: { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE },
   },
   {
+    key: "woodTablePixelMap",
+    path: `${tinySwordsRoot}/UI Elements/UI Elements/Wood Table/WoodTable.png`,
+    frameConfig: { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE },
+  },
+  {
     key: "redWarriorRunSheet",
     path: `${tinySwordsRoot}/Units/Red Units/Warrior/Warrior_Run.png`,
     frameConfig: { frameWidth: 192, frameHeight: 192 },
@@ -64,6 +69,9 @@ export const standaloneImages = [
   { key: "blueBarracks", path: `${tinySwordsRoot}/Buildings/Blue Buildings/Barracks.png` },
   { key: "redBarracks", path: `${tinySwordsRoot}/Buildings/Red Buildings/Barracks.png` },
   { key: "blueTower", path: `${tinySwordsRoot}/Buildings/Blue Buildings/Tower.png` },
+  { key: "buildIcon01", path: `${tinySwordsRoot}/UI Elements/UI Elements/Icons/Icon_01.png` },
+  { key: "hammerIcon08", path: `${tinySwordsRoot}/UI Elements/UI Elements/Icons/Icon_08.png` },
+  { key: "sellIcon03", path: `${tinySwordsRoot}/UI Elements/UI Elements/Icons/Icon_03.png` },
   { key: "bigBarFill", path: `${barsRoot}/BigBar_Fill.png` },
 ];
 

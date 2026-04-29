@@ -1,4 +1,5 @@
 import { cellToWorld, isBuildable } from "../maps/tileRules";
+import { TILE_SIZE } from "../constants";
 
 export class TowerSystem {
   constructor(scene, map) {
@@ -45,6 +46,29 @@ export class TowerSystem {
 
     this.towers.push(tower);
     return true;
+  }
+
+  getTowerAtCell(cellX, cellY) {
+    const world = cellToWorld(cellX, cellY);
+    return (
+      this.towers.find(
+        (tower) => Math.abs(tower.x - world.x) <= TILE_SIZE * 0.25 && Math.abs(tower.y - world.y) <= TILE_SIZE * 0.25,
+      ) ?? null
+    );
+  }
+
+  removeTowerAtCell(cellX, cellY) {
+    const tower = this.getTowerAtCell(cellX, cellY);
+    if (!tower) {
+      return 0;
+    }
+    const index = this.towers.indexOf(tower);
+    if (index >= 0) {
+      this.towers.splice(index, 1);
+    }
+    this.cellOccupancy.delete(`${cellX},${cellY}`);
+    tower.sprite?.destroy?.();
+    return Math.floor(this.towerCost * 0.5);
   }
 
   updateCooldowns(deltaSeconds) {

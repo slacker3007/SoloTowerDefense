@@ -1,67 +1,41 @@
 const OVERLAY_KEY = "__unitHpOverlayRoot";
 const INSTANCES_KEY = "__unitHpBarInstances";
+
 const BAR_STYLES = {
   small: {
     width: 38,
     height: 6,
     yOffset: 0,
+    border: 1,
   },
   default: {
     width: 56,
     height: 8,
     yOffset: 0,
+    border: 1,
   },
 };
 
-function clamp01(value) {
-  return Math.max(0, Math.min(1, value));
-}
-
-function resolveOverlayHost(scene) {
-  const canvas = scene?.game?.canvas;
-  if (!canvas || !canvas.parentElement) {
-    return null;
-  }
-  return canvas.parentElement;
-}
-
-function worldToScreen(scene, worldX, worldY) {
-  const cam = scene?.cameras?.main;
-  if (!cam) {
-    return { x: worldX, y: worldY };
-  }
-  const canvas = scene?.game?.canvas;
-  const scaleW = scene?.scale?.width || cam.width || 1;
-  const scaleH = scene?.scale?.height || cam.height || 1;
-  const cssScaleX = canvas?.clientWidth ? canvas.clientWidth / scaleW : 1;
-  const cssScaleY = canvas?.clientHeight ? canvas.clientHeight / scaleH : 1;
-  
-  return {
-    x: (cam.x + (worldX - cam.scrollX - cam.width * 0.5) * cam.zoom + cam.width * 0.5) * cssScaleX,
-    y: (cam.y + (worldY - cam.scrollY - cam.height * 0.5) * cam.zoom + cam.height * 0.5) * cssScaleY,
-  };
-}
-
+/**
+ * @param {Phaser.Scene} scene
+ */
 export function ensureUnitHpOverlay(scene) {
-  const host = resolveOverlayHost(scene);
-  if (!host) {
-    return null;
+  if (scene[OVERLAY_KEY]) {
+    return scene[OVERLAY_KEY];
   }
-  if (host.dataset.unitHpOverlayHost !== "1") {
-    host.dataset.unitHpOverlayHost = "1";
-    if (!host.style.position) {
-      host.style.position = "relative";
-    }
+  const root = scene.add.container(0, 0);
+  root.setDepth(50); // Above units, below HUD
+  scene[OVERLAY_KEY] = root;
+  
+  if (scene.worldRoot) {
+    scene.worldRoot.add(root);
   }
-  const existing = scene[OVERLAY_KEY];
-  if (existing && existing.parentElement === host) {
-    return existing;
+
+  if (scene.uiCamera) {
+    scene.uiCamera.ignore(root);
   }
-  const overlay = document.createElement("div");
-  overlay.className = "unit-hp-overlay";
-  host.appendChild(overlay);
-  scene[OVERLAY_KEY] = overlay;
-  return overlay;
+  
+  return root;
 }
 
 function ensureInstanceSet(scene) {
@@ -72,19 +46,12 @@ function ensureInstanceSet(scene) {
 }
 
 export function syncUnitHpBars(scene) {
-  const items = scene[INSTANCES_KEY];
-  if (!items) {
-    return;
-  }
-  for (const item of items) {
-    item.syncPosition();
-  }
 }
 
 export function destroyUnitHpOverlay(scene) {
-  const overlay = scene[OVERLAY_KEY];
-  if (overlay) {
-    overlay.remove();
+  const root = scene[OVERLAY_KEY];
+  if (root) {
+    root.destroy(true);
     scene[OVERLAY_KEY] = null;
   }
   scene[INSTANCES_KEY]?.clear();
@@ -93,72 +60,57 @@ export function destroyUnitHpOverlay(scene) {
 /**
  * @param {Phaser.Scene} scene
  * @param {{ style?: "small" | "default", worldX: number, worldY: number }} opts
- * @returns {{ container: null, setRatio: (r: number) => void, setWorldPosition: (x:number, y:number) => void, destroy: () => void } | null}
+ * @returns {{ container: Phaser.GameObjects.Container, setRatio: (r: number) => void, setWorldPosition: (x:number, y:number) => void, destroy: () => void } | null}
  */
 export function createUnitHpBar(scene, opts) {
   const style = BAR_STYLES[opts.style ?? "small"];
   if (!style) {
     return null;
   }
-  const overlay = ensureUnitHpOverlay(scene);
-  if (!overlay) {
+  const root = ensureUnitHpOverlay(scene);
+  if (!root) {
     return null;
   }
   const instances = ensureInstanceSet(scene);
 
-  const root = document.createElement("div");
-  const styleKey = opts.style ?? "small";
-  root.className = `unit-hp-bar unit-hp-bar--${styleKey}`;
-  root.style.width = `${style.width}px`;
-  root.style.height = `${style.height}px`;
+  const container = scene.add.container(opts.worldX, opts.worldY);
+  root.add(container);
 
-  const fill = document.createElement("div");
-  fill.className = "unit-hp-bar__fill";
-  root.appendChild(fill);
-  overlay.appendChild(root);
+  // Background/Border
+  const bg = scene.add.rectangle(0, 0, style.width, style.height, 0x000000, 1); // Solid black background
+  bg.setStrokeStyle(2, 0xf6e8c9, 1); // Thicker beige border
+  
+  // Fill
+  const fill = scene.add.rectangle(-style.width / 2 + style.border + 1, 0, style.width - style.border * 2 - 2, style.height - style.border * 2 - 2, 0xdf3737, 1);
+  fill.setOrigin(0, 0.5);
+
+  container.add([bg, fill]);
 
   let ratio = 1;
-  let worldX = opts.worldX;
-  let worldY = opts.worldY + style.yOffset;
-  let alive = true;
 
   const applyRatio = () => {
-    if (!alive) {
-      return;
-    }
-    const next = clamp01(ratio);
-    fill.style.transform = `scaleX(${next})`;
-    root.style.opacity = next <= 0 ? "0" : "1";
-  };
-
-  const applyPosition = () => {
-    if (!alive) {
-      return;
-    }
-    const p = worldToScreen(scene, worldX, worldY);
-    root.style.transform = `translate(${Math.round(p.x)}px, ${Math.round(p.y)}px) translate(-50%, -50%)`;
+    const r = Math.max(0, Math.min(1, ratio));
+    fill.setScale(r, 1);
+    container.setVisible(r > 0);
   };
 
   applyRatio();
-  applyPosition();
-  const instance = { syncPosition: applyPosition };
-  instances.add(instance);
 
-  return {
-    container: null,
+  const api = {
+    container,
     setRatio(r) {
       ratio = r;
       applyRatio();
     },
-    setWorldPosition(xPos, yPos) {
-      worldX = xPos;
-      worldY = yPos + style.yOffset;
-      applyPosition();
+    setWorldPosition(x, y) {
+      container.setPosition(x, y + style.yOffset);
     },
     destroy() {
-      alive = false;
-      instances.delete(instance);
-      root.remove();
+      instances.delete(api);
+      container.destroy(true);
     },
   };
+
+  instances.add(api);
+  return api;
 }
