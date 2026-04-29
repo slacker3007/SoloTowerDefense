@@ -25,11 +25,13 @@ export class TowerSystem {
     const world = cellToWorld(cellX, cellY);
     let sprite;
     if (this.scene.textures.exists("blueTower")) {
-      sprite = this.scene.add.image(world.x, world.y, "blueTower");
-      sprite.setDisplaySize(36, 36);
+      sprite = this.scene.add.image(world.x, world.y + TILE_SIZE / 2, "blueTower");
+      sprite.setOrigin(0.5, 1);
+      sprite.setDisplaySize(TILE_SIZE, TILE_SIZE * 2);
       sprite.setDepth(18);
     } else {
-      sprite = this.scene.add.rectangle(world.x, world.y, 30, 30, 0x3d69d6);
+      sprite = this.scene.add.rectangle(world.x, world.y + TILE_SIZE / 2, TILE_SIZE, TILE_SIZE * 2, 0x3d69d6);
+      sprite.setOrigin(0.5, 1);
     }
     if (this.scene.worldRoot) {
       this.scene.worldRoot.add(sprite);

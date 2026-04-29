@@ -353,11 +353,13 @@ export class GameScene extends Phaser.Scene {
     const pointer = this.input.activePointer;
     if (this.textures.exists("blueTower")) {
       this._towerGhost = this.add.image(pointer.worldX, pointer.worldY, "blueTower");
-      this._towerGhost.setDisplaySize(36, 36);
+      this._towerGhost.setOrigin(0.5, 1);
+      this._towerGhost.setDisplaySize(TILE_SIZE, TILE_SIZE * 2);
       this._towerGhost.setDepth(19);
       this._towerGhost.setAlpha(0.6);
     } else {
-      this._towerGhost = this.add.rectangle(pointer.worldX, pointer.worldY, 30, 30, 0x3d69d6, 0.7);
+      this._towerGhost = this.add.rectangle(pointer.worldX, pointer.worldY, TILE_SIZE, TILE_SIZE * 2, 0x3d69d6, 0.7);
+      this._towerGhost.setOrigin(0.5, 1);
       this._towerGhost.setDepth(19);
     }
     if (this.worldRoot) {
@@ -383,7 +385,7 @@ export class GameScene extends Phaser.Scene {
     }
     this._towerGhost.setVisible(true);
     const world = cellToWorld(cell.x, cell.y);
-    this._towerGhost.setPosition(world.x, world.y);
+    this._towerGhost.setPosition(world.x, world.y + TILE_SIZE / 2);
   }
 
   getMinimapData() {

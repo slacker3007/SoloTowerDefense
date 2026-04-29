@@ -30,6 +30,40 @@ If your filenames differ, update `src/game/assets.js`.
 - Tiny Swords tile guide uses `64x64` tiles and `10fps` animation.
 - Keep consistent tile size in `src/game/constants.js`.
 
+## Towers: visual size vs gameplay footprint
+
+Use this rule for all tower types:
+
+- **Gameplay footprint** stays `1 tile` (`64x64`).
+- **Visual sprite** can be taller (for example `64x128`) to look like a tower.
+- **Anchor** tower sprites at bottom-center: `setOrigin(0.5, 1)`.
+- **Snap position** to tile bottom-center:
+  - world position from `cellToWorld(cellX, cellY)`
+  - render at `x = world.x`, `y = world.y + TILE_SIZE / 2`
+
+This keeps towers readable and tall while allowing adjacent placements on neighboring cells.
+
+### Current implementation reference
+
+- Placement logic and occupancy: `src/game/systems/TowerSystem.js`
+  - Build validity and occupancy (`cellOccupancy`) remain tile-based.
+  - Render uses `setDisplaySize(TILE_SIZE, TILE_SIZE * 2)` and bottom-center origin.
+- Placement ghost preview: `src/scenes/GameScene.js`
+  - Ghost uses the same size/origin/position rules as final placement.
+  - Ghost snaps to tile bottom-center in `updateTowerGhost`.
+
+### Checklist for adding a new tower type
+
+1. Add a new image asset key in `src/game/assets.js`.
+2. Keep occupancy keying tile-based (`cellX,cellY`) in tower placement logic.
+3. Render sprite with:
+   - `setOrigin(0.5, 1)`
+   - `setDisplaySize(TILE_SIZE, TILE_SIZE * 2)` (or another approved tall size)
+   - position at `cellToWorld(...).y + TILE_SIZE / 2`
+4. Apply the same transform to the placement ghost preview.
+5. Keep tower runtime data (`x`,`y`) at tile center for range/combat/minimap consistency.
+6. Verify two neighboring cells can both place towers (no visual size should change footprint).
+
 ## UI: BigBar (blue barracks HP)
 
 - **Base:** `TinySwords/UI Elements/UI Elements/Bars/BigBar_Base.png` — **320×64** pixels, i.e. **(5×64)×64**: one row of five **64×64** cells.
