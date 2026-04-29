@@ -301,7 +301,7 @@ export class GameScene extends Phaser.Scene {
     }
     if (selected.kind === "tower") {
       this.hud.setActionSlots(this.buildHudActionSlots([
-        { innerRow: 1, innerCol: 1, actionId: "sellTower", label: "Sell", enabled: true, iconKey: "sellIcon03" },
+        { innerRow: 1, innerCol: 1, actionId: "sellTower", label: "", enabled: true, iconKey: "sellIcon03" },
         { innerRow: 3, innerCol: 4, actionId: "clearSelection", label: "", enabled: true, iconKey: "hammerIcon08" },
       ]));
       return;
