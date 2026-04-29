@@ -40,6 +40,18 @@ function resolvedTerrainOverride(ov) {
   return normalizeTerrainTileOverride(ov);
 }
 
+/**
+ * @typedef {Object} HudActionPlacement
+ * @property {number} innerRow 1..3 inside the action area
+ * @property {number} innerCol 1..4 inside the action area
+ * @property {string} actionId Action handled by `handleHudAction`
+ * @property {string} label
+ * @property {boolean} [enabled]
+ * @property {string} [iconKey]
+ * @property {number} [iconOffsetX]
+ * @property {number} [iconOffsetY]
+ */
+
 export class GameScene extends Phaser.Scene {
   constructor() {
     super("game");
@@ -211,6 +223,54 @@ export class GameScene extends Phaser.Scene {
     this.updateHudActions();
   }
 
+  /**
+   * Converts coordinate-addressed actions into the 12-slot HUD array.
+   * @param {HudActionPlacement[]} actionDefs
+   * @returns {(Record<string, unknown> | null)[]}
+   */
+  buildHudActionSlots(actionDefs = []) {
+    const rows = 3;
+    const cols = 4;
+    const totalSlots = rows * cols;
+    const slots = Array.from({ length: totalSlots }, () => null);
+    const usedCoords = new Set();
+
+    for (const def of actionDefs) {
+      if (!def || typeof def !== "object") {
+        continue;
+      }
+      const row = Number(def.innerRow);
+      const col = Number(def.innerCol);
+      const rowValid = Number.isInteger(row) && row >= 1 && row <= rows;
+      const colValid = Number.isInteger(col) && col >= 1 && col <= cols;
+      if (!rowValid || !colValid) {
+        console.warn("[HUD] Ignoring action with invalid coordinates:", def);
+        continue;
+      }
+      const key = `${row},${col}`;
+      if (usedCoords.has(key)) {
+        console.warn("[HUD] Ignoring duplicate action coordinate:", key, def);
+        continue;
+      }
+      usedCoords.add(key);
+
+      const slotIndex = (row - 1) * cols + (col - 1);
+      if (typeof def.actionId !== "string" || def.actionId.length === 0) {
+        console.warn("[HUD] Ignoring action without actionId:", def);
+        continue;
+      }
+      slots[slotIndex] = {
+        label: typeof def.label === "string" ? def.label : "",
+        enabled: def.enabled !== false,
+        onClick: () => this.handleHudAction(def.actionId),
+        iconKey: typeof def.iconKey === "string" ? def.iconKey : undefined,
+        iconOffsetX: typeof def.iconOffsetX === "number" ? def.iconOffsetX : undefined,
+        iconOffsetY: typeof def.iconOffsetY === "number" ? def.iconOffsetY : undefined,
+      };
+    }
+    return slots;
+  }
+
   updateHudActions() {
     if (!this.hud) {
       return;
@@ -226,27 +286,23 @@ export class GameScene extends Phaser.Scene {
     }
     if (selected.kind === "barracks" && selected.label === "Blue Barracks") {
       if (this._hudActionMode === "barracksCraftMenu") {
-        this.hud.setActionSlots([
-          { label: "Tower", enabled: true, onClick: () => this.handleHudAction("craftTower"), iconKey: "buildIcon01" },
-          { label: "Back", enabled: true, onClick: () => this.handleHudAction("backFromCraft") },
-        ]);
+        this.hud.setActionSlots(this.buildHudActionSlots([
+          { innerRow: 1, innerCol: 1, actionId: "craftTower", label: "", enabled: true, iconKey: "buildIcon05" },
+          { innerRow: 3, innerCol: 4, actionId: "backFromCraft", label: "", enabled: true, iconKey: "hammerIcon08" },
+        ]));
         return;
       }
-      this.hud.setActionSlots([
-        {
-          label: "Hammer",
-          enabled: true,
-          onClick: () => this.handleHudAction("openCraftMenu"),
-          iconKey: "hammerIcon08",
-        },
-      ]);
+      this.hud.setActionSlots(this.buildHudActionSlots([
+        { innerRow: 1, innerCol: 1, actionId: "openCraftMenu", label: "", enabled: true, iconKey: "buildIcon01" },
+        { innerRow: 3, innerCol: 4, actionId: "clearSelection", label: "", enabled: true, iconKey: "hammerIcon08" },
+      ]));
       return;
     }
     if (selected.kind === "tower") {
-      this.hud.setActionSlots([
-        { label: "Sell", enabled: true, onClick: () => this.handleHudAction("sellTower"), iconKey: "sellIcon03" },
-        { label: "Back", enabled: true, onClick: () => this.handleHudAction("clearSelection") },
-      ]);
+      this.hud.setActionSlots(this.buildHudActionSlots([
+        { innerRow: 1, innerCol: 1, actionId: "sellTower", label: "Sell", enabled: true, iconKey: "sellIcon03" },
+        { innerRow: 3, innerCol: 4, actionId: "clearSelection", label: "", enabled: true, iconKey: "hammerIcon08" },
+      ]));
       return;
     }
     this.hud.setActionSlots([]);
