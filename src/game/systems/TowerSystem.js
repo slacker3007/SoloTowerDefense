@@ -1,6 +1,14 @@
 import { cellToWorld, isBuildable } from "../maps/tileRules";
 import { TILE_SIZE } from "../constants";
-import { economy, getUpgradeOptionsForTower, isValidConversionTarget, toWorldRange, towerCatalog, upgrades } from "../balance";
+import {
+  economy,
+  getTowerTextureKey,
+  getUpgradeOptionsForTower,
+  isValidConversionTarget,
+  toWorldRange,
+  towerCatalog,
+  upgrades,
+} from "../balance";
 
 export class TowerSystem {
   constructor(scene, map) {
@@ -129,6 +137,13 @@ export class TowerSystem {
       tower.effects = [];
       tower.hitCount = 0;
       tower.lifestealPool = 0;
+      const convertedTextureKey = getTowerTextureKey(targetType);
+      if (this.scene.textures.exists(convertedTextureKey) && typeof tower.sprite?.setTexture === "function") {
+        tower.sprite.setTexture(convertedTextureKey);
+        tower.sprite.setOrigin(0.5, 1);
+        tower.sprite.setDisplaySize(TILE_SIZE, TILE_SIZE * 2);
+        tower.sprite.setDepth(18);
+      }
       // #region agent log
       fetch('http://127.0.0.1:7576/ingest/1dec1a9b-9444-4174-b16c-c421bd677924',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'3311f3'},body:JSON.stringify({sessionId:'3311f3',runId:'run1',hypothesisId:'H5',location:'src/game/systems/TowerSystem.js:tryUpgradeTowerAtCell:convert-success',message:'Tower conversion applied',data:{targetType,remainingGold:gameState.gold,newTowerType:tower.type,tier:tower.tier},timestamp:Date.now()})}).catch(()=>{});
       // #endregion

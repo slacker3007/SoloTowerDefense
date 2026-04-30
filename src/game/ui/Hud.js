@@ -11,6 +11,13 @@ export class Hud {
     this.topBarHeight = 48;
     this.bottomBarHeight = 220;
     this.depth = 100;
+    this.rootOffsetX = 0;
+    this.rootOffsetY = 0;
+    this.rootScale = 1;
+    this.actionPanelScale = 1.25;
+    this.actionPanelCorner = "bottom-right";
+    this.actionPanelMarginX = 16;
+    this.actionPanelMarginY = 16;
     this._selectedBuilding = null;
     this._minimapData = null;
     this._actionButtons = [];
@@ -19,16 +26,15 @@ export class Hud {
     this._actionSlotConfigs = Array.from({ length: 12 }, () => null);
     this._topVisible = true;
     this._bottomVisible = true;
+    this.root = scene.add.container(0, 0);
+    this.root.setDepth(this.depth);
+    this.root.setScrollFactor(0);
 
     this.topBackground = scene.add.rectangle(0, 0, scene.scale.width, this.topBarHeight, 0x000000, 0.72);
     this.topBackground.setOrigin(0, 0);
-    this.topBackground.setDepth(this.depth);
-    this.topBackground.setScrollFactor(0);
 
     this.bottomBackground = scene.add.rectangle(0, 0, scene.scale.width, this.bottomBarHeight, 0x000000, 0.82);
     this.bottomBackground.setOrigin(0, 0);
-    this.bottomBackground.setDepth(this.depth);
-    this.bottomBackground.setScrollFactor(0);
 
     this.menuButton = this.createButton("Menu", true);
 
@@ -62,10 +68,27 @@ export class Hud {
       fontSize: "14px",
       color: "#c8d0ff",
     });
+    this.selectedDamageText = scene.add.text(0, 0, "Damage: -", {
+      fontFamily: "monospace",
+      fontSize: "14px",
+      color: "#c8d0ff",
+    });
+    this.selectedRangeText = scene.add.text(0, 0, "Range: -", {
+      fontFamily: "monospace",
+      fontSize: "14px",
+      color: "#c8d0ff",
+    });
 
-    for (const text of [this.hpText, this.goldText, this.towersText, this.selectedTitleText, this.selectedHpText, this.selectedCellText]) {
-      text.setDepth(this.depth + 1);
-      text.setScrollFactor(0);
+    for (const text of [
+      this.hpText,
+      this.goldText,
+      this.towersText,
+      this.selectedTitleText,
+      this.selectedHpText,
+      this.selectedCellText,
+      this.selectedDamageText,
+      this.selectedRangeText,
+    ]) {
       text.setOrigin(0, 0.5);
     }
 
@@ -75,13 +98,9 @@ export class Hud {
 
     this.minimapFrame = scene.add.rectangle(0, 0, 180, 120, 0x152235, 0.95);
     this.minimapFrame.setOrigin(0, 0);
-    this.minimapFrame.setDepth(this.depth + 1);
-    this.minimapFrame.setScrollFactor(0);
     this.minimapFrame.setStrokeStyle(2, 0x7ca8d6, 0.9);
 
     this.minimapGraphics = scene.add.graphics();
-    this.minimapGraphics.setDepth(this.depth + 2);
-    this.minimapGraphics.setScrollFactor(0);
 
     this._actionGridBackground = this.createActionSlotBackground();
 
@@ -94,6 +113,23 @@ export class Hud {
       this._actionIcons.push(null);
     }
 
+    this.root.add([
+      this.topBackground,
+      this.bottomBackground,
+      this.menuButton,
+      this.hpText,
+      this.goldText,
+      this.towersText,
+      this.selectedTitleText,
+      this.selectedHpText,
+      this.selectedCellText,
+      this.selectedDamageText,
+      this.selectedRangeText,
+      this.minimapFrame,
+      this.minimapGraphics,
+      this._actionGridBackground,
+    ]);
+
     this.topUiObjects = [this.topBackground, this.menuButton, this.hpText, this.goldText, this.towersText];
     this.bottomUiObjects = [
       this.bottomBackground,
@@ -102,6 +138,8 @@ export class Hud {
       this.selectedTitleText,
       this.selectedHpText,
       this.selectedCellText,
+      this.selectedDamageText,
+      this.selectedRangeText,
       this._actionGridBackground,
     ];
     this.uiObjects = [
@@ -139,8 +177,6 @@ export class Hud {
       backgroundColor: interactive ? "#2f4f7f" : "#333333",
       padding: { x: 10, y: 6 },
     });
-    button.setDepth(this.depth + 1);
-    button.setScrollFactor(0);
     button.setOrigin(0, 0.5);
 
     if (interactive) {
@@ -163,8 +199,6 @@ export class Hud {
 
   createActionSlotBackground() {
     const container = this.scene.add.container(0, 0);
-    container.setDepth(this.depth + 1);
-    container.setScrollFactor(0);
 
     const rows = [1, 2, 4, 6, 7];
     const cols = [1, 2, 4, 4, 6, 7];
@@ -197,9 +231,14 @@ export class Hud {
   layout(width = this.scene.scale.width, height = this.scene.scale.height) {
     try {
       this.applyVisibilityState();
-      const topHeight = this.clamp(Math.round(height * 0.072), 48, 96);
-      const maxBottom = Math.max(150, height - topHeight - 96);
-      const bottomHeight = this.clamp(Math.round(height * 0.22), 170, maxBottom);
+      const rootScale = Number.isFinite(this.rootScale) && this.rootScale > 0 ? this.rootScale : 1;
+      this.root.setScale(rootScale);
+      this.root.setPosition(this.rootOffsetX, this.rootOffsetY);
+      const rootWidth = width / rootScale;
+      const rootHeight = height / rootScale;
+      const topHeight = this.clamp(Math.round(rootHeight * 0.072), 48, 96);
+      const maxBottom = Math.max(150, rootHeight - topHeight - 96);
+      const bottomHeight = this.clamp(Math.round(rootHeight * 0.22), 170, maxBottom);
       this.topBarHeight = topHeight;
       this.bottomBarHeight = bottomHeight;
 
@@ -215,12 +254,14 @@ export class Hud {
       this.selectedTitleText.setStyle({ fontSize: `${selectedTitleSize}px` });
       this.selectedHpText.setStyle({ fontSize: `${selectedInfoSize}px` });
       this.selectedCellText.setStyle({ fontSize: `${selectedInfoSize}px` });
+      this.selectedDamageText.setStyle({ fontSize: `${selectedInfoSize}px` });
+      this.selectedRangeText.setStyle({ fontSize: `${selectedInfoSize}px` });
 
-      this.topBackground.setSize(width, this.topBarHeight);
+      this.topBackground.setSize(rootWidth, this.topBarHeight);
       this.topBackground.setPosition(0, 0);
       const activeBottomHeight = this._bottomVisible ? this.bottomBarHeight : 0;
-      this.bottomBackground.setSize(width, activeBottomHeight);
-      this.bottomBackground.setPosition(0, Math.max(0, height - activeBottomHeight));
+      this.bottomBackground.setSize(rootWidth, activeBottomHeight);
+      this.bottomBackground.setPosition(0, Math.max(0, rootHeight - activeBottomHeight));
 
       const centerY = this.topBarHeight / 2;
       const leftPadding = 10;
@@ -228,18 +269,18 @@ export class Hud {
 
       const rightPadding = 12;
       const statGap = 20;
-      this.towersText.setPosition(width - rightPadding, centerY);
+      this.towersText.setPosition(rootWidth - rightPadding, centerY);
       this.goldText.setPosition(this.towersText.x - this.towersText.width - statGap, centerY);
       this.hpText.setPosition(this.goldText.x - this.goldText.width - statGap, centerY);
 
-      const bottomY = Math.max(0, height - activeBottomHeight);
-      let panelPadding = this.clamp(Math.round(width * 0.015), 8, 14);
-      const compactBottom = width < 760 || this.bottomBarHeight < 190;
+      const bottomY = Math.max(0, rootHeight - activeBottomHeight);
+      let panelPadding = this.clamp(Math.round(rootWidth * 0.015), 8, 14);
+      const compactBottom = rootWidth < 760 || this.bottomBarHeight < 190;
       if (compactBottom) {
         panelPadding = Math.max(6, panelPadding - 2);
       }
 
-      const minimapW = this.clamp(Math.round(width * 0.2), compactBottom ? 96 : 120, 220);
+      const minimapW = this.clamp(Math.round(rootWidth * 0.2), compactBottom ? 96 : 120, 220);
       const minimapH = this.clamp(
         Math.round(this.bottomBarHeight * (compactBottom ? 0.5 : 0.6)),
         compactBottom ? 78 : 90,
@@ -253,6 +294,8 @@ export class Hud {
       this.selectedTitleText.setPosition(selectionX, bottomY + panelPadding + selectedTitleSize * 0.8);
       this.selectedHpText.setPosition(selectionX, this.selectedTitleText.y + selectedInfoSize * 1.7);
       this.selectedCellText.setPosition(selectionX, this.selectedHpText.y + selectedInfoSize * 1.5);
+      this.selectedDamageText.setPosition(selectionX, this.selectedCellText.y + selectedInfoSize * 1.5);
+      this.selectedRangeText.setPosition(selectionX, this.selectedDamageText.y + selectedInfoSize * 1.5);
 
       const gridCols = 4;
       const frameW = 384;
@@ -262,16 +305,28 @@ export class Hud {
       const contentPadX = 64; 
       const contentPadY = 64;
       const actionFontSize = 16;
-      let gridStartX = width - panelPadding - frameW;
-      const gridLeftBound = this.minimapFrame.x + this.minimapFrame.width + panelPadding;
-      if (gridStartX < gridLeftBound) {
-        gridStartX = gridLeftBound;
+      const actionScale = Number.isFinite(this.actionPanelScale) && this.actionPanelScale > 0
+        ? this.actionPanelScale
+        : 1;
+      const scaledFrameW = frameW * actionScale;
+      const scaledFrameH = frameH * actionScale;
+      const marginX = Math.max(0, this.actionPanelMarginX);
+      const marginY = Math.max(0, this.actionPanelMarginY);
+      let gridStartX = rootWidth - marginX - scaledFrameW;
+      let gridStartY = rootHeight - marginY - scaledFrameH;
+      if (this.actionPanelCorner === "bottom-left") {
+        gridStartX = marginX;
+        gridStartY = rootHeight - marginY - scaledFrameH;
+      } else if (this.actionPanelCorner === "top-right") {
+        gridStartX = rootWidth - marginX - scaledFrameW;
+        gridStartY = Math.max(0, this.topBarHeight + marginY);
+      } else if (this.actionPanelCorner === "top-left") {
+        gridStartX = marginX;
+        gridStartY = Math.max(0, this.topBarHeight + marginY);
       }
 
-      const panelLiftY = 96;
-      const gridStartY = height - frameH - panelPadding - panelLiftY;
-      
       this._actionGridBackground.setPosition(gridStartX, gridStartY);
+      this._actionGridBackground.setScale(actionScale);
 
       for (let i = 0; i < this._actionButtons.length; i += 1) {
         const col = i % gridCols;
@@ -359,8 +414,45 @@ export class Hud {
     this.layout();
   }
 
+  setUiTransform({ x = this.rootOffsetX, y = this.rootOffsetY, scale = this.rootScale } = {}) {
+    this.rootOffsetX = Number.isFinite(x) ? x : this.rootOffsetX;
+    this.rootOffsetY = Number.isFinite(y) ? y : this.rootOffsetY;
+    this.rootScale = Number.isFinite(scale) ? Math.max(0.2, scale) : this.rootScale;
+    this.layout();
+  }
+
+  setActionPanelTransform({
+    scale = this.actionPanelScale,
+    corner = this.actionPanelCorner,
+    marginX = this.actionPanelMarginX,
+    marginY = this.actionPanelMarginY,
+  } = {}) {
+    if (Number.isFinite(scale)) {
+      this.actionPanelScale = Math.max(0.5, scale);
+    }
+    if (typeof corner === "string") {
+      const normalizedCorner = corner.toLowerCase();
+      const validCorner = [
+        "bottom-right",
+        "bottom-left",
+        "top-right",
+        "top-left",
+      ].includes(normalizedCorner);
+      if (validCorner) {
+        this.actionPanelCorner = normalizedCorner;
+      }
+    }
+    if (Number.isFinite(marginX)) {
+      this.actionPanelMarginX = Math.max(0, marginX);
+    }
+    if (Number.isFinite(marginY)) {
+      this.actionPanelMarginY = Math.max(0, marginY);
+    }
+    this.layout();
+  }
+
   getUiObjects() {
-    return this.uiObjects;
+    return [this.root];
   }
 
   getOcclusionMargins() {
@@ -389,6 +481,8 @@ export class Hud {
       this.selectedTitleText.setText("Selected: None");
       this.selectedHpText.setText("HP: N/A");
       this.selectedCellText.setText("Cell: -");
+      this.selectedDamageText.setVisible(false);
+      this.selectedRangeText.setVisible(false);
       return;
     }
     this.selectedTitleText.setText(`Selected: ${selected.label}`);
@@ -398,6 +492,17 @@ export class Hud {
       this.selectedHpText.setText("HP: N/A");
     }
     this.selectedCellText.setText(`Cell: ${selected.cellX},${selected.cellY}`);
+    if (selected.kind === "tower") {
+      const damageValue = Number.isFinite(selected.damage) ? Math.round(selected.damage * 10) / 10 : null;
+      const rangeValue = Number.isFinite(selected.range) ? Math.round(selected.range) : null;
+      this.selectedDamageText.setText(`Damage: ${damageValue ?? "-"}`);
+      this.selectedRangeText.setText(`Range: ${rangeValue ?? "-"}`);
+      this.selectedDamageText.setVisible(true);
+      this.selectedRangeText.setVisible(true);
+      return;
+    }
+    this.selectedDamageText.setVisible(false);
+    this.selectedRangeText.setVisible(false);
   }
 
   renderMinimap() {

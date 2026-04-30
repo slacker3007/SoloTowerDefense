@@ -4,6 +4,8 @@ const tinySwordsRoot = "TinySwords";
 
 const terrainRoot = `${tinySwordsRoot}/Terrain/Tileset`;
 const barsRoot = `${tinySwordsRoot}/UI Elements/UI Elements/Bars`;
+const elementIconsRoot = `${tinySwordsRoot}/UI Elements/UI Elements/Element_Icons`;
+const elementalBuildingsRoot = `${tinySwordsRoot}/Buildings/Elemental Buildings notog`;
 
 export const spriteSheets = [
   {
@@ -69,11 +71,27 @@ export const standaloneImages = [
   { key: "blueBarracks", path: `${tinySwordsRoot}/Buildings/Blue Buildings/Barracks.png` },
   { key: "redBarracks", path: `${tinySwordsRoot}/Buildings/Red Buildings/Barracks.png` },
   { key: "blueTower", path: `${tinySwordsRoot}/Buildings/Blue Buildings/Tower.png` },
+  { key: "tower_archer_building", path: `${elementalBuildingsRoot}/archer_tower.png` },
+  { key: "tower_lightning_building", path: `${elementalBuildingsRoot}/lightning_tower.png` },
+  { key: "tower_earth_building", path: `${elementalBuildingsRoot}/earth_tower.png` },
+  { key: "tower_fire_building", path: `${elementalBuildingsRoot}/fire_tower.png` },
+  { key: "tower_holy_building", path: `${elementalBuildingsRoot}/holy_tower.png` },
+  { key: "tower_ice_building", path: `${elementalBuildingsRoot}/ice_tower.png` },
+  { key: "tower_dark_building", path: `${elementalBuildingsRoot}/dark_tower.png` },
+  { key: "tower_nature_building", path: `${elementalBuildingsRoot}/nature_tower.png` },
   { key: "buildIcon01", path: `${tinySwordsRoot}/UI Elements/UI Elements/Icons/Icon_01.png` },
   { key: "buildIcon05", path: `${tinySwordsRoot}/UI Elements/UI Elements/Icons/Icon_05.png` },
   { key: "buildIcon06", path: `${tinySwordsRoot}/UI Elements/UI Elements/Icons/Icon_06.png` },
   { key: "hammerIcon08", path: `${tinySwordsRoot}/UI Elements/UI Elements/Icons/Icon_08.png` },
   { key: "sellIcon03", path: `${tinySwordsRoot}/UI Elements/UI Elements/Icons/Icon_03.png` },
+  { key: "tower_archer_icon", path: `${elementIconsRoot}/tower_archer_icon.png` },
+  { key: "tower_lightning_icon", path: `${elementIconsRoot}/tower_lightning_icon.png` },
+  { key: "tower_earth_icon", path: `${elementIconsRoot}/tower_earth_icon.png` },
+  { key: "tower_fire_icon", path: `${elementIconsRoot}/tower_fire_icon.png` },
+  { key: "tower_holy_icon", path: `${elementIconsRoot}/tower_holy_icon.png` },
+  { key: "tower_ice_icon", path: `${elementIconsRoot}/tower_ice_icon.png` },
+  { key: "tower_dark_icon", path: `${elementIconsRoot}/tower_dark_icon.png` },
+  { key: "tower_nature_icon", path: `${elementIconsRoot}/tower_nature_icon.png` },
   { key: "bigBarFill", path: `${barsRoot}/BigBar_Fill.png` },
 ];
 

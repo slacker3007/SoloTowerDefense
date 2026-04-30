@@ -27,7 +27,7 @@ import { Hud } from "../game/ui/Hud";
 import { blueBarracksHpBarYOffset, createBlueBarracksHpBar } from "../game/ui/BlueBarracksHpBar";
 import { destroyUnitHpOverlay, ensureUnitHpOverlay, syncUnitHpBars } from "../game/ui/UnitHpBar";
 import { DebugOverlay } from "../game/debug/DebugOverlay";
-import { BASIC_CONVERSION_ORDER, balanceRules, getAdaptiveAdjustment } from "../game/balance";
+import { BASIC_CONVERSION_ORDER, balanceRules, getAdaptiveAdjustment, getTowerDisplayName } from "../game/balance";
 import { MapEditor } from "../game/editor/MapEditor";
 import { EditorPanel } from "../game/editor/EditorPanel";
 import { ensureMapOverrideGrids, ensureMapTilesets, ensurePathMaskGrid } from "../game/maps/mapUtils";
@@ -193,9 +193,11 @@ export class GameScene extends Phaser.Scene {
       this._towerConversionPage = 0;
       this.selectedBuilding = {
         kind: "tower",
-        label: "Tower",
+        label: getTowerDisplayName(tower.type),
         cellX,
         cellY,
+        damage: tower.damage,
+        range: tower.range,
       };
       return true;
     }
@@ -293,14 +295,15 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     if (selected.kind === "barracks" && selected.label === "Blue Barracks") {
+      const canAffordTower = this.gameState.gold >= this.towerSystem.towerCost;
       if (this._hudActionMode === "barracksCraftMenu") {
         const slots = this.buildHudActionSlots([
-          { innerRow: 1, innerCol: 1, actionId: "craftTower", label: "", enabled: true, iconKey: "buildIcon06" },
+          { innerRow: 1, innerCol: 1, actionId: "craftTower", label: "", enabled: canAffordTower, iconKey: "buildIcon06" },
           {
             innerRow: 1,
             innerCol: 2,
             actionId: "craftTypeInfo",
-            label: "Type: Basic",
+            label: `Type: Basic (${this.towerSystem.towerCost}g)`,
             enabled: false,
           },
           { innerRow: 3, innerCol: 4, actionId: "backFromCraft", label: "", enabled: true, iconKey: "hammerIcon08" },
@@ -413,6 +416,9 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     if (action === "craftTower") {
+      if (this.gameState.gold < this.towerSystem.towerCost) {
+        return;
+      }
       this.startTowerPlacement();
       return;
     }
@@ -426,6 +432,12 @@ export class GameScene extends Phaser.Scene {
       fetch('http://127.0.0.1:7576/ingest/1dec1a9b-9444-4174-b16c-c421bd677924',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'3311f3'},body:JSON.stringify({sessionId:'3311f3',runId:'run1',hypothesisId:'H3',location:'src/scenes/GameScene.js:handleHudAction:upgrade-result',message:'Upgrade action result',data:{optionId,upgraded,gold:this.gameState.gold},timestamp:Date.now()})}).catch(()=>{});
       // #endregion
       if (upgraded) {
+        const tower = this.towerSystem.getTowerAtCell(this.selectedBuilding.cellX, this.selectedBuilding.cellY);
+        if (tower) {
+          this.selectedBuilding.label = getTowerDisplayName(tower.type);
+          this.selectedBuilding.damage = tower.damage;
+          this.selectedBuilding.range = tower.range;
+        }
         this.debugOverlay.redraw();
         this.hud.render(
           this.gameState,
@@ -831,24 +843,6 @@ export class GameScene extends Phaser.Scene {
         }
       }
     }
-
-    const stairsGfx = this.add.graphics();
-    for (let y = 0; y < this.map.height; y += 1) {
-      for (let x = 0; x < this.map.width; x += 1) {
-        if (this.map.stairs[y][x] !== 1) {
-          continue;
-        }
-        const px = x * TILE_SIZE;
-        const py = y * TILE_SIZE;
-        stairsGfx.fillStyle(0xb69463, 0.95);
-        stairsGfx.fillRect(px + 12, py + 6, TILE_SIZE - 24, TILE_SIZE - 12);
-        stairsGfx.lineStyle(1, 0x7a5a31, 0.8);
-        for (let step = 14; step <= TILE_SIZE - 10; step += 10) {
-          stairsGfx.lineBetween(px + 14, py + step, px + TILE_SIZE - 14, py + step);
-        }
-      }
-    }
-    this.terrainContainer.add(stairsGfx);
 
     if (hasSheet) {
       for (let y = 0; y < this.map.height; y += 1) {

@@ -29,6 +29,18 @@ export const towerCatalog = {
   archer: { label: "Archer", damage: 11, rate: 1.3, rangeTiles: 3.8, utilityBudget: 1.0, projectileSpeed: 490 },
 };
 
+export const towerVisuals = {
+  basic: { textureKey: "blueTower" },
+  archer: { textureKey: "tower_archer_building" },
+  lightning: { textureKey: "tower_lightning_building" },
+  earth: { textureKey: "tower_earth_building" },
+  fire: { textureKey: "tower_fire_building" },
+  holy: { textureKey: "tower_holy_building" },
+  ice: { textureKey: "tower_ice_building" },
+  dark: { textureKey: "tower_dark_building" },
+  nature: { textureKey: "tower_nature_building" },
+};
+
 export const economy = {
   startingGold: 200,
   startingLives: 20,
@@ -194,6 +206,15 @@ export function getUpgradeOptionsForTower(tower) {
 
 export function isValidConversionTarget(towerType) {
   return ELEMENT_CONVERSIONS.includes(towerType);
+}
+
+export function getTowerDisplayName(towerType) {
+  const label = towerCatalog[towerType]?.label ?? towerCatalog.basic.label;
+  return `${label} Tower`;
+}
+
+export function getTowerTextureKey(towerType) {
+  return towerVisuals[towerType]?.textureKey ?? towerVisuals.basic.textureKey;
 }
 
 export function clampUtilityBudget(towerType, damage, cooldownSeconds) {

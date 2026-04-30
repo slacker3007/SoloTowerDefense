@@ -19,8 +19,8 @@ export function isInsideGrid(cellX, cellY, width, height) {
 }
 
 /**
- * Buildable if on land (elevation >= 1), not stairs, and no building occupies the cell.
- * @param {{ width: number, height: number, elevation: number[][], stairs: number[][], buildings: (string|null)[][] }} map
+ * Buildable if on land (elevation >= 1) and no building occupies the cell.
+ * @param {{ width: number, height: number, elevation: number[][], buildings: (string|null)[][] }} map
  */
 export function isBuildable(map, cellX, cellY) {
   if (!isInsideGrid(cellX, cellY, map.width, map.height)) {
@@ -28,10 +28,6 @@ export function isBuildable(map, cellX, cellY) {
   }
 
   if (map.elevation[cellY][cellX] < 1) {
-    return false;
-  }
-
-  if (map.stairs[cellY][cellX] === 1) {
     return false;
   }
 
