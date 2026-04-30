@@ -1,12 +1,36 @@
+import Phaser from "phaser";
+import {
+  KEYBIND_ACTION_IDS,
+  KEYBIND_DESCRIPTIONS,
+  formatKeyLabel,
+  isModifierOnlyEvent,
+  keyCodeFromBrowserEvent,
+} from "../input/KeybindStore.js";
+
 export class Hud {
   /**
    * @param {Phaser.Scene} scene
-   * @param {{ onMenuClick?: () => void, maxLives?: number }} [options]
+   * @param {{
+   *   maxLives?: number,
+   *   keybindStore?: import("../input/KeybindStore.js").KeybindStore | null,
+   *   onMapEditorFromMenu?: () => void,
+   *   onKeybindsChanged?: () => void,
+   * }} [options]
    */
   constructor(scene, options = {}) {
     this.scene = scene;
-    this.onMenuClick = typeof options.onMenuClick === "function" ? options.onMenuClick : () => {};
     this.maxLives = typeof options.maxLives === "number" ? options.maxLives : 0;
+    /** @type {import("../input/KeybindStore.js").KeybindStore | null} */
+    this.keybindStore = options.keybindStore ?? null;
+    this.onMapEditorFromMenu = typeof options.onMapEditorFromMenu === "function" ? options.onMapEditorFromMenu : () => {};
+    this.onKeybindsChanged = typeof options.onKeybindsChanged === "function" ? options.onKeybindsChanged : () => {};
+
+    this._menuDropdownOpen = false;
+    this._keybindPanelOpen = false;
+    /** @type {string | null} */
+    this._rebindingActionId = null;
+    /** @type {((ev: KeyboardEvent) => void) | null} */
+    this._rebindKeyHandler = null;
 
     this.topBarHeight = 48;
     this.bottomBarHeight = 220;
@@ -14,16 +38,20 @@ export class Hud {
     this.rootOffsetX = 0;
     this.rootOffsetY = 0;
     this.rootScale = 1;
-    this.actionPanelScale = 1.25;
+    this.actionPanelScale = 1.5625;
     this.actionPanelCorner = "bottom-right";
     this.actionPanelMarginX = 16;
     this.actionPanelMarginY = 16;
+    this.actionPanelOffsetX = 80;
+    this.actionPanelOffsetY = 40;
     this._selectedBuilding = null;
     this._minimapData = null;
     this._actionButtons = [];
     this._actionGridBackground = null;
     this._actionIcons = [];
     this._actionSlotConfigs = Array.from({ length: 12 }, () => null);
+    this._hoveredActionIndex = -1;
+    this._tooltipAnchor = { x: 0, y: 0 };
     this._topVisible = true;
     this._bottomVisible = true;
     this.root = scene.add.container(0, 0);
@@ -36,7 +64,77 @@ export class Hud {
     this.bottomBackground = scene.add.rectangle(0, 0, scene.scale.width, this.bottomBarHeight, 0x000000, 0.82);
     this.bottomBackground.setOrigin(0, 0);
 
-    this.menuButton = this.createButton("Menu", true);
+    this.menuButton = this.createButton("Menu", true, () => this.toggleMenuDropdown());
+
+    this.menuBackdrop = scene.add.rectangle(0, 0, 800, 600, 0x000011, 0.35);
+    this.menuBackdrop.setOrigin(0, 0);
+    this.menuBackdrop.setInteractive();
+    this.menuBackdrop.on("pointerdown", (pointer, localX, localY, event) => {
+      event?.stopPropagation?.();
+      this.closeMenuDropdown();
+    });
+    this.menuBackdrop.setVisible(false);
+
+    this.menuDropdownBg = scene.add.rectangle(0, 0, 320, 132, 0x1e2a3d, 0.98);
+    this.menuDropdownBg.setOrigin(0, 0);
+    this.menuDropdownBg.setStrokeStyle(1, 0x7ca8d6, 0.85);
+
+    this.menuBtnMapEditor = this.createButton("Map editor", true, () => {
+      this.closeMenuDropdown();
+      this.onMapEditorFromMenu();
+    });
+    this.menuBtnKeybindings = this.createButton("Keybindings", true, () => {
+      this.closeMenuDropdown();
+      this.openKeybindPanel();
+    });
+
+    this.menuDropdownRoot = scene.add.container(0, 0, [this.menuDropdownBg, this.menuBtnMapEditor, this.menuBtnKeybindings]);
+    this.menuDropdownRoot.setVisible(false);
+    this.menuBtnMapEditor.setPosition(14, 22);
+    this.menuBtnKeybindings.setPosition(14, 76);
+
+    this.keybindBackdrop = scene.add.rectangle(0, 0, 800, 600, 0x000000, 0.55);
+    this.keybindBackdrop.setOrigin(0, 0);
+    this.keybindBackdrop.setInteractive();
+
+    this.keybindPanelBg = scene.add.rectangle(0, 0, 700, 440, 0x152235, 0.98);
+    this.keybindPanelBg.setOrigin(0.5, 0.5);
+    this.keybindPanelBg.setStrokeStyle(2, 0x7ca8d6, 1);
+
+    this.keybindTitle = scene.add.text(0, 0, "Keybindings", {
+      fontFamily: "monospace",
+      fontSize: "28px",
+      color: "#ffffff",
+    });
+    this.keybindTitle.setOrigin(0.5, 0);
+
+    /** @type {{ id: string, button: Phaser.GameObjects.Text }[]} */
+    this._keybindRowButtons = [];
+    for (const id of KEYBIND_ACTION_IDS) {
+      const button = this.createButton("", true, () => this.beginRebind(id));
+      button.setOrigin(0, 0.5);
+      this._keybindRowButtons.push({ id, button });
+    }
+
+    this.keybindBackBtn = this.createButton("Back", true, () => this.closeKeybindPanel());
+    this.keybindResetBtn = this.createButton("Reset defaults", true, () => {
+      this.keybindStore?.resetToDefaults();
+      this.refreshKeybindRows();
+      this.onKeybindsChanged();
+    });
+
+    this.keybindPanelInner = scene.add.container(0, 0, [
+      this.keybindPanelBg,
+      this.keybindTitle,
+      ...this._keybindRowButtons.map((r) => r.button),
+      this.keybindBackBtn,
+      this.keybindResetBtn,
+    ]);
+
+    this.keybindOverlayRoot = scene.add.container(0, 0, [this.keybindBackdrop, this.keybindPanelInner]);
+    this.keybindOverlayRoot.setVisible(false);
+
+    this.refreshKeybindRows();
 
     this.hpText = scene.add.text(0, 0, "", {
       fontFamily: "monospace",
@@ -113,6 +211,44 @@ export class Hud {
       this._actionIcons.push(null);
     }
 
+    this.tooltipBackground = scene.add.rectangle(0, 0, 300, 120, 0x0f1622, 0.95);
+    this.tooltipBackground.setOrigin(0, 0);
+    this.tooltipBackground.setStrokeStyle(1, 0x7ca8d6, 0.95);
+    this.tooltipTitleText = scene.add.text(0, 0, "", {
+      fontFamily: "monospace",
+      fontSize: "15px",
+      color: "#ffffff",
+      fontStyle: "bold",
+    });
+    this.tooltipTitleText.setOrigin(0, 0);
+    this.tooltipDescriptionText = scene.add.text(0, 0, "", {
+      fontFamily: "monospace",
+      fontSize: "13px",
+      color: "#d7e2ff",
+      wordWrap: { width: 268, useAdvancedWrap: true },
+    });
+    this.tooltipDescriptionText.setOrigin(0, 0);
+    this.tooltipCostText = scene.add.text(0, 0, "", {
+      fontFamily: "monospace",
+      fontSize: "13px",
+      color: "#ffeaa0",
+    });
+    this.tooltipCostText.setOrigin(0, 0);
+    this.tooltipWarningText = scene.add.text(0, 0, "", {
+      fontFamily: "monospace",
+      fontSize: "12px",
+      color: "#ff9a9a",
+    });
+    this.tooltipWarningText.setOrigin(0, 0);
+    this.tooltipRoot = scene.add.container(0, 0, [
+      this.tooltipBackground,
+      this.tooltipTitleText,
+      this.tooltipDescriptionText,
+      this.tooltipCostText,
+      this.tooltipWarningText,
+    ]);
+    this.tooltipRoot.setVisible(false);
+
     this.root.add([
       this.topBackground,
       this.bottomBackground,
@@ -128,6 +264,10 @@ export class Hud {
       this.minimapFrame,
       this.minimapGraphics,
       this._actionGridBackground,
+      this.menuBackdrop,
+      this.menuDropdownRoot,
+      this.keybindOverlayRoot,
+      this.tooltipRoot,
     ]);
 
     this.topUiObjects = [this.topBackground, this.menuButton, this.hpText, this.goldText, this.towersText];
@@ -149,7 +289,121 @@ export class Hud {
     this.layout();
   }
 
+  toggleMenuDropdown() {
+    this._menuDropdownOpen = !this._menuDropdownOpen;
+    this.applyMenuOverlayVisibility();
+    this.layout();
+  }
+
+  closeMenuDropdown() {
+    if (!this._menuDropdownOpen) {
+      return;
+    }
+    this._menuDropdownOpen = false;
+    this.applyMenuOverlayVisibility();
+    this.layout();
+  }
+
+  openKeybindPanel() {
+    if (!this.keybindStore) {
+      return;
+    }
+    this.closeMenuDropdown();
+    this._keybindPanelOpen = true;
+    this.refreshKeybindRows();
+    this.applyMenuOverlayVisibility();
+    this.layout();
+  }
+
+  closeKeybindPanel() {
+    if (!this._keybindPanelOpen) {
+      return;
+    }
+    this.endRebind();
+    this._keybindPanelOpen = false;
+    this.applyMenuOverlayVisibility();
+    this.layout();
+  }
+
+  isMenuDropdownOpen() {
+    return this._menuDropdownOpen;
+  }
+
+  isKeybindPanelOpen() {
+    return this._keybindPanelOpen;
+  }
+
+  isRebindingKey() {
+    return this._rebindingActionId != null;
+  }
+
+  applyMenuOverlayVisibility() {
+    const drop = Boolean(this._topVisible && this._menuDropdownOpen);
+    this.menuBackdrop.setVisible(drop);
+    this.menuDropdownRoot.setVisible(drop);
+    const keys = Boolean(this._keybindPanelOpen);
+    this.keybindOverlayRoot.setVisible(keys);
+  }
+
+  refreshKeybindRows() {
+    if (!this.keybindStore) {
+      return;
+    }
+    const codes = this.keybindStore.getCodes();
+    for (const { id, button } of this._keybindRowButtons) {
+      const desc = KEYBIND_DESCRIPTIONS[id] ?? id;
+      const keyLabel = formatKeyLabel(codes[id]);
+      button.setText(`${desc}   [${keyLabel}]   Click to rebind`);
+    }
+  }
+
+  /**
+   * @param {string} actionId
+   */
+  beginRebind(actionId) {
+    if (!this.keybindStore || this._rebindingActionId) {
+      return;
+    }
+    this._rebindingActionId = actionId;
+    this._rebindKeyHandler = (/** @type {KeyboardEvent} */ ev) => {
+      if (ev.key === "Escape") {
+        this.endRebind();
+        return;
+      }
+      if (isModifierOnlyEvent(ev)) {
+        return;
+      }
+      const code = keyCodeFromBrowserEvent(ev);
+      if (code == null) {
+        return;
+      }
+      ev.preventDefault();
+      const result = this.keybindStore.setBinding(actionId, code);
+      if (!result.ok) {
+        return;
+      }
+      this.endRebind();
+      this.refreshKeybindRows();
+      this.onKeybindsChanged();
+    };
+    this.scene.input.keyboard?.on(Phaser.Input.Keyboard.Events.ANY_KEY_DOWN, this._rebindKeyHandler);
+  }
+
+  endRebind() {
+    if (this._rebindKeyHandler) {
+      this.scene.input.keyboard?.off(Phaser.Input.Keyboard.Events.ANY_KEY_DOWN, this._rebindKeyHandler);
+      this._rebindKeyHandler = null;
+    }
+    this._rebindingActionId = null;
+  }
+
+  dispose() {
+    this.endRebind();
+    this.root?.destroy(true);
+  }
+
   setActionSlots(slots = []) {
+    this.hideActionTooltip();
     for (let i = 0; i < this._actionSlotConfigs.length; i += 1) {
       this._actionSlotConfigs[i] = slots[i] ?? null;
       this.updateActionSlotInteractivity(i);
@@ -157,16 +411,128 @@ export class Hud {
     this.layout();
   }
 
+  /**
+   * @param {number} index
+   * @returns {boolean}
+   */
+  triggerActionSlot(index) {
+    if (!Number.isInteger(index) || index < 0 || index >= this._actionSlotConfigs.length) {
+      return false;
+    }
+    const slot = this._actionSlotConfigs[index];
+    if (!slot || !slot.enabled || typeof slot.onClick !== "function") {
+      return false;
+    }
+    slot.onClick();
+    return true;
+  }
+
   updateActionSlotInteractivity(index) {
     const button = this._actionButtons[index];
     const slot = this._actionSlotConfigs[index];
-    button.removeAllListeners("pointerdown");
-    if (!slot || !slot.enabled || typeof slot.onClick !== "function") {
+    button.removeAllListeners();
+    if (!slot) {
+      button.disableInteractive();
+      return;
+    }
+    const canClick = Boolean(slot.enabled && typeof slot.onClick === "function");
+    const canHover = this.hasActionTooltip(slot);
+    if (!canClick && !canHover) {
       button.disableInteractive();
       return;
     }
     button.setInteractive({ useHandCursor: true });
-    button.on("pointerdown", () => slot.onClick());
+    if (canClick) {
+      button.on("pointerdown", () => slot.onClick());
+    }
+    if (canHover) {
+      button.on("pointerover", (pointer) => this.showActionTooltip(index, pointer));
+      button.on("pointermove", (pointer) => this.moveActionTooltip(pointer));
+      button.on("pointerout", () => this.hideActionTooltip());
+    }
+  }
+
+  hasActionTooltip(slot) {
+    return Boolean(
+      slot && (slot.tooltipTitle || slot.tooltipDescription || slot.tooltipCost != null || slot.tooltipWarning),
+    );
+  }
+
+  showActionTooltip(index, pointer) {
+    const slot = this._actionSlotConfigs[index];
+    if (!this._bottomVisible || !this.hasActionTooltip(slot)) {
+      this.hideActionTooltip();
+      return;
+    }
+    this._hoveredActionIndex = index;
+    const title = slot.tooltipTitle || slot.label || "Action";
+    const description = slot.tooltipDescription || "";
+    const hasCost = slot.tooltipCost != null;
+    const resource = slot.tooltipResource || "gold";
+    const warning = slot.tooltipWarning || "";
+    const costText = hasCost ? `Cost: ${slot.tooltipCost} ${resource}` : "Cost: Free";
+
+    this.tooltipTitleText.setText(title);
+    this.tooltipDescriptionText.setText(description);
+    this.tooltipCostText.setText(costText);
+    this.tooltipWarningText.setText(warning);
+
+    const textPad = 10;
+    const lineGap = 4;
+    this.tooltipTitleText.setPosition(textPad, textPad);
+    this.tooltipDescriptionText.setPosition(textPad, this.tooltipTitleText.y + this.tooltipTitleText.height + lineGap);
+    this.tooltipCostText.setPosition(textPad, this.tooltipDescriptionText.y + this.tooltipDescriptionText.height + lineGap);
+    this.tooltipWarningText.setPosition(textPad, this.tooltipCostText.y + this.tooltipCostText.height + lineGap);
+    this.tooltipWarningText.setVisible(warning.length > 0);
+
+    const tooltipInnerWidth = Math.max(
+      this.tooltipTitleText.width,
+      this.tooltipDescriptionText.width,
+      this.tooltipCostText.width,
+      this.tooltipWarningText.visible ? this.tooltipWarningText.width : 0,
+      180,
+    );
+    const tooltipW = tooltipInnerWidth + textPad * 2;
+    const warningHeight = this.tooltipWarningText.visible ? this.tooltipWarningText.height + lineGap : 0;
+    const tooltipH =
+      textPad +
+      this.tooltipTitleText.height +
+      lineGap +
+      this.tooltipDescriptionText.height +
+      lineGap +
+      this.tooltipCostText.height +
+      warningHeight +
+      textPad;
+    this.tooltipBackground.setSize(tooltipW, tooltipH);
+    this.tooltipRoot.setVisible(true);
+    this.moveActionTooltip(pointer);
+  }
+
+  moveActionTooltip(pointer) {
+    if (!this.tooltipRoot.visible) {
+      return;
+    }
+    if (pointer) {
+      this._tooltipAnchor.x = pointer.x;
+      this._tooltipAnchor.y = pointer.y;
+    }
+    const rootScale = Number.isFinite(this.rootScale) && this.rootScale > 0 ? this.rootScale : 1;
+    const rootWidth = this.scene.scale.width / rootScale;
+    const rootHeight = this.scene.scale.height / rootScale;
+    const localX = (this._tooltipAnchor.x - this.rootOffsetX) / rootScale;
+    const localY = (this._tooltipAnchor.y - this.rootOffsetY) / rootScale;
+    const offsetX = 16;
+    const offsetY = 20;
+    const maxX = Math.max(4, rootWidth - this.tooltipBackground.width - 4);
+    const maxY = Math.max(4, rootHeight - this.tooltipBackground.height - 4);
+    const x = this.clamp(localX + offsetX, 4, maxX);
+    const y = this.clamp(localY + offsetY, 4, maxY);
+    this.tooltipRoot.setPosition(x, y);
+  }
+
+  hideActionTooltip() {
+    this._hoveredActionIndex = -1;
+    this.tooltipRoot.setVisible(false);
   }
 
   createButton(label, interactive, onClick = null, useHoverBackground = true) {
@@ -267,6 +633,50 @@ export class Hud {
       const leftPadding = 10;
       this.menuButton.setPosition(leftPadding, centerY);
 
+      const menuPad = 8;
+      this.menuBackdrop.setPosition(0, this.topBarHeight);
+      this.menuBackdrop.setSize(rootWidth, Math.max(0, rootHeight - this.topBarHeight));
+
+      const dropY = this.menuButton.y + Math.round(this.menuButton.height * 0.5) + menuPad;
+      this.menuDropdownRoot.setPosition(this.menuButton.x, dropY);
+      const menuWidth = this.clamp(Math.round(rootWidth * 0.25), 300, 420);
+      const menuHeight = this.clamp(Math.round(this.topBarHeight * 2.8), 130, 200);
+      const menuItemFontSize = this.clamp(Math.round(this.topBarHeight * 0.42), 18, 30);
+      const menuItemPadX = this.clamp(Math.round(menuWidth * 0.05), 12, 20);
+      const menuItemPadY = this.clamp(Math.round(this.topBarHeight * 0.22), 8, 14);
+      this.menuDropdownBg.setSize(menuWidth, menuHeight);
+      this.menuBtnMapEditor.setStyle({ fontSize: `${menuItemFontSize}px`, padding: { x: menuItemPadX, y: menuItemPadY } });
+      this.menuBtnKeybindings.setStyle({ fontSize: `${menuItemFontSize}px`, padding: { x: menuItemPadX, y: menuItemPadY } });
+      this.menuBtnMapEditor.setPosition(14, Math.round(menuHeight * 0.28));
+      this.menuBtnKeybindings.setPosition(14, Math.round(menuHeight * 0.72));
+
+      this.keybindBackdrop.setPosition(0, 0);
+      this.keybindBackdrop.setSize(rootWidth, rootHeight);
+      this.keybindPanelInner.setPosition(rootWidth / 2, rootHeight / 2);
+      const keybindPanelW = this.clamp(Math.round(rootWidth * 0.72), 680, 980);
+      const keybindPanelH = this.clamp(Math.round(rootHeight * 0.55), 420, 620);
+      const keybindTitleSize = this.clamp(Math.round(keybindPanelH * 0.08), 24, 40);
+      this.keybindPanelBg.setSize(keybindPanelW, keybindPanelH);
+      this.keybindTitle.setStyle({ fontSize: `${keybindTitleSize}px` });
+      this.keybindTitle.setPosition(0, -this.keybindPanelBg.height * 0.5 + 22);
+      const footerY = this.keybindPanelBg.height * 0.5 - 28;
+      const rowStartY = this.keybindTitle.y + Math.round(keybindPanelH * 0.1);
+      const rowCount = Math.max(1, this._keybindRowButtons.length);
+      const rowAvailable = Math.max(60, footerY - 28 - rowStartY);
+      const rowStep = Math.max(22, Math.floor(rowAvailable / rowCount));
+      const keybindRowSize = this.clamp(Math.round(rowStep * 0.42), 13, 24);
+      let rowY = rowStartY;
+      for (const { button } of this._keybindRowButtons) {
+        button.setStyle({ fontSize: `${keybindRowSize}px`, padding: { x: 12, y: 6 } });
+        button.setPosition(-this.keybindPanelBg.width * 0.5 + 16, rowY);
+        rowY += rowStep;
+      }
+      const footerSize = this.clamp(Math.round(keybindPanelH * 0.05), 18, 28);
+      this.keybindBackBtn.setStyle({ fontSize: `${footerSize}px`, padding: { x: 16, y: 10 } });
+      this.keybindResetBtn.setStyle({ fontSize: `${footerSize}px`, padding: { x: 16, y: 10 } });
+      this.keybindBackBtn.setPosition(-this.keybindPanelBg.width * 0.5 + 16, footerY);
+      this.keybindResetBtn.setPosition(this.keybindPanelBg.width * 0.5 - this.keybindResetBtn.width - 16, footerY);
+
       const rightPadding = 12;
       const statGap = 20;
       this.towersText.setPosition(rootWidth - rightPadding, centerY);
@@ -325,7 +735,7 @@ export class Hud {
         gridStartY = Math.max(0, this.topBarHeight + marginY);
       }
 
-      this._actionGridBackground.setPosition(gridStartX, gridStartY);
+      this._actionGridBackground.setPosition(gridStartX + this.actionPanelOffsetX, gridStartY + this.actionPanelOffsetY);
       this._actionGridBackground.setScale(actionScale);
 
       for (let i = 0; i < this._actionButtons.length; i += 1) {
@@ -377,6 +787,9 @@ export class Hud {
           button.setOrigin(0.5, 0.5);
         }
       }
+      if (this.tooltipRoot.visible) {
+        this.moveActionTooltip();
+      }
       this.renderMinimap();
     } catch (e) {
       console.error("[HUD] Layout error:", e);
@@ -387,14 +800,22 @@ export class Hud {
     for (const obj of this.topUiObjects) {
       obj.setVisible(this._topVisible);
     }
+    this.applyMenuOverlayVisibility();
     for (const obj of this.bottomUiObjects) {
       obj.setVisible(this._bottomVisible);
+    }
+    if (!this._bottomVisible) {
+      this.hideActionTooltip();
     }
     for (const button of this._actionButtons) {
       if (button.input) {
         const idx = this._actionButtons.indexOf(button);
         const slot = this._actionSlotConfigs[idx];
-        const enabled = Boolean(this._bottomVisible && slot?.enabled && typeof slot?.onClick === "function");
+        const enabled = Boolean(
+          this._bottomVisible &&
+          slot &&
+          ((slot?.enabled && typeof slot?.onClick === "function") || this.hasActionTooltip(slot)),
+        );
         if (enabled) {
           button.setInteractive({ useHandCursor: true });
         } else {

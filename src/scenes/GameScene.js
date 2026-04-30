@@ -30,6 +30,7 @@ import { DebugOverlay } from "../game/debug/DebugOverlay";
 import { BASIC_CONVERSION_ORDER, balanceRules, getAdaptiveAdjustment, getTowerDisplayName } from "../game/balance";
 import { MapEditor } from "../game/editor/MapEditor";
 import { EditorPanel } from "../game/editor/EditorPanel";
+import { GRID_KEYBIND_ACTION_IDS, KeybindStore } from "../game/input/KeybindStore.js";
 import { ensureMapOverrideGrids, ensureMapTilesets, ensurePathMaskGrid } from "../game/maps/mapUtils";
 
 /**
@@ -50,6 +51,11 @@ function resolvedTerrainOverride(ov) {
  * @property {string} [iconKey]
  * @property {number} [iconOffsetX]
  * @property {number} [iconOffsetY]
+ * @property {string} [tooltipTitle]
+ * @property {string} [tooltipDescription]
+ * @property {number | null} [tooltipCost]
+ * @property {string} [tooltipResource]
+ * @property {string} [tooltipWarning]
  */
 
 export class GameScene extends Phaser.Scene {
@@ -107,9 +113,12 @@ export class GameScene extends Phaser.Scene {
     this.towerSystem = new TowerSystem(this, this.map);
     this.combatSystem = new CombatSystem(this, this.towerSystem, this.enemySystem);
     this.waveSystem = new WaveSystem(this.enemySystem);
+    this.keybindStore = new KeybindStore();
     this.hud = new Hud(this, {
       maxLives: STARTING_LIVES,
-      onMenuClick: () => this.togglePause(),
+      keybindStore: this.keybindStore,
+      onMapEditorFromMenu: () => this.toggleMapEditorFromMenu(),
+      onKeybindsChanged: () => {},
     });
     this.debugOverlay = new DebugOverlay(this);
     this.debugOverlay.redraw();
@@ -143,12 +152,17 @@ export class GameScene extends Phaser.Scene {
   }
 
   shutdown() {
+    if (this._onGameplayKeyDown) {
+      this.input.keyboard?.off(Phaser.Input.Keyboard.Events.ANY_KEY_DOWN, this._onGameplayKeyDown);
+    }
     this.clearTowerPlacement();
     this._homeHpBar?.destroy();
     this._homeHpBar = null;
     this.blueBarracksHpRoot?.destroy(true);
     this.editorPanel?.destroy();
     this.editor.destroy();
+    this.hud?.dispose();
+    this.hud = null;
     destroyUnitHpOverlay(this);
   }
 
@@ -276,6 +290,11 @@ export class GameScene extends Phaser.Scene {
         iconKey: typeof def.iconKey === "string" ? def.iconKey : undefined,
         iconOffsetX: typeof def.iconOffsetX === "number" ? def.iconOffsetX : undefined,
         iconOffsetY: typeof def.iconOffsetY === "number" ? def.iconOffsetY : undefined,
+        tooltipTitle: typeof def.tooltipTitle === "string" ? def.tooltipTitle : undefined,
+        tooltipDescription: typeof def.tooltipDescription === "string" ? def.tooltipDescription : undefined,
+        tooltipCost: typeof def.tooltipCost === "number" ? def.tooltipCost : def.tooltipCost === null ? null : undefined,
+        tooltipResource: typeof def.tooltipResource === "string" ? def.tooltipResource : undefined,
+        tooltipWarning: typeof def.tooltipWarning === "string" ? def.tooltipWarning : undefined,
       };
     }
     return slots;
@@ -298,22 +317,72 @@ export class GameScene extends Phaser.Scene {
       const canAffordTower = this.gameState.gold >= this.towerSystem.towerCost;
       if (this._hudActionMode === "barracksCraftMenu") {
         const slots = this.buildHudActionSlots([
-          { innerRow: 1, innerCol: 1, actionId: "craftTower", label: "", enabled: canAffordTower, iconKey: "buildIcon06" },
+          {
+            innerRow: 1,
+            innerCol: 1,
+            actionId: "craftTower",
+            label: "",
+            enabled: canAffordTower,
+            iconKey: "buildIcon06",
+            tooltipTitle: "Build Basic Tower",
+            tooltipDescription: "Start placing a basic tower on an empty buildable tile.",
+            tooltipCost: this.towerSystem.towerCost,
+            tooltipResource: "gold",
+            tooltipWarning: canAffordTower ? "" : "Not enough gold",
+          },
           {
             innerRow: 1,
             innerCol: 2,
             actionId: "craftTypeInfo",
             label: `Type: Basic (${this.towerSystem.towerCost}g)`,
             enabled: false,
+            tooltipTitle: "Basic Tower",
+            tooltipDescription: "Standard starter tower with balanced damage and range.",
+            tooltipCost: this.towerSystem.towerCost,
+            tooltipResource: "gold",
+            tooltipWarning: canAffordTower ? "" : "Not enough gold",
           },
-          { innerRow: 3, innerCol: 4, actionId: "backFromCraft", label: "", enabled: true, iconKey: "hammerIcon08" },
+          {
+            innerRow: 3,
+            innerCol: 4,
+            actionId: "backFromCraft",
+            label: "",
+            enabled: true,
+            iconKey: "hammerIcon08",
+            tooltipTitle: "Back",
+            tooltipDescription: "Return to the barracks action menu.",
+            tooltipCost: null,
+            tooltipResource: "gold",
+          },
         ]);
         this.hud.setActionSlots(slots);
         return;
       }
       this.hud.setActionSlots(this.buildHudActionSlots([
-        { innerRow: 1, innerCol: 1, actionId: "openCraftMenu", label: "", enabled: true, iconKey: "buildIcon01" },
-        { innerRow: 3, innerCol: 4, actionId: "clearSelection", label: "", enabled: true, iconKey: "hammerIcon08" },
+        {
+          innerRow: 1,
+          innerCol: 1,
+          actionId: "openCraftMenu",
+          label: "",
+          enabled: true,
+          iconKey: "buildIcon01",
+          tooltipTitle: "Build Menu",
+          tooltipDescription: "Open the tower crafting options for blue barracks.",
+          tooltipCost: null,
+          tooltipResource: "gold",
+        },
+        {
+          innerRow: 3,
+          innerCol: 4,
+          actionId: "clearSelection",
+          label: "",
+          enabled: true,
+          iconKey: "hammerIcon08",
+          tooltipTitle: "Clear Selection",
+          tooltipDescription: "Close the current selection.",
+          tooltipCost: null,
+          tooltipResource: "gold",
+        },
       ]));
       return;
     }
@@ -371,17 +440,54 @@ export class GameScene extends Phaser.Scene {
             label: "",
             enabled: this.gameState.gold >= option.cost,
             iconKey: cell.iconKey,
+            tooltipTitle: option.label,
+            tooltipDescription: `Convert this tower into a ${option.label} tower.`,
+            tooltipCost: option.cost,
+            tooltipResource: "gold",
+            tooltipWarning: this.gameState.gold >= option.cost ? "" : "Not enough gold",
           });
         }
-        actionDefs.push({ innerRow: 3, innerCol: 3, actionId: "sellTower", label: "", enabled: true, iconKey: "sellIcon03" });
-        actionDefs.push({ innerRow: 3, innerCol: 4, actionId: "clearSelection", label: "Back", enabled: true });
+        actionDefs.push({
+          innerRow: 3,
+          innerCol: 3,
+          actionId: "sellTower",
+          label: "",
+          enabled: true,
+          iconKey: "sellIcon03",
+          tooltipTitle: "Sell Tower",
+          tooltipDescription: "Remove this tower and receive a gold refund.",
+          tooltipCost: null,
+          tooltipResource: "gold",
+        });
+        actionDefs.push({
+          innerRow: 3,
+          innerCol: 4,
+          actionId: "clearSelection",
+          label: "Back",
+          enabled: true,
+          tooltipTitle: "Back",
+          tooltipDescription: "Close this tower menu.",
+          tooltipCost: null,
+          tooltipResource: "gold",
+        });
         // #region agent log
         fetch('http://127.0.0.1:7576/ingest/1dec1a9b-9444-4174-b16c-c421bd677924',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'3311f3'},body:JSON.stringify({sessionId:'3311f3',runId:'run1',hypothesisId:'H2',location:'src/scenes/GameScene.js:updateHudActions:basic-slots',message:'Built basic tower HUD action definitions',data:{actionDefs:actionDefs.map((def)=>({row:def.innerRow,col:def.innerCol,actionId:def.actionId,enabled:def.enabled,iconKey:def.iconKey??null}))},timestamp:Date.now()})}).catch(()=>{});
         // #endregion
         this.hud.setActionSlots(this.buildHudActionSlots(actionDefs));
         return;
       }
-      const actionDefs = [{ innerRow: 1, innerCol: 1, actionId: "sellTower", label: "", enabled: true, iconKey: "sellIcon03" }];
+      const actionDefs = [{
+        innerRow: 1,
+        innerCol: 1,
+        actionId: "sellTower",
+        label: "",
+        enabled: true,
+        iconKey: "sellIcon03",
+        tooltipTitle: "Sell Tower",
+        tooltipDescription: "Remove this tower and receive a gold refund.",
+        tooltipCost: null,
+        tooltipResource: "gold",
+      }];
       if (options[0]) {
         actionDefs.push({
           innerRow: 1,
@@ -389,6 +495,11 @@ export class GameScene extends Phaser.Scene {
           actionId: `upgrade:${options[0].id}`,
           label: `${options[0].label} (${options[0].cost}g)`,
           enabled: this.gameState.gold >= options[0].cost,
+          tooltipTitle: options[0].label,
+          tooltipDescription: `Upgrade this tower into ${options[0].label}.`,
+          tooltipCost: options[0].cost,
+          tooltipResource: "gold",
+          tooltipWarning: this.gameState.gold >= options[0].cost ? "" : "Not enough gold",
         });
       }
       if (options[1]) {
@@ -398,9 +509,25 @@ export class GameScene extends Phaser.Scene {
           actionId: `upgrade:${options[1].id}`,
           label: `${options[1].label} (${options[1].cost}g)`,
           enabled: this.gameState.gold >= options[1].cost,
+          tooltipTitle: options[1].label,
+          tooltipDescription: `Upgrade this tower into ${options[1].label}.`,
+          tooltipCost: options[1].cost,
+          tooltipResource: "gold",
+          tooltipWarning: this.gameState.gold >= options[1].cost ? "" : "Not enough gold",
         });
       }
-      actionDefs.push({ innerRow: 3, innerCol: 4, actionId: "clearSelection", label: "", enabled: true, iconKey: "hammerIcon08" });
+      actionDefs.push({
+        innerRow: 3,
+        innerCol: 4,
+        actionId: "clearSelection",
+        label: "",
+        enabled: true,
+        iconKey: "hammerIcon08",
+        tooltipTitle: "Back",
+        tooltipDescription: "Close this tower menu.",
+        tooltipCost: null,
+        tooltipResource: "gold",
+      });
       this.hud.setActionSlots(this.buildHudActionSlots(actionDefs));
       return;
     }
@@ -753,17 +880,70 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.input.keyboard.on("keydown-E", () => {
-      this.editor.toggle();
-      this.syncHudForEditorMode();
-      this.updateHudActions();
-      this.hud.render(
-        this.gameState,
-        this.towerSystem.towers.length,
-        STARTING_LIVES,
-        this.selectedBuilding,
-        this.getMinimapData(),
-      );
+      this.toggleMapEditorFromMenu();
     });
+
+    this._onGameplayKeyDown = (/** @type {KeyboardEvent} */ ev) => {
+      const hud = this.hud;
+      const store = this.keybindStore;
+      if (!hud || !store) {
+        return;
+      }
+      if (hud.isRebindingKey()) {
+        return;
+      }
+      if (hud.isKeybindPanelOpen()) {
+        if (ev.keyCode === store.getCode("backOrClose") || ev.key === "Escape") {
+          hud.closeKeybindPanel();
+          ev.preventDefault();
+        }
+        return;
+      }
+      if (hud.isMenuDropdownOpen()) {
+        if (ev.keyCode === store.getCode("backOrClose") || ev.key === "Escape") {
+          hud.closeMenuDropdown();
+          ev.preventDefault();
+        }
+        return;
+      }
+      if (ev.keyCode === store.getCode("backOrClose") || ev.key === "Escape") {
+        this.handleGameplayBackOrClose();
+        ev.preventDefault();
+        return;
+      }
+      if (this.editor.enabled || this.gameState.paused) {
+        return;
+      }
+      if (ev.keyCode === store.getCode("selectBlueBarracks")) {
+        const h = this.map.points.homeBarracks;
+        if (h && Number.isFinite(h.x) && Number.isFinite(h.y)) {
+          this.selectBuildingAtCell(h.x, h.y);
+          if (this.selectedBuilding?.kind === "barracks" && this.selectedBuilding?.label === "Blue Barracks") {
+            this.setHudActionMode("barracksMain");
+          } else {
+            this.setHudActionMode("empty");
+          }
+          this.hud.render(
+            this.gameState,
+            this.towerSystem.towers.length,
+            STARTING_LIVES,
+            this.selectedBuilding,
+            this.getMinimapData(),
+          );
+        }
+        ev.preventDefault();
+        return;
+      }
+      const actionId = store.findActionForCode(ev.keyCode);
+      if (actionId && GRID_KEYBIND_ACTION_IDS.includes(actionId)) {
+        const slotIndex = GRID_KEYBIND_ACTION_IDS.indexOf(actionId);
+        if (slotIndex >= 0) {
+          hud.triggerActionSlot(slotIndex);
+          ev.preventDefault();
+        }
+      }
+    };
+    this.input.keyboard.on(Phaser.Input.Keyboard.Events.ANY_KEY_DOWN, this._onGameplayKeyDown);
   }
 
   togglePause() {
@@ -778,6 +958,44 @@ export class GameScene extends Phaser.Scene {
       this.selectedBuilding,
       this.getMinimapData(),
     );
+  }
+
+  toggleMapEditorFromMenu() {
+    this.editor.toggle();
+    this.syncHudForEditorMode();
+    this.updateHudActions();
+    this.hud.render(
+      this.gameState,
+      this.towerSystem.towers.length,
+      STARTING_LIVES,
+      this.selectedBuilding,
+      this.getMinimapData(),
+    );
+  }
+
+  handleGameplayBackOrClose() {
+    if (this.editor.enabled) {
+      return;
+    }
+    if (this._hudActionMode === "barracksCraftMenu") {
+      this.handleHudAction("backFromCraft");
+      return;
+    }
+    if (this._pendingPlacement?.type === "tower") {
+      this.clearTowerPlacement();
+      this.updateHudActions();
+      this.hud.render(
+        this.gameState,
+        this.towerSystem.towers.length,
+        STARTING_LIVES,
+        this.selectedBuilding,
+        this.getMinimapData(),
+      );
+      return;
+    }
+    if (this.selectedBuilding != null) {
+      this.handleHudAction("clearSelection");
+    }
   }
 
   redrawTerrain() {
