@@ -72,7 +72,36 @@ Placement rules:
   - `(1,1)`: Icon_01 (`buildIcon01`) -> `openCraftMenu`
 - `barracksCraftMenu`
   - `(1,1)`: Icon_06 (`buildIcon06`) -> `craftTower`
+  - `(1,2)`: static type info (`Type: Basic`)
   - `(3,4)`: Icon_08 (`hammerIcon08`) -> `backFromCraft`
 - `towerMenu`
   - `(1,1)`: Sell (`sellTower`)
-  - `(3,4)`: Icon_08 (`hammerIcon08`) -> `clearSelection`
+  - for non-basic towers:
+    - `(1,2)`: Upgrade slot A (`upgrade:t1` / `upgrade:t2a` / `upgrade:t3a`) with gold cost shown in label
+    - `(1,3)`: Upgrade slot B (`upgrade:t2b`) with gold cost shown in label
+  - for basic towers:
+    - `(1,1)`: Archer conversion icon (`upgrade:convert:archer`)
+    - `(1,2)`: Lightning conversion icon (`upgrade:convert:lightning`)
+    - `(1,3)`: Earth conversion icon (`upgrade:convert:earth`)
+    - `(1,4)`: Fire conversion icon (`upgrade:convert:fire`)
+    - `(2,1)`: Holy conversion icon (`upgrade:convert:holy`)
+    - `(2,2)`: Ice conversion icon (`upgrade:convert:ice`)
+    - `(2,3)`: Dark conversion icon (`upgrade:convert:dark`)
+    - `(2,4)`: Nature conversion icon (`upgrade:convert:nature`)
+    - `(3,1)`: empty (reserved)
+    - `(3,2)`: empty (reserved)
+    - `(3,3)`: Sell (`sellTower`)
+    - `(3,4)`: Back (`clearSelection`)
+  - for non-basic towers, `(3,4)`: Icon_08 (`hammerIcon08`) -> `clearSelection`
+
+Upgrade menu rules:
+
+- Buttons are disabled when `gameState.gold < option.cost`.
+- Tier-2 branch choice is exclusive and determines whether tier-3 offers `t3a` or `t3b`.
+- Barracks places only a `basic` tower; element choice is done as a tower conversion upgrade.
+- Basic-tower conversion is a fixed grid (no conversion pagination).
+
+Additional craft action:
+
+- `barracksCraftMenu`
+  - no tower-type cycling action

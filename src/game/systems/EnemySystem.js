@@ -2,6 +2,7 @@ import { buildDefaultPathMask, computeRouteFromPathMask } from "../maps/enemyPat
 import { ensurePathMaskGrid } from "../maps/mapUtils";
 import { cellToWorld, worldToCell } from "../maps/tileRules";
 import { createUnitHpBar } from "../ui/UnitHpBar";
+import { balanceRules } from "../balance";
 
 const ENEMY_HP_BAR_Y_OFFSET = 52;
 
@@ -93,13 +94,19 @@ export class EnemySystem {
       hp: definition.hp,
       maxHp: definition.hp,
       speed: definition.speed,
+      baseSpeed: definition.speed,
       rewardGold: definition.rewardGold,
+      role: definition.role ?? "normal",
+      tags: definition.tags ?? [],
       target: cellToWorld(tc.x, tc.y),
       waypointIndex,
       pathCells: path,
       alive: true,
       escaped: false,
       hpBar: null,
+      statuses: [],
+      ccWindowTimer: 0,
+      ccSecondsWithinWindow: 0,
     };
     this._warnedNoPath = false;
 
@@ -123,6 +130,7 @@ export class EnemySystem {
       if (!enemy.alive || enemy.escaped) {
         continue;
       }
+      this._tickStatuses(enemy, deltaSeconds);
 
       const target = enemy.target;
       const dx = target.x - enemy.sprite.x;
@@ -168,6 +176,23 @@ export class EnemySystem {
     return false;
   }
 
+  applyStatus(enemy, status) {
+    if (!enemy || !enemy.alive || enemy.escaped || !status) {
+      return;
+    }
+    const isCc = status.type === "slow" || status.type === "stun" || status.type === "root";
+    if (isCc) {
+      const projected = enemy.ccSecondsWithinWindow + (status.duration ?? 0);
+      if (projected > balanceRules.ccWindowSeconds * balanceRules.ccUptimeCap) {
+        return;
+      }
+    }
+    enemy.statuses.push({
+      ...status,
+      remaining: status.duration ?? 0,
+    });
+  }
+
   consumeEscapedCount() {
     const escaped = this.enemies.filter((enemy) => enemy.escaped && enemy.alive);
     for (const enemy of escaped) {
@@ -180,6 +205,51 @@ export class EnemySystem {
 
   getActiveEnemies() {
     return this.enemies.filter((enemy) => enemy.alive && !enemy.escaped);
+  }
+
+  _tickStatuses(enemy, deltaSeconds) {
+    if (!Array.isArray(enemy.statuses) || enemy.statuses.length === 0) {
+      enemy.speed = enemy.baseSpeed;
+      enemy.ccWindowTimer = Math.max(0, enemy.ccWindowTimer - deltaSeconds);
+      return;
+    }
+    let speedMultiplier = 1;
+    let immobilized = false;
+    let ccInFrame = false;
+    const nextStatuses = [];
+    for (const status of enemy.statuses) {
+      status.remaining -= deltaSeconds;
+      if (status.type === "burn" || status.type === "poison") {
+        enemy.hp -= status.dps * deltaSeconds;
+      } else if (status.type === "slow") {
+        speedMultiplier = Math.min(speedMultiplier, 1 - status.ratio);
+        ccInFrame = true;
+      } else if (status.type === "stun" || status.type === "root") {
+        immobilized = true;
+        ccInFrame = true;
+      } else if (status.type === "curse" || status.type === "weakening") {
+        ccInFrame = true;
+      }
+      if (status.remaining > 0) {
+        nextStatuses.push(status);
+      }
+    }
+    enemy.statuses = nextStatuses;
+    enemy.ccWindowTimer += deltaSeconds;
+    if (ccInFrame) {
+      enemy.ccSecondsWithinWindow += deltaSeconds;
+    }
+    if (enemy.ccWindowTimer >= 12) {
+      enemy.ccWindowTimer = 0;
+      enemy.ccSecondsWithinWindow = Math.max(0, enemy.ccSecondsWithinWindow - 12);
+    }
+    enemy.speed = immobilized ? 0 : enemy.baseSpeed * speedMultiplier;
+    enemy.hpBar?.setRatio(enemy.hp / enemy.maxHp);
+    if (enemy.hp <= 0) {
+      enemy.alive = false;
+      enemy.hpBar?.destroy();
+      enemy.sprite.destroy();
+    }
   }
 
   setBarracksTargets(spawnCell, targetCell) {

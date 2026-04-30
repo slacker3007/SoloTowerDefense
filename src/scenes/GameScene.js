@@ -27,7 +27,7 @@ import { Hud } from "../game/ui/Hud";
 import { blueBarracksHpBarYOffset, createBlueBarracksHpBar } from "../game/ui/BlueBarracksHpBar";
 import { destroyUnitHpOverlay, ensureUnitHpOverlay, syncUnitHpBars } from "../game/ui/UnitHpBar";
 import { DebugOverlay } from "../game/debug/DebugOverlay";
-import { balance } from "../game/balance";
+import { BASIC_CONVERSION_ORDER, balanceRules, getAdaptiveAdjustment } from "../game/balance";
 import { MapEditor } from "../game/editor/MapEditor";
 import { EditorPanel } from "../game/editor/EditorPanel";
 import { ensureMapOverrideGrids, ensureMapTilesets, ensurePathMaskGrid } from "../game/maps/mapUtils";
@@ -65,9 +65,15 @@ export class GameScene extends Phaser.Scene {
     this._hudActionMode = "empty";
     this._pendingPlacement = null;
     this._towerGhost = null;
+    this._towerConversionPage = 0;
+    this._performance = { clearedWaves: 0, leaksInWave: 0, livesAtWaveStart: STARTING_LIVES, waveTimer: 0 };
+    this._adaptiveEnabled = balanceRules.adaptive.enabled;
   }
 
   create() {
+    // #region agent log
+    fetch('http://127.0.0.1:7576/ingest/1dec1a9b-9444-4174-b16c-c421bd677924',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'3311f3'},body:JSON.stringify({sessionId:'3311f3',runId:'run2',hypothesisId:'H0',location:'src/scenes/GameScene.js:create',message:'GameScene create entered',data:{scene:'game'},timestamp:Date.now()})}).catch((err)=>{console.error('[agent-log] create post failed', err);});
+    // #endregion
     this.map = createFreshMap001();
     this.gameState = {
       gold: STARTING_GOLD,
@@ -109,8 +115,9 @@ export class GameScene extends Phaser.Scene {
     this.debugOverlay.redraw();
     this.worldRoot.add(this.debugOverlay.graphics);
 
-    this.waveSystem.startAutoSpawner(balance.redBarracksSpawner);
+    this.waveSystem.startAutoSpawner();
     this.gameState.wave = this.waveSystem.waveIndex;
+    this._performance.livesAtWaveStart = this.gameState.lives;
 
     this._mapPixelW = this.map.width * TILE_SIZE;
     this._mapPixelH = this.map.height * TILE_SIZE;
@@ -183,6 +190,7 @@ export class GameScene extends Phaser.Scene {
   selectBuildingAtCell(cellX, cellY) {
     const tower = this.getTowerAtCell(cellX, cellY);
     if (tower) {
+      this._towerConversionPage = 0;
       this.selectedBuilding = {
         kind: "tower",
         label: "Tower",
@@ -288,6 +296,13 @@ export class GameScene extends Phaser.Scene {
       if (this._hudActionMode === "barracksCraftMenu") {
         const slots = this.buildHudActionSlots([
           { innerRow: 1, innerCol: 1, actionId: "craftTower", label: "", enabled: true, iconKey: "buildIcon06" },
+          {
+            innerRow: 1,
+            innerCol: 2,
+            actionId: "craftTypeInfo",
+            label: "Type: Basic",
+            enabled: false,
+          },
           { innerRow: 3, innerCol: 4, actionId: "backFromCraft", label: "", enabled: true, iconKey: "hammerIcon08" },
         ]);
         this.hud.setActionSlots(slots);
@@ -300,22 +315,126 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     if (selected.kind === "tower") {
-      this.hud.setActionSlots(this.buildHudActionSlots([
-        { innerRow: 1, innerCol: 1, actionId: "sellTower", label: "", enabled: true, iconKey: "sellIcon03" },
-        { innerRow: 3, innerCol: 4, actionId: "clearSelection", label: "", enabled: true, iconKey: "hammerIcon08" },
-      ]));
+      const tower = this.getTowerAtCell(selected.cellX, selected.cellY);
+      const options = this.towerSystem.getUpgradeOptions(tower);
+      if (tower?.type === "basic") {
+        // #region agent log
+        fetch('http://127.0.0.1:7576/ingest/1dec1a9b-9444-4174-b16c-c421bd677924',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'3311f3'},body:JSON.stringify({sessionId:'3311f3',runId:'run1',hypothesisId:'H1',location:'src/scenes/GameScene.js:updateHudActions:basic-entry',message:'Entering basic tower HUD conversion render',data:{selectedCell:{x:selected.cellX,y:selected.cellY},towerType:tower?.type,optionIds:options.map((entry)=>entry?.id??null)},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+        const conversionByType = new Map();
+        for (const option of options) {
+          if (!option?.id?.startsWith?.("convert:")) {
+            continue;
+          }
+          const type = option.id.slice("convert:".length);
+          conversionByType.set(type, option);
+        }
+        const gridCells = [
+          { innerRow: 1, innerCol: 1, towerType: "archer", iconKey: "tower_archer_icon" },
+          { innerRow: 1, innerCol: 2, towerType: "lightning", iconKey: "tower_lightning_icon" },
+          { innerRow: 1, innerCol: 3, towerType: "earth", iconKey: "tower_earth_icon" },
+          { innerRow: 1, innerCol: 4, towerType: "fire", iconKey: "tower_fire_icon" },
+          { innerRow: 2, innerCol: 1, towerType: "holy", iconKey: "tower_holy_icon" },
+          { innerRow: 2, innerCol: 2, towerType: "ice", iconKey: "tower_ice_icon" },
+          { innerRow: 2, innerCol: 3, towerType: "dark", iconKey: "tower_dark_icon" },
+          { innerRow: 2, innerCol: 4, towerType: "nature", iconKey: "tower_nature_icon" },
+          { innerRow: 3, innerCol: 1, towerType: null },
+          { innerRow: 3, innerCol: 2, towerType: null },
+        ];
+        const actionDefs = [];
+        for (const cell of gridCells) {
+          if (!cell.towerType) {
+            actionDefs.push({
+              innerRow: cell.innerRow,
+              innerCol: cell.innerCol,
+              actionId: "conversionReserved",
+              label: "",
+              enabled: false,
+              iconKey: cell.iconKey,
+            });
+            continue;
+          }
+          if (!BASIC_CONVERSION_ORDER.includes(cell.towerType)) {
+            continue;
+          }
+          const option = conversionByType.get(cell.towerType);
+          if (!option) {
+            continue;
+          }
+          actionDefs.push({
+            innerRow: cell.innerRow,
+            innerCol: cell.innerCol,
+            actionId: `upgrade:${option.id}`,
+            label: "",
+            enabled: this.gameState.gold >= option.cost,
+            iconKey: cell.iconKey,
+          });
+        }
+        actionDefs.push({ innerRow: 3, innerCol: 3, actionId: "sellTower", label: "", enabled: true, iconKey: "sellIcon03" });
+        actionDefs.push({ innerRow: 3, innerCol: 4, actionId: "clearSelection", label: "Back", enabled: true });
+        // #region agent log
+        fetch('http://127.0.0.1:7576/ingest/1dec1a9b-9444-4174-b16c-c421bd677924',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'3311f3'},body:JSON.stringify({sessionId:'3311f3',runId:'run1',hypothesisId:'H2',location:'src/scenes/GameScene.js:updateHudActions:basic-slots',message:'Built basic tower HUD action definitions',data:{actionDefs:actionDefs.map((def)=>({row:def.innerRow,col:def.innerCol,actionId:def.actionId,enabled:def.enabled,iconKey:def.iconKey??null}))},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+        this.hud.setActionSlots(this.buildHudActionSlots(actionDefs));
+        return;
+      }
+      const actionDefs = [{ innerRow: 1, innerCol: 1, actionId: "sellTower", label: "", enabled: true, iconKey: "sellIcon03" }];
+      if (options[0]) {
+        actionDefs.push({
+          innerRow: 1,
+          innerCol: 2,
+          actionId: `upgrade:${options[0].id}`,
+          label: `${options[0].label} (${options[0].cost}g)`,
+          enabled: this.gameState.gold >= options[0].cost,
+        });
+      }
+      if (options[1]) {
+        actionDefs.push({
+          innerRow: 1,
+          innerCol: 3,
+          actionId: `upgrade:${options[1].id}`,
+          label: `${options[1].label} (${options[1].cost}g)`,
+          enabled: this.gameState.gold >= options[1].cost,
+        });
+      }
+      actionDefs.push({ innerRow: 3, innerCol: 4, actionId: "clearSelection", label: "", enabled: true, iconKey: "hammerIcon08" });
+      this.hud.setActionSlots(this.buildHudActionSlots(actionDefs));
       return;
     }
     this.hud.setActionSlots([]);
   }
 
   handleHudAction(action) {
+    // #region agent log
+    fetch('http://127.0.0.1:7576/ingest/1dec1a9b-9444-4174-b16c-c421bd677924',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'3311f3'},body:JSON.stringify({sessionId:'3311f3',runId:'run2',hypothesisId:'H6',location:'src/scenes/GameScene.js:handleHudAction:entry',message:'HUD action invoked',data:{action,selectedKind:this.selectedBuilding?.kind??null},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     if (action === "openCraftMenu") {
       this.setHudActionMode("barracksCraftMenu");
       return;
     }
     if (action === "craftTower") {
       this.startTowerPlacement();
+      return;
+    }
+    if (action.startsWith("upgrade:") && this.selectedBuilding?.kind === "tower") {
+      const optionId = action.slice("upgrade:".length);
+      // #region agent log
+      fetch('http://127.0.0.1:7576/ingest/1dec1a9b-9444-4174-b16c-c421bd677924',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'3311f3'},body:JSON.stringify({sessionId:'3311f3',runId:'run1',hypothesisId:'H3',location:'src/scenes/GameScene.js:handleHudAction:upgrade',message:'Upgrade action clicked',data:{action,optionId,selectedKind:this.selectedBuilding?.kind,selectedCell:{x:this.selectedBuilding?.cellX,y:this.selectedBuilding?.cellY}},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
+      const upgraded = this.towerSystem.tryUpgradeTowerAtCell(this.selectedBuilding.cellX, this.selectedBuilding.cellY, this.gameState, optionId);
+      // #region agent log
+      fetch('http://127.0.0.1:7576/ingest/1dec1a9b-9444-4174-b16c-c421bd677924',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'3311f3'},body:JSON.stringify({sessionId:'3311f3',runId:'run1',hypothesisId:'H3',location:'src/scenes/GameScene.js:handleHudAction:upgrade-result',message:'Upgrade action result',data:{optionId,upgraded,gold:this.gameState.gold},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
+      if (upgraded) {
+        this.debugOverlay.redraw();
+        this.hud.render(
+          this.gameState,
+          this.towerSystem.towers.length,
+          STARTING_LIVES,
+          this.selectedBuilding,
+          this.getMinimapData(),
+        );
+      }
       return;
     }
     if (action === "backFromCraft") {
@@ -347,7 +466,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   startTowerPlacement() {
-    this._pendingPlacement = { type: "tower" };
+    this._pendingPlacement = { type: "tower", towerType: "basic" };
     this._hudActionMode = "empty";
     this.selectedBuilding = null;
     const pointer = this.input.activePointer;
@@ -493,7 +612,7 @@ export class GameScene extends Phaser.Scene {
         if (!cell) {
           return;
         }
-        const placed = this.towerSystem.tryPlaceTower(cell.x, cell.y, this.gameState);
+        const placed = this.towerSystem.tryPlaceTower(cell.x, cell.y, this.gameState, this._pendingPlacement.towerType);
         if (!placed) {
           return;
         }
@@ -616,6 +735,9 @@ export class GameScene extends Phaser.Scene {
 
     this.input.keyboard.on("keydown-R", () => {
       this.scene.restart();
+    });
+    this.input.keyboard.on("keydown-O", () => {
+      this._adaptiveEnabled = !this._adaptiveEnabled;
     });
 
     this.input.keyboard.on("keydown-E", () => {
@@ -848,6 +970,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     const deltaSeconds = delta / 1000;
+    this._performance.waveTimer += deltaSeconds;
     this.enemySystem.update(deltaSeconds);
     this.waveSystem.update(deltaSeconds);
     this.towerSystem.updateCooldowns(deltaSeconds);
@@ -856,8 +979,18 @@ export class GameScene extends Phaser.Scene {
     const escaped = this.enemySystem.consumeEscapedCount();
     if (escaped > 0) {
       this.gameState.lives = Math.max(0, this.gameState.lives - escaped);
+      this._performance.leaksInWave += escaped;
     }
 
+    if (this.gameState.wave !== this.waveSystem.waveIndex) {
+      this._performance.clearedWaves += 1;
+      const livesLostInWave = Math.max(0, this._performance.livesAtWaveStart - this.gameState.lives);
+      const adjustment = this.computeAdaptiveAdjustment(livesLostInWave);
+      this.waveSystem.setAdaptiveAdjustment(adjustment);
+      this._performance.waveTimer = 0;
+      this._performance.leaksInWave = 0;
+      this._performance.livesAtWaveStart = this.gameState.lives;
+    }
     this.gameState.wave = this.waveSystem.waveIndex;
     this._homeHpBar?.setRatio(this.gameState.lives / STARTING_LIVES);
     this._homeHpBar?.setValues(this.gameState.lives, STARTING_LIVES);
@@ -873,5 +1006,16 @@ export class GameScene extends Phaser.Scene {
       this.selectedBuilding,
       this.getMinimapData(),
     );
+  }
+
+  computeAdaptiveAdjustment(livesLostInWave = 0) {
+    if (!this._adaptiveEnabled) {
+      return { hpScale: 1, speedScale: 1, countOffset: 0 };
+    }
+    return getAdaptiveAdjustment({
+      leaksInWave: this._performance.leaksInWave,
+      livesLostInWave,
+      waveClearSeconds: this._performance.waveTimer,
+    });
   }
 }

@@ -1,5 +1,6 @@
 import { cellToWorld, isBuildable } from "../maps/tileRules";
 import { TILE_SIZE } from "../constants";
+import { economy, getUpgradeOptionsForTower, isValidConversionTarget, toWorldRange, towerCatalog, upgrades } from "../balance";
 
 export class TowerSystem {
   constructor(scene, map) {
@@ -7,10 +8,10 @@ export class TowerSystem {
     this.map = map;
     this.towers = [];
     this.cellOccupancy = new Set();
-    this.towerCost = 30;
+    this.towerCost = economy.baseTowerCost;
   }
 
-  tryPlaceTower(cellX, cellY, gameState) {
+  tryPlaceTower(cellX, cellY, gameState, towerType = "basic") {
     const key = `${cellX},${cellY}`;
     const buildable = isBuildable(this.map, cellX, cellY);
     const onEnemyPath = this.map.pathMask?.[cellY]?.[cellX] === 1;
@@ -36,14 +37,25 @@ export class TowerSystem {
     if (this.scene.worldRoot) {
       this.scene.worldRoot.add(sprite);
     }
+    const resolvedTowerType = towerCatalog[towerType] ? towerType : "basic";
+    const base = towerCatalog[resolvedTowerType] ?? towerCatalog.basic;
     const tower = {
       x: world.x,
       y: world.y,
-      range: 180,
-      damage: 20,
-      cooldown: 0.5,
+      range: toWorldRange(base.rangeTiles),
+      damage: base.damage,
+      baseDamage: base.damage,
+      cooldown: 1 / base.rate,
+      baseCooldown: 1 / base.rate,
       cooldownRemaining: 0,
+      utilityBudget: base.utilityBudget ?? 1,
       sprite,
+      type: resolvedTowerType,
+      tier: 0,
+      branch: null,
+      effects: [],
+      hitCount: 0,
+      lifestealPool: 0,
     };
 
     this.towers.push(tower);
@@ -70,12 +82,83 @@ export class TowerSystem {
     }
     this.cellOccupancy.delete(`${cellX},${cellY}`);
     tower.sprite?.destroy?.();
-    return Math.floor(this.towerCost * 0.5);
+    return Math.floor(this.towerCost * economy.sellRefundRate);
   }
 
   updateCooldowns(deltaSeconds) {
     for (const tower of this.towers) {
       tower.cooldownRemaining = Math.max(0, tower.cooldownRemaining - deltaSeconds);
     }
+  }
+
+  getUpgradeOptions(tower) {
+    return getUpgradeOptionsForTower(tower);
+  }
+
+  tryUpgradeTowerAtCell(cellX, cellY, gameState, optionId) {
+    const tower = this.getTowerAtCell(cellX, cellY);
+    // #region agent log
+    fetch('http://127.0.0.1:7576/ingest/1dec1a9b-9444-4174-b16c-c421bd677924',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'3311f3'},body:JSON.stringify({sessionId:'3311f3',runId:'run1',hypothesisId:'H4',location:'src/game/systems/TowerSystem.js:tryUpgradeTowerAtCell:entry',message:'tryUpgradeTowerAtCell called',data:{cellX,cellY,optionId,hasTower:Boolean(tower),towerType:tower?.type??null,gold:gameState?.gold},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+    if (!tower) {
+      return false;
+    }
+    const option = this.getUpgradeOptions(tower).find((entry) => entry.id === optionId);
+    // #region agent log
+    fetch('http://127.0.0.1:7576/ingest/1dec1a9b-9444-4174-b16c-c421bd677924',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'3311f3'},body:JSON.stringify({sessionId:'3311f3',runId:'run1',hypothesisId:'H4',location:'src/game/systems/TowerSystem.js:tryUpgradeTowerAtCell:option-lookup',message:'Upgrade option lookup result',data:{optionId,availableOptionIds:this.getUpgradeOptions(tower).map((entry)=>entry.id),foundOptionId:option?.id??null,optionCost:option?.cost??null},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+    if (!option || gameState.gold < option.cost) {
+      return false;
+    }
+    if (option.id.startsWith("convert:")) {
+      const targetType = option.id.split(":")[1];
+      if (!isValidConversionTarget(targetType) || !towerCatalog[targetType]) {
+        return false;
+      }
+      const target = towerCatalog[targetType];
+      gameState.gold -= option.cost;
+      tower.type = targetType;
+      tower.tier = 0;
+      tower.branch = null;
+      tower.damage = target.damage;
+      tower.baseDamage = target.damage;
+      tower.cooldown = 1 / target.rate;
+      tower.baseCooldown = 1 / target.rate;
+      tower.range = toWorldRange(target.rangeTiles);
+      tower.utilityBudget = target.utilityBudget ?? 1;
+      tower.effects = [];
+      tower.hitCount = 0;
+      tower.lifestealPool = 0;
+      // #region agent log
+      fetch('http://127.0.0.1:7576/ingest/1dec1a9b-9444-4174-b16c-c421bd677924',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'3311f3'},body:JSON.stringify({sessionId:'3311f3',runId:'run1',hypothesisId:'H5',location:'src/game/systems/TowerSystem.js:tryUpgradeTowerAtCell:convert-success',message:'Tower conversion applied',data:{targetType,remainingGold:gameState.gold,newTowerType:tower.type,tier:tower.tier},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
+      return true;
+    }
+    const typeUpgrades = upgrades[tower.type];
+    const upgradeData = typeUpgrades?.[option.id];
+    if (!upgradeData) {
+      return false;
+    }
+    gameState.gold -= option.cost;
+    tower.tier = option.tier;
+    if (option.path) {
+      tower.branch = option.path;
+    }
+    if (typeof upgradeData.damageMultiplier === "number") {
+      tower.damage *= upgradeData.damageMultiplier;
+    }
+    if (typeof upgradeData.cooldownMultiplier === "number") {
+      tower.cooldown *= upgradeData.cooldownMultiplier;
+    }
+    if (typeof upgradeData.rangeMultiplier === "number") {
+      tower.range *= upgradeData.rangeMultiplier;
+    }
+    if (Array.isArray(upgradeData.effects)) {
+      tower.effects.push(...upgradeData.effects);
+    }
+    // #region agent log
+    fetch('http://127.0.0.1:7576/ingest/1dec1a9b-9444-4174-b16c-c421bd677924',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'3311f3'},body:JSON.stringify({sessionId:'3311f3',runId:'run1',hypothesisId:'H5',location:'src/game/systems/TowerSystem.js:tryUpgradeTowerAtCell:upgrade-success',message:'Non-conversion upgrade applied',data:{optionId,newTier:tower.tier,newBranch:tower.branch,remainingGold:gameState.gold},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+    return true;
   }
 }
