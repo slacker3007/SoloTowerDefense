@@ -403,10 +403,16 @@ export class Hud {
   }
 
   setActionSlots(slots = []) {
-    this.hideActionTooltip();
+    const hoveredBefore = this._hoveredActionIndex;
     for (let i = 0; i < this._actionSlotConfigs.length; i += 1) {
       this._actionSlotConfigs[i] = slots[i] ?? null;
       this.updateActionSlotInteractivity(i);
+    }
+    const hoveredSlot = hoveredBefore >= 0 ? this._actionSlotConfigs[hoveredBefore] : null;
+    if (hoveredBefore >= 0 && this.hasActionTooltip(hoveredSlot)) {
+      this._hoveredActionIndex = hoveredBefore;
+    } else {
+      this.hideActionTooltip();
     }
     this.layout();
   }
@@ -446,9 +452,17 @@ export class Hud {
       button.on("pointerdown", () => slot.onClick());
     }
     if (canHover) {
-      button.on("pointerover", (pointer) => this.showActionTooltip(index, pointer));
+      button.on("pointerover", (pointer) => {
+        this._hoveredActionIndex = index;
+        this.layout();
+        this.showActionTooltip(index, pointer);
+      });
       button.on("pointermove", (pointer) => this.moveActionTooltip(pointer));
-      button.on("pointerout", () => this.hideActionTooltip());
+      button.on("pointerout", () => {
+        this._hoveredActionIndex = -1;
+        this.layout();
+        this.hideActionTooltip();
+      });
     }
   }
 
@@ -773,13 +787,14 @@ export class Hud {
         }
 
         const button = this._actionButtons[i];
+        const showInlineLabel = Boolean(slot?.label) && this._hoveredActionIndex === i;
         button
           .setPosition(x, y)
           .setVisible(Boolean(slot))
-          .setText(slot?.label ?? "")
+          .setText(showInlineLabel ? slot.label : "")
           .setStyle({ fontSize: `${actionFontSize}px`, padding: { x: 6, y: 5 } });
 
-        if (currentIcon && slot?.label) {
+        if (currentIcon && showInlineLabel) {
           button.setOrigin(1, 0.5);
           button.setX(x - (iconSize / 2) - 8);
           button.setStyle({ fontSize: `13px`, color: "#ffffff", stroke: "#000000", strokeThickness: 3 });

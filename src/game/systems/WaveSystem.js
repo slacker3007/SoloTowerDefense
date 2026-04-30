@@ -50,6 +50,7 @@ export class WaveSystem {
         role: step.role,
         tags: this._buildEnemyTags(step.role, waveIndex),
         rewardGold: getGoldPerKill(waveIndex, step.breather),
+        visual: this._getWaveVisual(waveIndex),
       },
       waveRole: step.role,
       secondaryRole: step.secondaryRole ?? null,
@@ -61,6 +62,19 @@ export class WaveSystem {
       spawnTarget: spawnCount,
       breather: Boolean(step.breather),
     };
+  }
+
+  _getWaveVisual(waveIndex) {
+    if (waveIndex === 2) {
+      return { textureKey: "redLancerRunSheet", animationKey: "red-lancer-run", scale: 0.5 };
+    }
+    if (waveIndex === 3) {
+      return { textureKey: "redMonkRunSheet", animationKey: "red-monk-run", scale: 0.5 };
+    }
+    if (waveIndex === 4) {
+      return { textureKey: "redArcherRunSheet", animationKey: "red-archer-run", scale: 0.5 };
+    }
+    return { textureKey: "redWarriorRunSheet", animationKey: "red-warrior-run", scale: 0.5 };
   }
 
   update(deltaSeconds) {

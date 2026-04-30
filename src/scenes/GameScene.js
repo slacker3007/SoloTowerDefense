@@ -27,7 +27,14 @@ import { Hud } from "../game/ui/Hud";
 import { blueBarracksHpBarYOffset, createBlueBarracksHpBar } from "../game/ui/BlueBarracksHpBar";
 import { destroyUnitHpOverlay, ensureUnitHpOverlay, syncUnitHpBars } from "../game/ui/UnitHpBar";
 import { DebugOverlay } from "../game/debug/DebugOverlay";
-import { BASIC_CONVERSION_ORDER, balanceRules, getAdaptiveAdjustment, getTowerDisplayName } from "../game/balance";
+import {
+  BASIC_CONVERSION_ORDER,
+  balanceRules,
+  getAdaptiveAdjustment,
+  getTowerDescription,
+  getTowerDisplayName,
+  getTowerTooltipSummary,
+} from "../game/balance";
 import { MapEditor } from "../game/editor/MapEditor";
 import { EditorPanel } from "../game/editor/EditorPanel";
 import { GRID_KEYBIND_ACTION_IDS, KeybindStore } from "../game/input/KeybindStore.js";
@@ -77,9 +84,6 @@ export class GameScene extends Phaser.Scene {
   }
 
   create() {
-    // #region agent log
-    fetch('http://127.0.0.1:7576/ingest/1dec1a9b-9444-4174-b16c-c421bd677924',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'3311f3'},body:JSON.stringify({sessionId:'3311f3',runId:'run2',hypothesisId:'H0',location:'src/scenes/GameScene.js:create',message:'GameScene create entered',data:{scene:'game'},timestamp:Date.now()})}).catch((err)=>{console.error('[agent-log] create post failed', err);});
-    // #endregion
     this.map = createFreshMap001();
     this.gameState = {
       gold: STARTING_GOLD,
@@ -325,7 +329,7 @@ export class GameScene extends Phaser.Scene {
             enabled: canAffordTower,
             iconKey: "buildIcon06",
             tooltipTitle: "Build Basic Tower",
-            tooltipDescription: "Start placing a basic tower on an empty buildable tile.",
+            tooltipDescription: `${getTowerDescription("basic")} ${getTowerTooltipSummary("basic")}`,
             tooltipCost: this.towerSystem.towerCost,
             tooltipResource: "gold",
             tooltipWarning: canAffordTower ? "" : "Not enough gold",
@@ -336,8 +340,8 @@ export class GameScene extends Phaser.Scene {
             actionId: "craftTypeInfo",
             label: `Type: Basic (${this.towerSystem.towerCost}g)`,
             enabled: false,
-            tooltipTitle: "Basic Tower",
-            tooltipDescription: "Standard starter tower with balanced damage and range.",
+            tooltipTitle: getTowerDisplayName("basic"),
+            tooltipDescription: `${getTowerDescription("basic")} ${getTowerTooltipSummary("basic")}`,
             tooltipCost: this.towerSystem.towerCost,
             tooltipResource: "gold",
             tooltipWarning: canAffordTower ? "" : "Not enough gold",
@@ -390,9 +394,6 @@ export class GameScene extends Phaser.Scene {
       const tower = this.getTowerAtCell(selected.cellX, selected.cellY);
       const options = this.towerSystem.getUpgradeOptions(tower);
       if (tower?.type === "basic") {
-        // #region agent log
-        fetch('http://127.0.0.1:7576/ingest/1dec1a9b-9444-4174-b16c-c421bd677924',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'3311f3'},body:JSON.stringify({sessionId:'3311f3',runId:'run1',hypothesisId:'H1',location:'src/scenes/GameScene.js:updateHudActions:basic-entry',message:'Entering basic tower HUD conversion render',data:{selectedCell:{x:selected.cellX,y:selected.cellY},towerType:tower?.type,optionIds:options.map((entry)=>entry?.id??null)},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         const conversionByType = new Map();
         for (const option of options) {
           if (!option?.id?.startsWith?.("convert:")) {
@@ -433,15 +434,16 @@ export class GameScene extends Phaser.Scene {
           if (!option) {
             continue;
           }
+          const conversionButtonLabel = getTowerDisplayName(cell.towerType).replace(/ Tower$/, "");
           actionDefs.push({
             innerRow: cell.innerRow,
             innerCol: cell.innerCol,
             actionId: `upgrade:${option.id}`,
-            label: "",
+            label: conversionButtonLabel,
             enabled: this.gameState.gold >= option.cost,
             iconKey: cell.iconKey,
-            tooltipTitle: option.label,
-            tooltipDescription: `Convert this tower into a ${option.label} tower.`,
+            tooltipTitle: getTowerDisplayName(cell.towerType),
+            tooltipDescription: `${getTowerDescription(cell.towerType)} ${getTowerTooltipSummary(cell.towerType)}`,
             tooltipCost: option.cost,
             tooltipResource: "gold",
             tooltipWarning: this.gameState.gold >= option.cost ? "" : "Not enough gold",
@@ -470,9 +472,6 @@ export class GameScene extends Phaser.Scene {
           tooltipCost: null,
           tooltipResource: "gold",
         });
-        // #region agent log
-        fetch('http://127.0.0.1:7576/ingest/1dec1a9b-9444-4174-b16c-c421bd677924',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'3311f3'},body:JSON.stringify({sessionId:'3311f3',runId:'run1',hypothesisId:'H2',location:'src/scenes/GameScene.js:updateHudActions:basic-slots',message:'Built basic tower HUD action definitions',data:{actionDefs:actionDefs.map((def)=>({row:def.innerRow,col:def.innerCol,actionId:def.actionId,enabled:def.enabled,iconKey:def.iconKey??null}))},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         this.hud.setActionSlots(this.buildHudActionSlots(actionDefs));
         return;
       }
@@ -489,6 +488,7 @@ export class GameScene extends Phaser.Scene {
         tooltipResource: "gold",
       }];
       if (options[0]) {
+        const upgradeDescriptionA = `${getTowerDescription(tower?.type)} ${getTowerTooltipSummary(tower?.type)} Upgrade: ${options[0].label}.`;
         actionDefs.push({
           innerRow: 1,
           innerCol: 2,
@@ -496,13 +496,14 @@ export class GameScene extends Phaser.Scene {
           label: `${options[0].label} (${options[0].cost}g)`,
           enabled: this.gameState.gold >= options[0].cost,
           tooltipTitle: options[0].label,
-          tooltipDescription: `Upgrade this tower into ${options[0].label}.`,
+          tooltipDescription: upgradeDescriptionA,
           tooltipCost: options[0].cost,
           tooltipResource: "gold",
           tooltipWarning: this.gameState.gold >= options[0].cost ? "" : "Not enough gold",
         });
       }
       if (options[1]) {
+        const upgradeDescriptionB = `${getTowerDescription(tower?.type)} ${getTowerTooltipSummary(tower?.type)} Upgrade: ${options[1].label}.`;
         actionDefs.push({
           innerRow: 1,
           innerCol: 3,
@@ -510,7 +511,7 @@ export class GameScene extends Phaser.Scene {
           label: `${options[1].label} (${options[1].cost}g)`,
           enabled: this.gameState.gold >= options[1].cost,
           tooltipTitle: options[1].label,
-          tooltipDescription: `Upgrade this tower into ${options[1].label}.`,
+          tooltipDescription: upgradeDescriptionB,
           tooltipCost: options[1].cost,
           tooltipResource: "gold",
           tooltipWarning: this.gameState.gold >= options[1].cost ? "" : "Not enough gold",
@@ -535,9 +536,6 @@ export class GameScene extends Phaser.Scene {
   }
 
   handleHudAction(action) {
-    // #region agent log
-    fetch('http://127.0.0.1:7576/ingest/1dec1a9b-9444-4174-b16c-c421bd677924',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'3311f3'},body:JSON.stringify({sessionId:'3311f3',runId:'run2',hypothesisId:'H6',location:'src/scenes/GameScene.js:handleHudAction:entry',message:'HUD action invoked',data:{action,selectedKind:this.selectedBuilding?.kind??null},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     if (action === "openCraftMenu") {
       this.setHudActionMode("barracksCraftMenu");
       return;
@@ -551,13 +549,7 @@ export class GameScene extends Phaser.Scene {
     }
     if (action.startsWith("upgrade:") && this.selectedBuilding?.kind === "tower") {
       const optionId = action.slice("upgrade:".length);
-      // #region agent log
-      fetch('http://127.0.0.1:7576/ingest/1dec1a9b-9444-4174-b16c-c421bd677924',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'3311f3'},body:JSON.stringify({sessionId:'3311f3',runId:'run1',hypothesisId:'H3',location:'src/scenes/GameScene.js:handleHudAction:upgrade',message:'Upgrade action clicked',data:{action,optionId,selectedKind:this.selectedBuilding?.kind,selectedCell:{x:this.selectedBuilding?.cellX,y:this.selectedBuilding?.cellY}},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
       const upgraded = this.towerSystem.tryUpgradeTowerAtCell(this.selectedBuilding.cellX, this.selectedBuilding.cellY, this.gameState, optionId);
-      // #region agent log
-      fetch('http://127.0.0.1:7576/ingest/1dec1a9b-9444-4174-b16c-c421bd677924',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'3311f3'},body:JSON.stringify({sessionId:'3311f3',runId:'run1',hypothesisId:'H3',location:'src/scenes/GameScene.js:handleHudAction:upgrade-result',message:'Upgrade action result',data:{optionId,upgraded,gold:this.gameState.gold},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
       if (upgraded) {
         const tower = this.towerSystem.getTowerAtCell(this.selectedBuilding.cellX, this.selectedBuilding.cellY);
         if (tower) {

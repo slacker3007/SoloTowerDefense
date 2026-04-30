@@ -29,6 +29,36 @@ export const towerCatalog = {
   archer: { label: "Archer", damage: 11, rate: 1.3, rangeTiles: 3.8, utilityBudget: 1.0, projectileSpeed: 490 },
 };
 
+export const towerUiMeta = {
+  basic: {
+    description: "Balanced starter tower with steady damage and reliable range.",
+  },
+  fire: {
+    description: "High burst damage with burn-focused upgrades.",
+  },
+  ice: {
+    description: "Control tower that slows enemies and sets up disables.",
+  },
+  lightning: {
+    description: "Fast attacks with chain and burst potential.",
+  },
+  nature: {
+    description: "Damage-over-time specialist with poison and root utility.",
+  },
+  earth: {
+    description: "Heavy-hitting shots with strong splash and crowd control.",
+  },
+  dark: {
+    description: "Debuff-oriented tower with curse and sustain effects.",
+  },
+  holy: {
+    description: "Supportive damage dealer with anti-dark and aura upgrades.",
+  },
+  archer: {
+    description: "Long-range rapid fire with crit and volley paths.",
+  },
+};
+
 export const towerVisuals = {
   basic: { textureKey: "blueTower" },
   archer: { textureKey: "tower_archer_building" },
@@ -211,6 +241,18 @@ export function isValidConversionTarget(towerType) {
 export function getTowerDisplayName(towerType) {
   const label = towerCatalog[towerType]?.label ?? towerCatalog.basic.label;
   return `${label} Tower`;
+}
+
+export function getTowerDescription(towerType) {
+  return towerUiMeta[towerType]?.description ?? towerUiMeta.basic.description;
+}
+
+export function getTowerTooltipSummary(towerType) {
+  const tower = towerCatalog[towerType] ?? towerCatalog.basic;
+  const damage = Number.isFinite(tower.damage) ? tower.damage : towerCatalog.basic.damage;
+  const rate = Number.isFinite(tower.rate) ? tower.rate : towerCatalog.basic.rate;
+  const rangeTiles = Number.isFinite(tower.rangeTiles) ? tower.rangeTiles : towerCatalog.basic.rangeTiles;
+  return `Damage ${damage} | Rate ${rate.toFixed(1)}/s | Range ${rangeTiles.toFixed(1)} tiles`;
 }
 
 export function getTowerTextureKey(towerType) {

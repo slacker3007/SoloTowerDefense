@@ -77,12 +77,29 @@ export class EnemySystem {
       waypointIndex = path.length > 1 ? 1 : 0;
     }
 
+    const visual = definition?.visual ?? {};
+    const textureKey = typeof visual.textureKey === "string" ? visual.textureKey : "redWarriorRunSheet";
+    const animationKey = typeof visual.animationKey === "string" ? visual.animationKey : "red-warrior-run";
+    const scale = Number.isFinite(visual.scale) ? visual.scale : 0.5;
+    const fallbackTextureKey = "redWarriorRunSheet";
+    const fallbackAnimationKey = "red-warrior-run";
+
     let sprite = null;
-    if (this.scene.textures.exists("redWarriorRunSheet")) {
-      sprite = this.scene.add.sprite(startWorld.x, startWorld.y, "redWarriorRunSheet", 0);
-      sprite.setScale(0.5);
-      if (this.scene.anims.exists("red-warrior-run")) {
-        sprite.play("red-warrior-run");
+    const resolvedTextureKey = this.scene.textures.exists(textureKey)
+      ? textureKey
+      : this.scene.textures.exists(fallbackTextureKey)
+        ? fallbackTextureKey
+        : null;
+    if (resolvedTextureKey) {
+      sprite = this.scene.add.sprite(startWorld.x, startWorld.y, resolvedTextureKey, 0);
+      sprite.setScale(scale);
+      const resolvedAnimationKey = this.scene.anims.exists(animationKey)
+        ? animationKey
+        : this.scene.anims.exists(fallbackAnimationKey)
+          ? fallbackAnimationKey
+          : null;
+      if (resolvedAnimationKey) {
+        sprite.play(resolvedAnimationKey);
       }
     } else {
       sprite = this.scene.add.circle(startWorld.x, startWorld.y, 14, 0xcf3f3f);

@@ -58,6 +58,21 @@ export const spriteSheets = [
     path: `${tinySwordsRoot}/Units/Red Units/Warrior/Warrior_Run.png`,
     frameConfig: { frameWidth: 192, frameHeight: 192 },
   },
+  {
+    key: "redLancerRunSheet",
+    path: `${tinySwordsRoot}/Units/Red Units/Lancer/Lancer_Run.png`,
+    frameConfig: { frameWidth: 320, frameHeight: 320 },
+  },
+  {
+    key: "redMonkRunSheet",
+    path: `${tinySwordsRoot}/Units/Red Units/Monk/Run.png`,
+    frameConfig: { frameWidth: 192, frameHeight: 192 },
+  },
+  {
+    key: "redArcherRunSheet",
+    path: `${tinySwordsRoot}/Units/Red Units/Archer/Archer_Run.png`,
+    frameConfig: { frameWidth: 192, frameHeight: 192 },
+  },
   /** BigBar_Base 320×64 = (5×64)×64: frames 0=left, 2=tile middle (repeat), 4=right; 1 and 3 are blank. */
   {
     key: "bigBarBase",
@@ -115,18 +130,30 @@ export function preloadTinySwords(scene) {
 }
 
 export function createTinySwordsAnimations(scene) {
-  if (scene.textures.exists("redWarriorRunSheet") && !scene.anims.exists("red-warrior-run")) {
-    const warriorFrameCount = scene.textures.get("redWarriorRunSheet").frameTotal - 1;
+  const createRunLoop = (sheetKey, animationKey, explicitEndFrame = null) => {
+    if (!scene.textures.exists(sheetKey) || scene.anims.exists(animationKey)) {
+      return;
+    }
+    const frameCount = scene.textures.get(sheetKey).frameTotal - 1;
+    const computedEndFrame = Math.max(0, frameCount - 1);
+    const endFrame = Number.isInteger(explicitEndFrame)
+      ? Math.max(0, Math.min(explicitEndFrame, computedEndFrame))
+      : computedEndFrame;
     scene.anims.create({
-      key: "red-warrior-run",
-      frames: scene.anims.generateFrameNumbers("redWarriorRunSheet", {
+      key: animationKey,
+      frames: scene.anims.generateFrameNumbers(sheetKey, {
         start: 0,
-        end: Math.max(0, warriorFrameCount - 1),
+        end: endFrame,
       }),
       frameRate: 10,
       repeat: -1,
     });
-  }
+  };
+
+  createRunLoop("redWarriorRunSheet", "red-warrior-run");
+  createRunLoop("redLancerRunSheet", "red-lancer-run", 5);
+  createRunLoop("redMonkRunSheet", "red-monk-run");
+  createRunLoop("redArcherRunSheet", "red-archer-run");
 }
 
 export function hasTinySwordsFolderHint(scene) {
