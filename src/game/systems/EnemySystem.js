@@ -181,7 +181,13 @@ export class EnemySystem {
       return false;
     }
 
-    enemy.hp -= amount;
+    let damageMultiplier = enemy.tags.includes("armor") ? 0.85 : 1;
+    for (const status of enemy.statuses ?? []) {
+      if (status.type === "curse" || status.type === "vulnerability" || status.type === "weakening") {
+        damageMultiplier += status.ratio ?? 0;
+      }
+    }
+    enemy.hp -= amount * damageMultiplier;
     enemy.hpBar?.setRatio(enemy.hp / enemy.maxHp);
     if (enemy.hp <= 0) {
       enemy.alive = false;
@@ -244,8 +250,8 @@ export class EnemySystem {
       } else if (status.type === "stun" || status.type === "root") {
         immobilized = true;
         ccInFrame = true;
-      } else if (status.type === "curse" || status.type === "weakening") {
-        ccInFrame = true;
+      } else if (status.type === "weakening") {
+        speedMultiplier = Math.min(speedMultiplier, 1 - (status.ratio ?? 0));
       }
       if (status.remaining > 0) {
         nextStatuses.push(status);
@@ -256,9 +262,9 @@ export class EnemySystem {
     if (ccInFrame) {
       enemy.ccSecondsWithinWindow += deltaSeconds;
     }
-    if (enemy.ccWindowTimer >= 12) {
+    if (enemy.ccWindowTimer >= balanceRules.ccWindowSeconds) {
       enemy.ccWindowTimer = 0;
-      enemy.ccSecondsWithinWindow = Math.max(0, enemy.ccSecondsWithinWindow - 12);
+      enemy.ccSecondsWithinWindow = Math.max(0, enemy.ccSecondsWithinWindow - balanceRules.ccWindowSeconds);
     }
     enemy.speed = immobilized ? 0 : enemy.baseSpeed * speedMultiplier;
     enemy.hpBar?.setRatio(enemy.hp / enemy.maxHp);

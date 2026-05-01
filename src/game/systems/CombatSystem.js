@@ -1,3 +1,5 @@
+import { balanceRules, clampUtilityBudget, economy, toWorldRange, towerCatalog } from "../balance";
+
 export class CombatSystem {
   constructor(scene, towerSystem, enemySystem) {
     this.scene = scene;
@@ -20,11 +22,12 @@ export class CombatSystem {
 
       let target = null;
       let bestDistance = Infinity;
+      const effectiveRange = tower.range * this.getTowerRangeMultiplier(tower);
       for (const enemy of enemies) {
         const dx = enemy.sprite.x - tower.x;
         const dy = enemy.sprite.y - tower.y;
         const distance = Math.hypot(dx, dy);
-        if (distance <= tower.range && distance < bestDistance) {
+        if (distance <= effectiveRange && distance < bestDistance) {
           bestDistance = distance;
           target = enemy;
         }
@@ -32,7 +35,7 @@ export class CombatSystem {
 
       if (target) {
         tower.hitCount = (tower.hitCount ?? 0) + 1;
-        tower.cooldownRemaining = tower.cooldown;
+        tower.cooldownRemaining = tower.cooldown / this.getTowerSpeedMultiplier(tower);
         const sprite = this.scene.add.circle(tower.x, tower.y, 4, 0xf5d742);
         if (this.scene.worldRoot) {
           this.scene.worldRoot.add(sprite);
@@ -40,7 +43,7 @@ export class CombatSystem {
         const projectile = {
           x: tower.x,
           y: tower.y,
-          speed: 460,
+          speed: tower.projectileSpeed ?? towerCatalog[tower.type]?.projectileSpeed ?? towerCatalog.basic.projectileSpeed,
           target,
           damage: tower.damage,
           sprite,
@@ -118,13 +121,41 @@ export class CombatSystem {
     const cooldown = Math.max(0.01, tower.cooldown ?? 0.5);
     const utilityBudget = tower.utilityBudget ?? 1;
     if (utilityBudget < 1) {
-      const archerDps = 11 * 1.3;
-      const utilityMin = archerDps * 0.7;
-      const utilityMax = archerDps * 0.85;
-      const cappedDps = Math.min(utilityMax, Math.max(utilityMin, damage / cooldown)) * utilityBudget;
-      damage = Math.min(damage, cappedDps * cooldown);
+      damage = clampUtilityBudget(tower.type, damage, cooldown);
     }
     return damage;
+  }
+
+  getTowerSpeedMultiplier(targetTower) {
+    let multiplier = 1;
+    for (const sourceTower of this.towerSystem.towers) {
+      for (const effect of sourceTower.effects ?? []) {
+        if (effect.type !== "towerAuraSpeed") {
+          continue;
+        }
+        const distance = Math.hypot(targetTower.x - sourceTower.x, targetTower.y - sourceTower.y);
+        if (distance <= toWorldRange(effect.radiusTiles ?? 2.5)) {
+          multiplier = Math.max(multiplier, 1 + (effect.ratio ?? 0));
+        }
+      }
+    }
+    return multiplier;
+  }
+
+  getTowerRangeMultiplier(targetTower) {
+    let multiplier = 1;
+    for (const sourceTower of this.towerSystem.towers) {
+      for (const effect of sourceTower.effects ?? []) {
+        if (effect.type !== "towerAuraRange") {
+          continue;
+        }
+        const distance = Math.hypot(targetTower.x - sourceTower.x, targetTower.y - sourceTower.y);
+        if (distance <= sourceTower.range) {
+          multiplier = Math.max(multiplier, 1 + (effect.ratio ?? 0));
+        }
+      }
+    }
+    return multiplier;
   }
 
   applyTowerEffects(tower, enemy, resolvedDamage, gameState) {
@@ -145,8 +176,29 @@ export class CombatSystem {
       } else if (effect.type === "weakening") {
         this.enemySystem.applyStatus(enemy, { type: "weakening", duration: effect.duration, ratio: effect.ratio });
       } else if (effect.type === "drain") {
+        const maxLives = effects.some((entry) => entry.type === "overhealShield")
+          ? Math.ceil(economy.startingLives * 1.25)
+          : economy.startingLives;
         tower.lifestealPool = (tower.lifestealPool ?? 0) + resolvedDamage * effect.ratio;
-        gameState.lives = Math.min(20, gameState.lives + resolvedDamage * effect.ratio * 0.01);
+        gameState.lives = Math.min(maxLives, gameState.lives + resolvedDamage * effect.ratio * 0.01);
+      }
+      if (effect.type === "auraSlow") {
+        this.applyAuraStatus(tower, "slow", effect.radiusTiles ?? 2.5, {
+          duration: 0.6,
+          ratio: effect.ratio,
+        });
+      }
+      if (effect.type === "auraVulnerability") {
+        this.applyAuraStatus(tower, "vulnerability", effect.radiusTiles ?? 2.5, {
+          duration: 0.8,
+          ratio: effect.ratio,
+        });
+      }
+      if (effect.type === "knockback") {
+        this.enemySystem.applyStatus(enemy, { type: "slow", duration: 0.35, ratio: Math.min(0.6, effect.distanceTiles ?? 0.3) });
+      }
+      if (effect.type === "chainKnockbackSlow") {
+        this.applySplashStatus(enemy, "slow", 1.2, { duration: effect.duration, ratio: effect.ratio });
       }
       if (effect.type === "splash") {
         this.applySplashDamage(tower, enemy, resolvedDamage, effect.ratio, effect.radiusTiles ?? 1.2);
@@ -162,6 +214,9 @@ export class CombatSystem {
       }
       if (effect.type === "volley" || effect.type === "volleyPierce") {
         this.applyVolley(tower, enemy, resolvedDamage, effect.arrows ?? 3);
+      }
+      if (effect.type === "smiteBeamTargets") {
+        this.applySmiteBeam(tower, enemy, resolvedDamage, effect.targets ?? 3);
       }
     }
   }
@@ -183,7 +238,7 @@ export class CombatSystem {
 
   applySplashDamage(tower, target, baseDamage, ratio, radiusTiles) {
     const enemies = this.enemySystem.getActiveEnemies();
-    const radius = radiusTiles * 64;
+    const radius = toWorldRange(radiusTiles);
     for (const enemy of enemies) {
       if (enemy === target) {
         continue;
@@ -196,8 +251,7 @@ export class CombatSystem {
   }
 
   applyChainDamage(tower, target, baseDamage, chainTargets, decay = true) {
-    const hardCap = 6;
-    const safeTargets = Math.min(chainTargets, hardCap);
+    const safeTargets = Math.min(chainTargets, balanceRules.maxChainTargets);
     const enemies = this.enemySystem
       .getActiveEnemies()
       .filter((enemy) => enemy !== target && Math.hypot(enemy.sprite.x - target.sprite.x, enemy.sprite.y - target.sprite.y) <= tower.range)
@@ -221,7 +275,7 @@ export class CombatSystem {
   }
 
   applyVolley(tower, target, amount, arrows) {
-    const safeArrows = Math.min(arrows, 7);
+    const safeArrows = Math.min(arrows, balanceRules.maxVolleyArrows);
     const enemies = this.enemySystem
       .getActiveEnemies()
       .filter((enemy) => Math.hypot(enemy.sprite.x - tower.x, enemy.sprite.y - tower.y) <= tower.range)
@@ -235,12 +289,33 @@ export class CombatSystem {
   }
 
   applySplashStatus(originEnemy, statusType, radiusTiles, payload) {
-    const radius = radiusTiles * 64;
+    const radius = toWorldRange(radiusTiles);
     for (const enemy of this.enemySystem.getActiveEnemies()) {
       const distance = Math.hypot(enemy.sprite.x - originEnemy.sprite.x, enemy.sprite.y - originEnemy.sprite.y);
       if (distance <= radius) {
         this.enemySystem.applyStatus(enemy, { type: statusType, ...payload });
       }
+    }
+  }
+
+  applyAuraStatus(tower, statusType, radiusTiles, payload) {
+    const radius = toWorldRange(radiusTiles);
+    for (const enemy of this.enemySystem.getActiveEnemies()) {
+      const distance = Math.hypot(enemy.sprite.x - tower.x, enemy.sprite.y - tower.y);
+      if (distance <= radius) {
+        this.enemySystem.applyStatus(enemy, { type: statusType, ...payload });
+      }
+    }
+  }
+
+  applySmiteBeam(tower, target, amount, targets) {
+    const safeTargets = Math.max(1, Math.min(targets, balanceRules.maxChainTargets));
+    const enemies = this.enemySystem
+      .getActiveEnemies()
+      .filter((enemy) => Math.hypot(enemy.sprite.x - tower.x, enemy.sprite.y - tower.y) <= tower.range)
+      .slice(0, safeTargets);
+    for (const enemy of enemies) {
+      this.enemySystem.damageEnemy(enemy, enemy === target ? amount * 0.25 : amount * 0.5);
     }
   }
 }

@@ -72,7 +72,7 @@ export const towerVisuals = {
 };
 
 export const economy = {
-  startingGold: 200,
+  startingGold: 220,
   startingLives: 20,
   baseTowerCost: 100,
   sellRefundRate: 0.5,
@@ -156,7 +156,7 @@ export const enemyRoleModifiers = {
   fast: { hp: 0.6, speed: 1.6, count: 1.0 },
   tank: { hp: 2.2, speed: 0.6, count: 1.0 },
   swarm: { hp: 0.35, speed: 1.0, count: 2.0 },
-  elite: { hp: 4.0, speed: 0.8, count: 1.0 },
+  elite: { hp: 3.95, speed: 0.8, count: 1.0 },
 };
 
 export const waveProgram = [
@@ -174,7 +174,7 @@ export const waveProgram = [
   { role: "fast", secondaryRole: "fast", breather: false, expectedTowerCount: 7, expectedDpsBand: [136, 178] },
   { role: "elite", secondaryRole: "tank", breather: false, expectedTowerCount: 8, expectedDpsBand: [154, 202] },
   { role: "swarm", breather: false, expectedTowerCount: 9, expectedDpsBand: [172, 226] },
-  { role: "elite", secondaryRole: "elite", breather: true, expectedTowerCount: 9, expectedDpsBand: [188, 248] },
+  { role: "elite", secondaryRole: "fast", breather: true, expectedTowerCount: 9, expectedDpsBand: [188, 248] },
 ];
 
 export const balanceRules = {

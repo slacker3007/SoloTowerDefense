@@ -56,6 +56,7 @@ export class TowerSystem {
       cooldown: 1 / base.rate,
       baseCooldown: 1 / base.rate,
       cooldownRemaining: 0,
+      projectileSpeed: base.projectileSpeed,
       utilityBudget: base.utilityBudget ?? 1,
       sprite,
       type: resolvedTowerType,
@@ -133,6 +134,7 @@ export class TowerSystem {
       tower.cooldown = 1 / target.rate;
       tower.baseCooldown = 1 / target.rate;
       tower.range = toWorldRange(target.rangeTiles);
+      tower.projectileSpeed = target.projectileSpeed;
       tower.utilityBudget = target.utilityBudget ?? 1;
       tower.effects = [];
       tower.hitCount = 0;
