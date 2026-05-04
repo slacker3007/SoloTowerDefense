@@ -99,6 +99,52 @@ export function isEnemyWalkableCell(map, scene, cellX, cellY, spawnCell, targetC
 }
 
 /**
+ * Same as {@link isEnemyWalkableCell} but allows stepping on one occupied tower cell (builder start/end).
+ * @param {string | null} ignoreOccupancyKey `"cellX,cellY"` to ignore for `towerSystem.cellOccupancy`, or null
+ */
+export function isEnemyWalkableCellIgnoringOccupancyKey(
+  map,
+  scene,
+  cellX,
+  cellY,
+  spawnCell,
+  targetCell,
+  ignoreOccupancyKey,
+) {
+  const row = map.elevation[cellY];
+  if (!row || row[cellX] == null || row[cellX] < 1) {
+    return false;
+  }
+
+  const isSpawn = cellX === spawnCell.x && cellY === spawnCell.y;
+  const isGoal = cellX === targetCell.x && cellY === targetCell.y;
+  const nearSpawnRing = manhattan(cellX, cellY, spawnCell.x, spawnCell.y) <= ENEMY_BARRACKS_RELAX_MANHATTAN;
+  const nearGoalRing = manhattan(cellX, cellY, targetCell.x, targetCell.y) <= ENEMY_BARRACKS_RELAX_MANHATTAN;
+  const nearBarracksRing = nearSpawnRing || nearGoalRing;
+
+  if (!isSpawn && !isGoal && row[cellX] >= 2 && !nearBarracksRing) {
+    return false;
+  }
+
+  if (!isSpawn && !isGoal && isPlateauRimCell(map, cellX, cellY) && !nearBarracksRing) {
+    return false;
+  }
+
+  if (!isSpawn && !isGoal && map.buildings[cellY]?.[cellX] != null) {
+    return false;
+  }
+
+  const towerKey = `${cellX},${cellY}`;
+  const towerCells = scene.towerSystem?.cellOccupancy;
+  const ignoreThis = ignoreOccupancyKey != null && towerKey === ignoreOccupancyKey;
+  if (!isSpawn && !isGoal && !ignoreThis && towerCells instanceof Set && towerCells.has(towerKey)) {
+    return false;
+  }
+
+  return true;
+}
+
+/**
  * Walkable only on road tiles (terrainColor6 override) plus spawn/goal barracks cells.
  * Use with `isEnemyWalkableCell` as fallback for grass detours when the road is blocked.
  * @param {*} map

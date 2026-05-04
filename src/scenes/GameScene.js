@@ -20,6 +20,7 @@ import {
 } from "../game/maps/tileRules";
 import { DEFAULT_TERRAIN_SHEET, normalizeTerrainTileOverride } from "../game/maps/tileOverrideSchema";
 import { EnemySystem } from "../game/systems/EnemySystem";
+import { BuilderSystem } from "../game/systems/BuilderSystem";
 import { TowerSystem } from "../game/systems/TowerSystem";
 import { CombatSystem } from "../game/systems/CombatSystem";
 import { WaveSystem } from "../game/systems/WaveSystem";
@@ -115,6 +116,20 @@ export class GameScene extends Phaser.Scene {
       targetCell: this.map.points.homeBarracks,
     });
     this.towerSystem = new TowerSystem(this, this.map);
+    this.builderSystem = new BuilderSystem(this, {
+      map: this.map,
+      towerSystem: this.towerSystem,
+      onAfterJobComplete: () => {
+        this.debugOverlay?.redraw?.();
+        this.hud?.render?.(
+          this.gameState,
+          this.towerSystem.towers.length,
+          STARTING_LIVES,
+          this.selectedBuilding,
+          this.getMinimapData(),
+        );
+      },
+    });
     this.combatSystem = new CombatSystem(this, this.towerSystem, this.enemySystem);
     this.waveSystem = new WaveSystem(this.enemySystem);
     this.keybindStore = new KeybindStore();
@@ -160,6 +175,7 @@ export class GameScene extends Phaser.Scene {
       this.input.keyboard?.off(Phaser.Input.Keyboard.Events.ANY_KEY_DOWN, this._onGameplayKeyDown);
     }
     this.clearTowerPlacement();
+    this.builderSystem?.destroy?.();
     this._homeHpBar?.destroy();
     this._homeHpBar = null;
     this.blueBarracksHpRoot?.destroy(true);
@@ -743,7 +759,7 @@ export class GameScene extends Phaser.Scene {
         if (!cell) {
           return;
         }
-        const placed = this.towerSystem.tryPlaceTower(cell.x, cell.y, this.gameState, this._pendingPlacement.towerType);
+        const placed = this.builderSystem.startTowerBuild(cell.x, cell.y, this._pendingPlacement.towerType, this.gameState);
         if (!placed) {
           return;
         }
@@ -1176,6 +1192,7 @@ export class GameScene extends Phaser.Scene {
     const deltaSeconds = delta / 1000;
     this._performance.waveTimer += deltaSeconds;
     this.enemySystem.update(deltaSeconds);
+    this.builderSystem?.update?.(deltaSeconds);
     this.waveSystem.update(deltaSeconds);
     this.towerSystem.updateCooldowns(deltaSeconds);
     this.combatSystem.update(deltaSeconds, this.gameState);

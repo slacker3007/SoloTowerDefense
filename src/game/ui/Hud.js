@@ -47,6 +47,8 @@ export class Hud {
     this._selectedBuilding = null;
     this._minimapData = null;
     this._actionButtons = [];
+    /** @type {Phaser.GameObjects.Zone[]} Full-cell hit targets for action grid slots (64×64 local space). */
+    this._actionHitZones = [];
     this._actionGridBackground = null;
     this._actionIcons = [];
     this._actionSlotConfigs = Array.from({ length: 12 }, () => null);
@@ -202,12 +204,19 @@ export class Hud {
 
     this._actionGridBackground = this.createActionSlotBackground();
 
+    const actionSlotCell = 64;
     for (let i = 0; i < 12; i += 1) {
-      const button = this.createButton("", true, null, false);
+      const button = this.createButton("", false, null, false);
       button.setOrigin(0.5, 0.5);
       button.setStyle({ backgroundColor: "#00000000" });
       this._actionGridBackground.add(button);
       this._actionButtons.push(button);
+
+      const zone = this.scene.add.zone(0, 0, actionSlotCell, actionSlotCell);
+      zone.setOrigin(0.5, 0.5);
+      this._actionGridBackground.add(zone);
+      this._actionHitZones.push(zone);
+
       this._actionIcons.push(null);
     }
 
@@ -216,27 +225,27 @@ export class Hud {
     this.tooltipBackground.setStrokeStyle(1, 0x7ca8d6, 0.95);
     this.tooltipTitleText = scene.add.text(0, 0, "", {
       fontFamily: "monospace",
-      fontSize: "15px",
+      fontSize: "17px",
       color: "#ffffff",
       fontStyle: "bold",
     });
     this.tooltipTitleText.setOrigin(0, 0);
     this.tooltipDescriptionText = scene.add.text(0, 0, "", {
       fontFamily: "monospace",
-      fontSize: "13px",
+      fontSize: "16px",
       color: "#d7e2ff",
-      wordWrap: { width: 268, useAdvancedWrap: true },
+      wordWrap: { width: 340, useAdvancedWrap: true },
     });
     this.tooltipDescriptionText.setOrigin(0, 0);
     this.tooltipCostText = scene.add.text(0, 0, "", {
       fontFamily: "monospace",
-      fontSize: "13px",
+      fontSize: "15px",
       color: "#ffeaa0",
     });
     this.tooltipCostText.setOrigin(0, 0);
     this.tooltipWarningText = scene.add.text(0, 0, "", {
       fontFamily: "monospace",
-      fontSize: "12px",
+      fontSize: "14px",
       color: "#ff9a9a",
     });
     this.tooltipWarningText.setOrigin(0, 0);
@@ -434,31 +443,31 @@ export class Hud {
   }
 
   updateActionSlotInteractivity(index) {
-    const button = this._actionButtons[index];
+    const zone = this._actionHitZones[index];
     const slot = this._actionSlotConfigs[index];
-    button.removeAllListeners();
+    zone.removeAllListeners();
     if (!slot) {
-      button.disableInteractive();
+      zone.disableInteractive();
       return;
     }
     const canClick = Boolean(slot.enabled && typeof slot.onClick === "function");
     const canHover = this.hasActionTooltip(slot);
     if (!canClick && !canHover) {
-      button.disableInteractive();
+      zone.disableInteractive();
       return;
     }
-    button.setInteractive({ useHandCursor: true });
+    zone.setInteractive({ useHandCursor: canClick });
     if (canClick) {
-      button.on("pointerdown", () => slot.onClick());
+      zone.on("pointerdown", () => slot.onClick());
     }
     if (canHover) {
-      button.on("pointerover", (pointer) => {
+      zone.on("pointerover", (pointer) => {
         this._hoveredActionIndex = index;
         this.layout();
         this.showActionTooltip(index, pointer);
       });
-      button.on("pointermove", (pointer) => this.moveActionTooltip(pointer));
-      button.on("pointerout", () => {
+      zone.on("pointermove", (pointer) => this.moveActionTooltip(pointer));
+      zone.on("pointerout", () => {
         this._hoveredActionIndex = -1;
         this.layout();
         this.hideActionTooltip();
@@ -504,7 +513,7 @@ export class Hud {
       this.tooltipDescriptionText.width,
       this.tooltipCostText.width,
       this.tooltipWarningText.visible ? this.tooltipWarningText.width : 0,
-      180,
+      280,
     );
     const tooltipW = tooltipInnerWidth + textPad * 2;
     const warningHeight = this.tooltipWarningText.visible ? this.tooltipWarningText.height + lineGap : 0;
@@ -787,7 +796,13 @@ export class Hud {
         }
 
         const button = this._actionButtons[i];
-        const showInlineLabel = Boolean(slot?.label) && this._hoveredActionIndex === i;
+        const hitZone = this._actionHitZones[i];
+        hitZone
+          .setPosition(x, y)
+          .setSize(contentCellW, contentCellH)
+          .setVisible(Boolean(slot));
+
+        const showInlineLabel = Boolean(slot?.label) && this._hoveredActionIndex === i && !this.hasActionTooltip(slot);
         button
           .setPosition(x, y)
           .setVisible(Boolean(slot))
@@ -801,6 +816,9 @@ export class Hud {
         } else {
           button.setOrigin(0.5, 0.5);
         }
+      }
+      for (const z of this._actionHitZones) {
+        this._actionGridBackground.bringToTop(z);
       }
       if (this.tooltipRoot.visible) {
         this.moveActionTooltip();
@@ -822,20 +840,19 @@ export class Hud {
     if (!this._bottomVisible) {
       this.hideActionTooltip();
     }
-    for (const button of this._actionButtons) {
-      if (button.input) {
-        const idx = this._actionButtons.indexOf(button);
-        const slot = this._actionSlotConfigs[idx];
-        const enabled = Boolean(
-          this._bottomVisible &&
-          slot &&
-          ((slot?.enabled && typeof slot?.onClick === "function") || this.hasActionTooltip(slot)),
-        );
-        if (enabled) {
-          button.setInteractive({ useHandCursor: true });
-        } else {
-          button.disableInteractive();
-        }
+    for (let idx = 0; idx < this._actionHitZones.length; idx += 1) {
+      const zone = this._actionHitZones[idx];
+      const slot = this._actionSlotConfigs[idx];
+      const wantsInput = Boolean(
+        this._bottomVisible &&
+        slot &&
+        ((slot?.enabled && typeof slot?.onClick === "function") || this.hasActionTooltip(slot)),
+      );
+      if (wantsInput) {
+        const canClick = Boolean(slot.enabled && typeof slot.onClick === "function");
+        zone.setInteractive({ useHandCursor: canClick });
+      } else {
+        zone.disableInteractive();
       }
     }
   }

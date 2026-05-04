@@ -19,18 +19,54 @@ export class TowerSystem {
     this.towerCost = economy.baseTowerCost;
   }
 
-  tryPlaceTower(cellX, cellY, gameState, towerType = "basic") {
+  /**
+   * Shared validation for placing or reserving a tower cell.
+   * @param {number} cellX
+   * @param {number} cellY
+   * @param {{ gold: number }} gameState
+   * @returns {boolean}
+   */
+  canPlaceTowerAtCell(cellX, cellY, gameState) {
     const key = `${cellX},${cellY}`;
     const buildable = isBuildable(this.map, cellX, cellY);
     const onEnemyPath = this.map.pathMask?.[cellY]?.[cellX] === 1;
     const occupied = this.cellOccupancy.has(key);
     const enoughGold = gameState.gold >= this.towerCost;
-    if (!buildable || onEnemyPath || occupied || !enoughGold) {
+    return buildable && !onEnemyPath && !occupied && enoughGold;
+  }
+
+  /**
+   * Spend gold and reserve the cell for an in-flight builder job (no tower object yet).
+   * @param {number} cellX
+   * @param {number} cellY
+   * @param {{ gold: number }} gameState
+   * @returns {boolean}
+   */
+  tryReserveTowerConstruction(cellX, cellY, gameState) {
+    if (!this.canPlaceTowerAtCell(cellX, cellY, gameState)) {
+      return false;
+    }
+    gameState.gold -= this.towerCost;
+    this.cellOccupancy.add(`${cellX},${cellY}`);
+    return true;
+  }
+
+  /**
+   * Create the active tower at a cell that was already reserved (gold already spent).
+   * @param {number} cellX
+   * @param {number} cellY
+   * @param {string} [towerType]
+   * @returns {boolean}
+   */
+  completeReservedTower(cellX, cellY, towerType = "basic") {
+    const key = `${cellX},${cellY}`;
+    if (!this.cellOccupancy.has(key)) {
+      return false;
+    }
+    if (this.getTowerAtCell(cellX, cellY)) {
       return false;
     }
 
-    gameState.gold -= this.towerCost;
-    this.cellOccupancy.add(key);
     const world = cellToWorld(cellX, cellY);
     let sprite;
     if (this.scene.textures.exists("blueTower")) {
@@ -69,6 +105,32 @@ export class TowerSystem {
 
     this.towers.push(tower);
     return true;
+  }
+
+  /**
+   * Refund and release a reserved cell if construction was cancelled before completion.
+   * @param {number} cellX
+   * @param {number} cellY
+   * @param {{ gold: number }} gameState
+   */
+  cancelReservedTowerConstruction(cellX, cellY, gameState) {
+    const key = `${cellX},${cellY}`;
+    if (this.getTowerAtCell(cellX, cellY)) {
+      return;
+    }
+    if (!this.cellOccupancy.has(key)) {
+      return;
+    }
+    this.cellOccupancy.delete(key);
+    gameState.gold += this.towerCost;
+  }
+
+  /** @deprecated Prefer tryReserveTowerConstruction + builder job + completeReservedTower */
+  tryPlaceTower(cellX, cellY, gameState, towerType = "basic") {
+    if (!this.tryReserveTowerConstruction(cellX, cellY, gameState)) {
+      return false;
+    }
+    return this.completeReservedTower(cellX, cellY, towerType);
   }
 
   getTowerAtCell(cellX, cellY) {

@@ -73,6 +73,16 @@ export const spriteSheets = [
     path: `${tinySwordsRoot}/Units/Red Units/Archer/Archer_Run.png`,
     frameConfig: { frameWidth: 192, frameHeight: 192 },
   },
+  {
+    key: "bluePawnRunHammerSheet",
+    path: `${tinySwordsRoot}/Units/Blue Units/Pawn/Pawn_Run Hammer.png`,
+    frameConfig: { frameWidth: 192, frameHeight: 192 },
+  },
+  {
+    key: "bluePawnInteractHammerSheet",
+    path: `${tinySwordsRoot}/Units/Blue Units/Pawn/Pawn_Interact Hammer.png`,
+    frameConfig: { frameWidth: 192, frameHeight: 192 },
+  },
   /** BigBar_Base 320×64 = (5×64)×64: frames 0=left, 2=tile middle (repeat), 4=right; 1 and 3 are blank. */
   {
     key: "bigBarBase",
@@ -154,6 +164,8 @@ export function createTinySwordsAnimations(scene) {
   createRunLoop("redLancerRunSheet", "red-lancer-run", 5);
   createRunLoop("redMonkRunSheet", "red-monk-run");
   createRunLoop("redArcherRunSheet", "red-archer-run");
+  createRunLoop("bluePawnRunHammerSheet", "blue-pawn-run-hammer");
+  createRunLoop("bluePawnInteractHammerSheet", "blue-pawn-interact-hammer");
 }
 
 export function hasTinySwordsFolderHint(scene) {
