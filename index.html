@@ -32,7 +32,9 @@
         overflow: hidden;
       }
       #app {
-        flex: 0 0 auto;
+        flex: 1 1 auto;
+        min-width: 0;
+        height: 100%;
         position: relative;
         max-height: 100%;
         overflow: hidden;
@@ -67,7 +69,10 @@
       #editor-panel {
         flex: 0 0 288px;
         width: 288px;
-        min-height: 100vh;
+        height: 100vh;
+        height: 100dvh;
+        max-height: 100vh;
+        max-height: 100dvh;
         border-left: 1px solid #2a3548;
         background: #141b28;
         overflow-y: auto;

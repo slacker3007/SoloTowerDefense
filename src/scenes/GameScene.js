@@ -970,6 +970,7 @@ export class GameScene extends Phaser.Scene {
 
   toggleMapEditorFromMenu() {
     this.editor.toggle();
+    this._refreshScaleAfterEditorPanelToggle();
     this.syncHudForEditorMode();
     this.updateHudActions();
     this.hud.render(
@@ -979,6 +980,17 @@ export class GameScene extends Phaser.Scene {
       this.selectedBuilding,
       this.getMinimapData(),
     );
+  }
+
+  _refreshScaleAfterEditorPanelToggle() {
+    const refresh = () => {
+      this.scale.refresh();
+      this.hud?.layout?.();
+      this._clampCameraScroll();
+    };
+
+    refresh();
+    window.requestAnimationFrame(refresh);
   }
 
   handleGameplayBackOrClose() {

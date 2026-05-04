@@ -54,6 +54,8 @@ export class EditorPanel {
     this.tilePickerCanvas = null;
     /** @type {HTMLHeadingElement | null} */
     this._pickerHeadingEl = null;
+    /** @type {HTMLParagraphElement | null} */
+    this._tilePickerHintEl = null;
     /** @type {HTMLButtonElement[]} */
     this._sheetButtons = [];
     /** @type {HTMLInputElement | null} */
@@ -259,10 +261,10 @@ export class EditorPanel {
     this._pickerHeadingEl.className = "editor-panel__picker-title";
     this._pickerHeadingEl.textContent = "Tile picker";
     pickerSec.appendChild(this._pickerHeadingEl);
-    const pickerHint = document.createElement("p");
-    pickerHint.className = "editor-panel__picker-hint";
-    pickerHint.textContent = "Select a cell first, choose role above, then click a tile.";
-    pickerSec.appendChild(pickerHint);
+    this._tilePickerHintEl = document.createElement("p");
+    this._tilePickerHintEl.className = "editor-panel__picker-hint editor-panel__tile-picker-hint";
+    this._tilePickerHintEl.textContent = "Select a cell first, choose role above, then click a tile.";
+    pickerSec.appendChild(this._tilePickerHintEl);
     this.tilePickerCanvas = document.createElement("canvas");
     this.tilePickerCanvas.className = "tile-picker-canvas";
     const pw = 270;
@@ -773,9 +775,8 @@ export class EditorPanel {
       this.saveBtn.textContent = e.isDirty ? "Save map *" : "Save map";
     }
 
-    const hint = this.root.querySelector(".editor-panel__picker-hint");
-    if (hint instanceof HTMLElement) {
-      hint.textContent =
+    if (this._tilePickerHintEl) {
+      this._tilePickerHintEl.textContent =
         e.getSelectedCount() === 0
           ? "Select cells first (Select tool), choose role, then click a tile."
           : "Click a tile below to apply to all selected cells.";
@@ -805,6 +806,7 @@ export class EditorPanel {
     this._decThumb = null;
     this._roleRadios = [];
     this._pickerHeadingEl = null;
+    this._tilePickerHintEl = null;
     this._sheetButtons = [];
     this.tilePickerCanvas = null;
     this._pickerMove = null;
