@@ -47,7 +47,7 @@ export class Hud {
     this.actionPanelOffsetX = 80;
     this.actionPanelOffsetY = 40;
     this._selectedBuilding = null;
-    this._minimapData = null;
+    this._waveInfo = null;
     this._actionButtons = [];
     /** @type {Phaser.GameObjects.Zone[]} Full-cell hit targets for action grid slots (64×64 local space). */
     this._actionHitZones = [];
@@ -199,11 +199,21 @@ export class Hud {
     this.goldText.setOrigin(1, 0.5);
     this.towersText.setOrigin(1, 0.5);
 
-    this.minimapFrame = scene.add.rectangle(0, 0, 180, 120, 0x152235, 0.95);
-    this.minimapFrame.setOrigin(0, 0);
-    this.minimapFrame.setStrokeStyle(2, 0x7ca8d6, 0.9);
-
-    this.minimapGraphics = scene.add.graphics();
+    this.waveInfoFrame = scene.add.rectangle(0, 0, 180, 120, 0x152235, 0.95);
+    this.waveInfoFrame.setOrigin(0, 0);
+    this.waveInfoFrame.setStrokeStyle(2, 0x7ca8d6, 0.9);
+    this.waveInfoTitleText = scene.add.text(0, 0, "Wave Info", {
+      fontFamily: "monospace",
+      fontSize: "14px",
+      color: "#ffffff",
+    });
+    this.waveInfoTitleText.setOrigin(0, 0);
+    this.waveRoleText = scene.add.text(0, 0, "Role: Unknown", {
+      fontFamily: "monospace",
+      fontSize: "14px",
+      color: "#c8d0ff",
+    });
+    this.waveRoleText.setOrigin(0, 0);
 
     this._actionGridBackground = this.createActionSlotBackground();
 
@@ -274,8 +284,9 @@ export class Hud {
       this.selectedCellText,
       this.selectedDamageText,
       this.selectedRangeText,
-      this.minimapFrame,
-      this.minimapGraphics,
+      this.waveInfoFrame,
+      this.waveInfoTitleText,
+      this.waveRoleText,
       this._actionGridBackground,
       this.menuBackdrop,
       this.menuDropdownRoot,
@@ -286,8 +297,9 @@ export class Hud {
     this.topUiObjects = [this.topBackground, this.menuButton, this.speedButton, this.hpText, this.goldText, this.towersText];
     this.bottomUiObjects = [
       this.bottomBackground,
-      this.minimapFrame,
-      this.minimapGraphics,
+      this.waveInfoFrame,
+      this.waveInfoTitleText,
+      this.waveRoleText,
       this.selectedTitleText,
       this.selectedHpText,
       this.selectedCellText,
@@ -720,17 +732,27 @@ export class Hud {
         panelPadding = Math.max(6, panelPadding - 2);
       }
 
-      const minimapW = this.clamp(Math.round(rootWidth * 0.2), compactBottom ? 96 : 120, 220);
-      const minimapH = this.clamp(
+      const infoPanelW = this.clamp(Math.round(rootWidth * 0.2), compactBottom ? 96 : 120, 220);
+      const infoPanelH = this.clamp(
         Math.round(this.bottomBarHeight * (compactBottom ? 0.5 : 0.6)),
         compactBottom ? 78 : 90,
         Math.max(compactBottom ? 78 : 90, this.bottomBarHeight - panelPadding * 2),
       );
-      this.minimapFrame.setSize(minimapW, minimapH);
-      this.minimapFrame.setPosition(panelPadding, bottomY + panelPadding);
+      this.waveInfoFrame.setSize(infoPanelW, infoPanelH);
+      this.waveInfoFrame.setPosition(panelPadding, bottomY + panelPadding);
+      const waveInfoPad = this.clamp(Math.round(infoPanelW * 0.08), 8, 14);
+      const waveInfoTitleSize = this.clamp(Math.round(infoPanelH * 0.18), 12, 20);
+      const waveInfoValueSize = this.clamp(Math.round(infoPanelH * 0.17), 12, 20);
+      this.waveInfoTitleText.setStyle({ fontSize: `${waveInfoTitleSize}px` });
+      this.waveRoleText.setStyle({ fontSize: `${waveInfoValueSize}px` });
+      this.waveInfoTitleText.setPosition(this.waveInfoFrame.x + waveInfoPad, this.waveInfoFrame.y + waveInfoPad);
+      this.waveRoleText.setPosition(
+        this.waveInfoFrame.x + waveInfoPad,
+        this.waveInfoTitleText.y + this.waveInfoTitleText.height + Math.max(4, Math.round(waveInfoPad * 0.5)),
+      );
 
       let selectionGap = compactBottom ? 10 : 18;
-      let selectionX = this.minimapFrame.x + this.minimapFrame.width + selectionGap;
+      let selectionX = this.waveInfoFrame.x + this.waveInfoFrame.width + selectionGap;
       this.selectedTitleText.setPosition(selectionX, bottomY + panelPadding + selectedTitleSize * 0.8);
       this.selectedHpText.setPosition(selectionX, this.selectedTitleText.y + selectedInfoSize * 1.7);
       this.selectedCellText.setPosition(selectionX, this.selectedHpText.y + selectedInfoSize * 1.5);
@@ -830,7 +852,6 @@ export class Hud {
       if (this.tooltipRoot.visible) {
         this.moveActionTooltip();
       }
-      this.renderMinimap();
     } catch (e) {
       console.error("[HUD] Layout error:", e);
     }
@@ -844,6 +865,10 @@ export class Hud {
     for (const obj of this.bottomUiObjects) {
       obj.setVisible(this._bottomVisible);
     }
+    const showWavePanel = this._bottomVisible && this._selectedBuilding == null;
+    this.waveInfoFrame.setVisible(showWavePanel);
+    this.waveInfoTitleText.setVisible(showWavePanel);
+    this.waveRoleText.setVisible(showWavePanel);
     if (!this._bottomVisible) {
       this.hideActionTooltip();
     }
@@ -924,9 +949,9 @@ export class Hud {
     };
   }
 
-  render(state, towerCount = 0, maxLives = this.maxLives, selectedBuilding = null, minimapData = null) {
+  render(state, towerCount = 0, maxLives = this.maxLives, selectedBuilding = null, waveInfo = null) {
     this._selectedBuilding = selectedBuilding;
-    this._minimapData = minimapData;
+    this._waveInfo = waveInfo;
     const rawSpeed = Number(state.gameSpeed);
     const gameSpeed =
       Number.isFinite(rawSpeed) ? Math.max(1, Math.min(3, Math.round(rawSpeed))) : 1;
@@ -947,8 +972,23 @@ export class Hud {
       this.selectedCellText.setText("Cell: -");
       this.selectedDamageText.setVisible(false);
       this.selectedRangeText.setVisible(false);
+      this.waveInfoFrame.setVisible(true);
+      this.waveInfoTitleText.setVisible(true);
+      this.waveRoleText.setVisible(true);
+      const rawRole = typeof this._waveInfo?.role === "string" ? this._waveInfo.role : "unknown";
+      const formattedRole = rawRole
+        .split("_")
+        .join(" ")
+        .split(" ")
+        .filter(Boolean)
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(" ");
+      this.waveRoleText.setText(`Role: ${formattedRole || "Unknown"}`);
       return;
     }
+    this.waveInfoFrame.setVisible(false);
+    this.waveInfoTitleText.setVisible(false);
+    this.waveRoleText.setVisible(false);
     this.selectedTitleText.setText(`Selected: ${selected.label}`);
     if (typeof selected.hpCurrent === "number" && typeof selected.hpMax === "number") {
       this.selectedHpText.setText(`HP: ${selected.hpCurrent}/${selected.hpMax}`);
@@ -969,54 +1009,4 @@ export class Hud {
     this.selectedRangeText.setVisible(false);
   }
 
-  renderMinimap() {
-    const gfx = this.minimapGraphics;
-    gfx.clear();
-    if (!this._bottomVisible) {
-      return;
-    }
-    const data = this._minimapData;
-    if (!data) {
-      return;
-    }
-
-    const frameX = this.minimapFrame.x;
-    const frameY = this.minimapFrame.y;
-    const frameW = this.minimapFrame.width;
-    const frameH = this.minimapFrame.height;
-    const mapW = Math.max(1, data.mapWidth);
-    const mapH = Math.max(1, data.mapHeight);
-    const scale = Math.min(frameW / mapW, frameH / mapH);
-    const drawW = mapW * scale;
-    const drawH = mapH * scale;
-    const offX = frameX + (frameW - drawW) / 2;
-    const offY = frameY + (frameH - drawH) / 2;
-
-    gfx.fillStyle(0x233a57, 0.85);
-    gfx.fillRect(offX, offY, drawW, drawH);
-    gfx.lineStyle(1, 0xa6caf0, 0.9);
-    gfx.strokeRect(offX, offY, drawW, drawH);
-
-    gfx.fillStyle(0x58a6ff, 1);
-    for (const tower of data.towers) {
-      gfx.fillRect(offX + tower.x * scale - 1, offY + tower.y * scale - 1, 3, 3);
-    }
-
-    gfx.fillStyle(0x4de06f, 1);
-    for (const barracks of data.friendlyBarracks) {
-      gfx.fillRect(offX + barracks.x * scale - 2, offY + barracks.y * scale - 2, 5, 5);
-    }
-    gfx.fillStyle(0xff6f6f, 1);
-    for (const barracks of data.enemyBarracks) {
-      gfx.fillRect(offX + barracks.x * scale - 2, offY + barracks.y * scale - 2, 5, 5);
-    }
-
-    const viewport = data.viewport;
-    const vx = offX + viewport.x * scale;
-    const vy = offY + viewport.y * scale;
-    const vw = viewport.width * scale;
-    const vh = viewport.height * scale;
-    gfx.lineStyle(1, 0xffec88, 1);
-    gfx.strokeRect(vx, vy, vw, vh);
-  }
 }

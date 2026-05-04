@@ -147,7 +147,7 @@ export class GameScene extends Phaser.Scene {
           this.towerSystem.towers.length,
           STARTING_LIVES,
           this.selectedBuilding,
-          this.getMinimapData(),
+          this.getWaveInfo(),
         );
       },
     });
@@ -188,7 +188,7 @@ export class GameScene extends Phaser.Scene {
       this.towerSystem.towers.length,
       STARTING_LIVES,
       this.selectedBuilding,
-      this.getMinimapData(),
+      this.getWaveInfo(),
     );
   }
 
@@ -655,7 +655,7 @@ export class GameScene extends Phaser.Scene {
           this.towerSystem.towers.length,
           STARTING_LIVES,
           this.selectedBuilding,
-          this.getMinimapData(),
+          this.getWaveInfo(),
         );
       }
       return;
@@ -667,7 +667,7 @@ export class GameScene extends Phaser.Scene {
     if (action === "clearSelection") {
       this.selectedBuilding = null;
       this.setHudActionMode("empty");
-      this.hud.render(this.gameState, this.towerSystem.towers.length, STARTING_LIVES, this.selectedBuilding, this.getMinimapData());
+      this.hud.render(this.gameState, this.towerSystem.towers.length, STARTING_LIVES, this.selectedBuilding, this.getWaveInfo());
       return;
     }
     if (action === "sellTower" && this.selectedBuilding?.kind === "tower") {
@@ -682,7 +682,7 @@ export class GameScene extends Phaser.Scene {
           this.towerSystem.towers.length,
           STARTING_LIVES,
           this.selectedBuilding,
-          this.getMinimapData(),
+          this.getWaveInfo(),
         );
       }
     }
@@ -731,40 +731,10 @@ export class GameScene extends Phaser.Scene {
     this._towerGhost.setPosition(world.x, world.y + TILE_SIZE / 2);
   }
 
-  getMinimapData() {
-    const cam = this.cameras.main;
-    const margins = this.hud?.getOcclusionMargins?.() ?? { top: 0, bottom: 0, left: 0, right: 0 };
-    const towers = this.towerSystem.towers.map((tower) => ({ x: tower.x, y: tower.y }));
-    const friendlyBarracks = [];
-    const enemyBarracks = [];
-    for (let y = 0; y < this.map.height; y += 1) {
-      for (let x = 0; x < this.map.width; x += 1) {
-        const key = this.map.buildings?.[y]?.[x];
-        if (key !== "barracks_blue" && key !== "barracks_red") {
-          continue;
-        }
-        const pos = cellToWorld(x, y);
-        if (key === "barracks_blue") {
-          friendlyBarracks.push(pos);
-        } else {
-          enemyBarracks.push(pos);
-        }
-      }
-    }
-    const viewportWidth = Math.max(1, (cam.width - margins.left - margins.right) / cam.zoom);
-    const viewportHeight = Math.max(1, (cam.height - margins.top - margins.bottom) / cam.zoom);
+  getWaveInfo() {
+    const role = this.waveSystem?.spawner?.waveRole;
     return {
-      mapWidth: this._mapPixelW,
-      mapHeight: this._mapPixelH,
-      towers,
-      friendlyBarracks,
-      enemyBarracks,
-      viewport: {
-        x: cam.scrollX + margins.left / cam.zoom,
-        y: cam.scrollY + margins.top / cam.zoom,
-        width: viewportWidth,
-        height: viewportHeight,
-      },
+      role: typeof role === "string" && role.length > 0 ? role : "unknown",
     };
   }
 
@@ -848,7 +818,7 @@ export class GameScene extends Phaser.Scene {
           this.towerSystem.towers.length,
           STARTING_LIVES,
           this.selectedBuilding,
-          this.getMinimapData(),
+          this.getWaveInfo(),
         );
         return;
       }
@@ -869,7 +839,7 @@ export class GameScene extends Phaser.Scene {
           this.towerSystem.towers.length,
           STARTING_LIVES,
           this.selectedBuilding,
-          this.getMinimapData(),
+          this.getWaveInfo(),
         );
         return;
       }
@@ -881,7 +851,7 @@ export class GameScene extends Phaser.Scene {
         this.towerSystem.towers.length,
         STARTING_LIVES,
         this.selectedBuilding,
-        this.getMinimapData(),
+        this.getWaveInfo(),
       );
     });
 
@@ -1003,7 +973,7 @@ export class GameScene extends Phaser.Scene {
             this.towerSystem.towers.length,
             STARTING_LIVES,
             this.selectedBuilding,
-            this.getMinimapData(),
+            this.getWaveInfo(),
           );
         }
         ev.preventDefault();
@@ -1031,7 +1001,7 @@ export class GameScene extends Phaser.Scene {
       this.towerSystem.towers.length,
       STARTING_LIVES,
       this.selectedBuilding,
-      this.getMinimapData(),
+      this.getWaveInfo(),
     );
   }
 
@@ -1043,7 +1013,7 @@ export class GameScene extends Phaser.Scene {
       this.towerSystem.towers.length,
       STARTING_LIVES,
       this.selectedBuilding,
-      this.getMinimapData(),
+      this.getWaveInfo(),
     );
   }
 
@@ -1057,7 +1027,7 @@ export class GameScene extends Phaser.Scene {
       this.towerSystem.towers.length,
       STARTING_LIVES,
       this.selectedBuilding,
-      this.getMinimapData(),
+      this.getWaveInfo(),
     );
   }
 
@@ -1088,7 +1058,7 @@ export class GameScene extends Phaser.Scene {
         this.towerSystem.towers.length,
         STARTING_LIVES,
         this.selectedBuilding,
-        this.getMinimapData(),
+        this.getWaveInfo(),
       );
       return;
     }
@@ -1392,7 +1362,7 @@ export class GameScene extends Phaser.Scene {
       this.towerSystem.towers.length,
       STARTING_LIVES,
       this.selectedBuilding,
-      this.getMinimapData(),
+      this.getWaveInfo(),
     );
   }
 
