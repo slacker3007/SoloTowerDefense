@@ -127,8 +127,9 @@ export class EnemySystem {
     };
     this._warnedNoPath = false;
 
-    if (this.scene.worldRoot) {
-      this.scene.worldRoot.add(enemy.sprite);
+    const unitsParent = this.scene.unitsWorldLayer ?? this.scene.worldRoot;
+    if (unitsParent) {
+      unitsParent.add(enemy.sprite);
     }
     enemy.hpBar = createUnitHpBar(this.scene, {
       style: "small",

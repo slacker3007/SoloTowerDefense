@@ -78,8 +78,9 @@ export class BuilderSystem {
       sprite.setDepth(DEPTH_PAWN);
     }
 
-    if (this.scene.worldRoot) {
-      this.scene.worldRoot.add(sprite);
+    const unitsParent = this.scene.unitsWorldLayer ?? this.scene.worldRoot;
+    if (unitsParent) {
+      unitsParent.add(sprite);
     }
 
     const isWalkableTo = makeBuilderWalkable(this.map, this.scene, goalKey);

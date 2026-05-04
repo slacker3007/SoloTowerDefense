@@ -107,6 +107,12 @@ export class GameScene extends Phaser.Scene {
     this.blueBarracksHpRoot = this.add.container(0, 0);
     this.worldRoot.add(this.terrainContainer);
     this.worldRoot.add(this.blueBarracksHpRoot);
+    this.unitsWorldLayer = this.add.container(0, 0);
+    this.towersWorldLayer = this.add.container(0, 0);
+    this.effectsWorldLayer = this.add.container(0, 0);
+    this.worldRoot.add(this.unitsWorldLayer);
+    this.worldRoot.add(this.towersWorldLayer);
+    this.worldRoot.add(this.effectsWorldLayer);
     /** @type {{ container: Phaser.GameObjects.Container, setRatio: (r: number) => void, setValues: (current: number, max: number) => void, destroy: () => void } | null} */
     this._homeHpBar = null;
     this.redrawTerrain();
@@ -630,8 +636,9 @@ export class GameScene extends Phaser.Scene {
       this._towerGhost.setOrigin(0.5, 1);
       this._towerGhost.setDepth(19);
     }
-    if (this.worldRoot) {
-      this.worldRoot.add(this._towerGhost);
+    const towerParent = this.towersWorldLayer ?? this.worldRoot;
+    if (towerParent) {
+      towerParent.add(this._towerGhost);
     }
     this.updateHudActions();
   }

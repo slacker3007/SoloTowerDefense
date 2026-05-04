@@ -37,8 +37,9 @@ export class CombatSystem {
         tower.hitCount = (tower.hitCount ?? 0) + 1;
         tower.cooldownRemaining = tower.cooldown / this.getTowerSpeedMultiplier(tower);
         const sprite = this.scene.add.circle(tower.x, tower.y, 4, 0xf5d742);
-        if (this.scene.worldRoot) {
-          this.scene.worldRoot.add(sprite);
+        const effectsParent = this.scene.effectsWorldLayer ?? this.scene.worldRoot;
+        if (effectsParent) {
+          effectsParent.add(sprite);
         }
         const projectile = {
           x: tower.x,

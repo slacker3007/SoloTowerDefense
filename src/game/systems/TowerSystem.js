@@ -78,8 +78,9 @@ export class TowerSystem {
       sprite = this.scene.add.rectangle(world.x, world.y + TILE_SIZE / 2, TILE_SIZE, TILE_SIZE * 2, 0x3d69d6);
       sprite.setOrigin(0.5, 1);
     }
-    if (this.scene.worldRoot) {
-      this.scene.worldRoot.add(sprite);
+    const towersParent = this.scene.towersWorldLayer ?? this.scene.worldRoot;
+    if (towersParent) {
+      towersParent.add(sprite);
     }
     const resolvedTowerType = towerCatalog[towerType] ? towerType : "basic";
     const base = towerCatalog[resolvedTowerType] ?? towerCatalog.basic;
