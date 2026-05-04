@@ -49,6 +49,19 @@ function resolvedTerrainOverride(ov) {
   return normalizeTerrainTileOverride(ov);
 }
 
+const BARRACKS_CLICK_WIDTH = 192;
+const BARRACKS_CLICK_HEIGHT = 256;
+const BLUE_BARRACKS_FIRE_HP_THRESHOLD = 10;
+const BLUE_BARRACKS_FIRE_SHEET_KEY = "fire01Sheet";
+const BLUE_BARRACKS_FIRE_ANIM_KEY = "fire-01-loop";
+const BLUE_BARRACKS_FIRE_POINTS = [
+  { x: -58, y: -8, scale: 1.05 },
+  { x: 58, y: -8, scale: 1.05 },
+  { x: -72, y: 30, scale: 1.2 },
+  { x: 72, y: 30, scale: 1.2 },
+  { x: 0, y: 42, scale: 1.35 },
+];
+
 /**
  * @typedef {Object} HudActionPlacement
  * @property {number} innerRow 1..3 inside the action area
@@ -82,6 +95,7 @@ export class GameScene extends Phaser.Scene {
     this._towerConversionPage = 0;
     this._performance = { clearedWaves: 0, leaksInWave: 0, livesAtWaveStart: STARTING_LIVES, waveTimer: 0 };
     this._adaptiveEnabled = balanceRules.adaptive.enabled;
+    this._blueBarracksFireFx = null;
   }
 
   create() {
@@ -186,6 +200,7 @@ export class GameScene extends Phaser.Scene {
     this.builderSystem?.destroy?.();
     this._homeHpBar?.destroy();
     this._homeHpBar = null;
+    this._destroyBlueBarracksFireEffect();
     this.blueBarracksHpRoot?.destroy(true);
     this.editorPanel?.destroy();
     this.editor.destroy();
@@ -267,6 +282,59 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.selectedBuilding = null;
+    return false;
+  }
+
+  /**
+   * @param {number} worldX
+   * @param {number} worldY
+   * @returns {boolean}
+   */
+  selectBarracksAtWorld(worldX, worldY) {
+    const candidates = [
+      {
+        key: "barracks_blue",
+        label: "Blue Barracks",
+        cell: this.map.points?.homeBarracks ?? null,
+      },
+      {
+        key: "barracks_red",
+        label: "Red Barracks",
+        cell: this.map.points?.enemyBarracks ?? null,
+      },
+    ];
+    const halfW = BARRACKS_CLICK_WIDTH / 2;
+    const halfH = BARRACKS_CLICK_HEIGHT / 2;
+    for (const candidate of candidates) {
+      const c = candidate.cell;
+      if (!c || !Number.isFinite(c.x) || !Number.isFinite(c.y)) {
+        continue;
+      }
+      const pos = cellToWorld(c.x, c.y);
+      const inBounds =
+        worldX >= pos.x - halfW && worldX <= pos.x + halfW && worldY >= pos.y - halfH && worldY <= pos.y + halfH;
+      if (!inBounds) {
+        continue;
+      }
+      if (candidate.key === "barracks_blue") {
+        this.selectedBuilding = {
+          kind: "barracks",
+          label: "Blue Barracks",
+          cellX: c.x,
+          cellY: c.y,
+          hpCurrent: this.gameState.lives,
+          hpMax: STARTING_LIVES,
+        };
+      } else {
+        this.selectedBuilding = {
+          kind: "barracks",
+          label: "Red Barracks",
+          cellX: c.x,
+          cellY: c.y,
+        };
+      }
+      return true;
+    }
     return false;
   }
 
@@ -785,20 +853,9 @@ export class GameScene extends Phaser.Scene {
         return;
       }
       const cell = this.pointerToCell(pointer);
-      if (!cell) {
-        this.selectedBuilding = null;
-        this.setHudActionMode("empty");
-        this.hud.render(
-          this.gameState,
-          this.towerSystem.towers.length,
-          STARTING_LIVES,
-          this.selectedBuilding,
-          this.getMinimapData(),
-        );
-        return;
-      }
-
-      const selected = this.selectBuildingAtCell(cell.x, cell.y);
+      const selectedTower = cell ? this.selectBuildingAtCell(cell.x, cell.y) : false;
+      const selectedBarracks = selectedTower ? false : this.selectBarracksAtWorld(pointer.worldX, pointer.worldY);
+      const selected = selectedTower || selectedBarracks;
       if (selected) {
         if (this.selectedBuilding?.kind === "barracks" && this.selectedBuilding?.label === "Blue Barracks") {
           this.setHudActionMode("barracksMain");
@@ -817,6 +874,7 @@ export class GameScene extends Phaser.Scene {
         return;
       }
 
+      this.selectedBuilding = null;
       this.setHudActionMode("empty");
       this.hud.render(
         this.gameState,
@@ -1216,6 +1274,79 @@ export class GameScene extends Phaser.Scene {
     api.setValues(this.gameState.lives, STARTING_LIVES);
   }
 
+  _getBlueBarracksWorldPosition() {
+    const hb = this.map.points?.homeBarracks;
+    if (!hb || !Number.isFinite(hb.x) || !Number.isFinite(hb.y)) {
+      return null;
+    }
+    return cellToWorld(hb.x, hb.y);
+  }
+
+  _ensureBlueBarracksFireEffect() {
+    if (this._blueBarracksFireFx) {
+      return;
+    }
+    const pos = this._getBlueBarracksWorldPosition();
+    if (!pos) {
+      return;
+    }
+    if (!this.textures.exists(BLUE_BARRACKS_FIRE_SHEET_KEY)) {
+      return;
+    }
+    const container = this.add.container(pos.x, pos.y).setDepth(35);
+    const flameSprites = [];
+    for (const point of BLUE_BARRACKS_FIRE_POINTS) {
+      const flameSprite = this.add.sprite(point.x, point.y, BLUE_BARRACKS_FIRE_SHEET_KEY, 0);
+      flameSprite.setScale(point.scale);
+      flameSprite.setAlpha(0.9);
+      if (this.anims.exists(BLUE_BARRACKS_FIRE_ANIM_KEY)) {
+        flameSprite.play(BLUE_BARRACKS_FIRE_ANIM_KEY);
+      }
+      container.add(flameSprite);
+      flameSprites.push({ sprite: flameSprite, point });
+    }
+    this.effectsWorldLayer?.add(container);
+
+    const tweens = flameSprites.map(({ sprite, point }, index) =>
+      this.tweens.add({
+        targets: sprite,
+        y: point.y - 3,
+        scaleX: point.scale * 1.08,
+        scaleY: point.scale * 0.92,
+        alpha: 0.96,
+        duration: 180 + index * 35,
+        yoyo: true,
+        repeat: -1,
+        delay: index * 40,
+      }),
+    );
+    this._blueBarracksFireFx = { container, tweens };
+  }
+
+  _destroyBlueBarracksFireEffect() {
+    if (!this._blueBarracksFireFx) {
+      return;
+    }
+    for (const tween of this._blueBarracksFireFx.tweens) {
+      tween?.stop?.();
+      tween?.remove?.();
+    }
+    this._blueBarracksFireFx.container?.destroy?.(true);
+    this._blueBarracksFireFx = null;
+  }
+
+  _updateBlueBarracksFireEffect() {
+    if (this.gameState.lives <= BLUE_BARRACKS_FIRE_HP_THRESHOLD) {
+      this._ensureBlueBarracksFireEffect();
+      const pos = this._getBlueBarracksWorldPosition();
+      if (pos && this._blueBarracksFireFx?.container) {
+        this._blueBarracksFireFx.container.setPosition(pos.x, pos.y);
+      }
+      return;
+    }
+    this._destroyBlueBarracksFireEffect();
+  }
+
   update(_time, delta) {
     syncUnitHpBars(this);
     if (this.gameState.paused) {
@@ -1250,6 +1381,7 @@ export class GameScene extends Phaser.Scene {
     this.gameState.wave = this.waveSystem.waveIndex;
     this._homeHpBar?.setRatio(this.gameState.lives / STARTING_LIVES);
     this._homeHpBar?.setValues(this.gameState.lives, STARTING_LIVES);
+    this._updateBlueBarracksFireEffect();
     this.updateHudActions();
     if (this.selectedBuilding?.kind === "barracks" && this.selectedBuilding?.label === "Blue Barracks") {
       this.selectedBuilding.hpCurrent = this.gameState.lives;

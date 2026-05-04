@@ -235,9 +235,9 @@ export class Hud {
     this.tooltipTitleText.setOrigin(0, 0);
     this.tooltipDescriptionText = scene.add.text(0, 0, "", {
       fontFamily: "monospace",
-      fontSize: "16px",
+      fontSize: "24px",
       color: "#d7e2ff",
-      wordWrap: { width: 340, useAdvancedWrap: true },
+      wordWrap: { width: 510, useAdvancedWrap: true },
     });
     this.tooltipDescriptionText.setOrigin(0, 0);
     this.tooltipCostText = scene.add.text(0, 0, "", {

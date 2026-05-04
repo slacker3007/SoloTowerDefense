@@ -6,6 +6,7 @@ const terrainRoot = `${tinySwordsRoot}/Terrain/Tileset`;
 const barsRoot = `${tinySwordsRoot}/UI Elements/UI Elements/Bars`;
 const elementIconsRoot = `${tinySwordsRoot}/UI Elements/UI Elements/Element_Icons`;
 const elementalBuildingsRoot = `${tinySwordsRoot}/Buildings/Elemental Buildings notog`;
+const particleFxRoot = `${tinySwordsRoot}/Particle FX`;
 
 export const spriteSheets = [
   {
@@ -82,6 +83,11 @@ export const spriteSheets = [
     key: "bluePawnInteractHammerSheet",
     path: `${tinySwordsRoot}/Units/Blue Units/Pawn/Pawn_Interact Hammer.png`,
     frameConfig: { frameWidth: 192, frameHeight: 192 },
+  },
+  {
+    key: "fire01Sheet",
+    path: `${particleFxRoot}/Fire_01.png`,
+    frameConfig: { frameWidth: 64, frameHeight: 64 },
   },
   /** BigBar_Base 320×64 = (5×64)×64: frames 0=left, 2=tile middle (repeat), 4=right; 1 and 3 are blank. */
   {
@@ -166,6 +172,7 @@ export function createTinySwordsAnimations(scene) {
   createRunLoop("redArcherRunSheet", "red-archer-run");
   createRunLoop("bluePawnRunHammerSheet", "blue-pawn-run-hammer");
   createRunLoop("bluePawnInteractHammerSheet", "blue-pawn-interact-hammer");
+  createRunLoop("fire01Sheet", "fire-01-loop", 7);
 }
 
 export function hasTinySwordsFolderHint(scene) {
