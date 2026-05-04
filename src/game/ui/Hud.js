@@ -15,6 +15,7 @@ export class Hud {
    *   keybindStore?: import("../input/KeybindStore.js").KeybindStore | null,
    *   onMapEditorFromMenu?: () => void,
    *   onKeybindsChanged?: () => void,
+   *   onCycleGameSpeed?: () => void,
    * }} [options]
    */
   constructor(scene, options = {}) {
@@ -24,6 +25,7 @@ export class Hud {
     this.keybindStore = options.keybindStore ?? null;
     this.onMapEditorFromMenu = typeof options.onMapEditorFromMenu === "function" ? options.onMapEditorFromMenu : () => {};
     this.onKeybindsChanged = typeof options.onKeybindsChanged === "function" ? options.onKeybindsChanged : () => {};
+    this.onCycleGameSpeed = typeof options.onCycleGameSpeed === "function" ? options.onCycleGameSpeed : () => {};
 
     this._menuDropdownOpen = false;
     this._keybindPanelOpen = false;
@@ -67,6 +69,7 @@ export class Hud {
     this.bottomBackground.setOrigin(0, 0);
 
     this.menuButton = this.createButton("Menu", true, () => this.toggleMenuDropdown());
+    this.speedButton = this.createButton("Speed x1", true, () => this.onCycleGameSpeed());
 
     this.menuBackdrop = scene.add.rectangle(0, 0, 800, 600, 0x000011, 0.35);
     this.menuBackdrop.setOrigin(0, 0);
@@ -262,6 +265,7 @@ export class Hud {
       this.topBackground,
       this.bottomBackground,
       this.menuButton,
+      this.speedButton,
       this.hpText,
       this.goldText,
       this.towersText,
@@ -279,7 +283,7 @@ export class Hud {
       this.tooltipRoot,
     ]);
 
-    this.topUiObjects = [this.topBackground, this.menuButton, this.hpText, this.goldText, this.towersText];
+    this.topUiObjects = [this.topBackground, this.menuButton, this.speedButton, this.hpText, this.goldText, this.towersText];
     this.bottomUiObjects = [
       this.bottomBackground,
       this.minimapFrame,
@@ -634,6 +638,7 @@ export class Hud {
       const statFontSize = this.clamp(Math.round(topHeight * 0.36), 16, 24);
       const buttonFontSize = this.clamp(Math.round(topHeight * 0.3), 14, 20);
       this.menuButton.setStyle({ fontSize: `${buttonFontSize}px`, padding: { x: 10, y: 6 } });
+      this.speedButton.setStyle({ fontSize: `${buttonFontSize}px`, padding: { x: 10, y: 6 } });
       this.hpText.setStyle({ fontSize: `${statFontSize}px` });
       this.goldText.setStyle({ fontSize: `${statFontSize}px` });
       this.towersText.setStyle({ fontSize: `${statFontSize}px` });
@@ -655,6 +660,8 @@ export class Hud {
       const centerY = this.topBarHeight / 2;
       const leftPadding = 10;
       this.menuButton.setPosition(leftPadding, centerY);
+      const speedGap = 10;
+      this.speedButton.setPosition(this.menuButton.x + this.menuButton.width + speedGap, centerY);
 
       const menuPad = 8;
       this.menuBackdrop.setPosition(0, this.topBarHeight);
@@ -920,6 +927,10 @@ export class Hud {
   render(state, towerCount = 0, maxLives = this.maxLives, selectedBuilding = null, minimapData = null) {
     this._selectedBuilding = selectedBuilding;
     this._minimapData = minimapData;
+    const rawSpeed = Number(state.gameSpeed);
+    const gameSpeed =
+      Number.isFinite(rawSpeed) ? Math.max(1, Math.min(3, Math.round(rawSpeed))) : 1;
+    this.speedButton.setText(`Speed x${gameSpeed}`);
     const hpMax = typeof maxLives === "number" && maxLives > 0 ? maxLives : state.lives;
     this.hpText.setText(`HP: ${state.lives}/${hpMax}`);
     this.goldText.setText(`Gold: ${state.gold}`);

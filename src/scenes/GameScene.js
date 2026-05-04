@@ -91,6 +91,7 @@ export class GameScene extends Phaser.Scene {
       lives: STARTING_LIVES,
       wave: 0,
       paused: false,
+      gameSpeed: 1,
     };
 
     createTinySwordsAnimations(this);
@@ -138,6 +139,7 @@ export class GameScene extends Phaser.Scene {
       keybindStore: this.keybindStore,
       onMapEditorFromMenu: () => this.toggleMapEditorFromMenu(),
       onKeybindsChanged: () => {},
+      onCycleGameSpeed: () => this.cycleGameSpeed(),
     });
     this.debugOverlay = new DebugOverlay(this);
     this.debugOverlay.redraw();
@@ -968,6 +970,18 @@ export class GameScene extends Phaser.Scene {
     );
   }
 
+  cycleGameSpeed() {
+    const cur = Phaser.Math.Clamp(Number(this.gameState.gameSpeed) || 1, 1, 3);
+    this.gameState.gameSpeed = cur >= 3 ? 1 : cur + 1;
+    this.hud.render(
+      this.gameState,
+      this.towerSystem.towers.length,
+      STARTING_LIVES,
+      this.selectedBuilding,
+      this.getMinimapData(),
+    );
+  }
+
   toggleMapEditorFromMenu() {
     this.editor.toggle();
     this._refreshScaleAfterEditorPanelToggle();
@@ -1201,7 +1215,9 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    const deltaSeconds = delta / 1000;
+    const raw = Number(this.gameState.gameSpeed);
+    const speed = Number.isFinite(raw) ? Phaser.Math.Clamp(raw, 1, 3) : 1;
+    const deltaSeconds = (delta / 1000) * speed;
     this._performance.waveTimer += deltaSeconds;
     this.enemySystem.update(deltaSeconds);
     this.builderSystem?.update?.(deltaSeconds);
