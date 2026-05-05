@@ -19,93 +19,93 @@ const STANDARD_TARGETS = [
   [{ type: "basic" }, { type: "basic" }],
   [{ type: "archer" }, { type: "basic" }],
   [{ type: "archer" }, { type: "fire" }, { type: "basic" }],
-  [{ type: "archer", upgrades: ["t1"] }, { type: "fire" }, { type: "lightning" }],
-  [{ type: "archer", upgrades: ["t1"] }, { type: "fire", upgrades: ["t1"] }, { type: "lightning" }, { type: "earth" }],
+  [{ type: "archer", upgrades: ["level1"] }, { type: "fire" }, { type: "lightning" }],
+  [{ type: "archer", upgrades: ["level1"] }, { type: "fire", upgrades: ["level1"] }, { type: "lightning" }, { type: "earth" }],
   [
-    { type: "archer", upgrades: ["t1"] },
-    { type: "fire", upgrades: ["t1"] },
-    { type: "lightning", upgrades: ["t1"] },
+    { type: "archer", upgrades: ["level1"] },
+    { type: "fire", upgrades: ["level1"] },
+    { type: "lightning", upgrades: ["level1"] },
     { type: "earth" },
   ],
   [
-    { type: "archer", upgrades: ["t1", "t2b"] },
-    { type: "fire", upgrades: ["t1"] },
-    { type: "lightning", upgrades: ["t1"] },
-    { type: "earth" },
-    { type: "ice" },
-  ],
-  [
-    { type: "archer", upgrades: ["t1", "t2b"] },
-    { type: "fire", upgrades: ["t1", "t2b"] },
-    { type: "lightning", upgrades: ["t1"] },
+    { type: "archer", upgrades: ["level1", "level2"] },
+    { type: "fire", upgrades: ["level1"] },
+    { type: "lightning", upgrades: ["level1"] },
     { type: "earth" },
     { type: "ice" },
   ],
   [
-    { type: "archer", upgrades: ["t1", "t2b"] },
-    { type: "fire", upgrades: ["t1", "t2b"] },
-    { type: "lightning", upgrades: ["t1", "t2a"] },
-    { type: "earth", upgrades: ["t1"] },
+    { type: "archer", upgrades: ["level1", "level2"] },
+    { type: "fire", upgrades: ["level1", "level2"] },
+    { type: "lightning", upgrades: ["level1"] },
+    { type: "earth" },
+    { type: "ice" },
+  ],
+  [
+    { type: "archer", upgrades: ["level1", "level2"] },
+    { type: "fire", upgrades: ["level1", "level2"] },
+    { type: "lightning", upgrades: ["level1", "level2"] },
+    { type: "earth", upgrades: ["level1"] },
     { type: "ice" },
     { type: "nature" },
   ],
   [
-    { type: "archer", upgrades: ["t1", "t2b"] },
-    { type: "fire", upgrades: ["t1", "t2b"] },
-    { type: "lightning", upgrades: ["t1", "t2a"] },
-    { type: "earth", upgrades: ["t1"] },
-    { type: "ice", upgrades: ["t1"] },
+    { type: "archer", upgrades: ["level1", "level2"] },
+    { type: "fire", upgrades: ["level1", "level2"] },
+    { type: "lightning", upgrades: ["level1", "level2"] },
+    { type: "earth", upgrades: ["level1"] },
+    { type: "ice", upgrades: ["level1"] },
     { type: "nature" },
   ],
   [
-    { type: "archer", upgrades: ["t1", "t2b", "t3b"] },
-    { type: "fire", upgrades: ["t1", "t2b"] },
-    { type: "lightning", upgrades: ["t1", "t2a"] },
-    { type: "earth", upgrades: ["t1"] },
-    { type: "ice", upgrades: ["t1"] },
+    { type: "archer", upgrades: ["level1", "level2", "level3"] },
+    { type: "fire", upgrades: ["level1", "level2"] },
+    { type: "lightning", upgrades: ["level1", "level2"] },
+    { type: "earth", upgrades: ["level1"] },
+    { type: "ice", upgrades: ["level1"] },
     { type: "nature" },
     { type: "holy" },
   ],
   [
-    { type: "archer", upgrades: ["t1", "t2b", "t3b"] },
-    { type: "fire", upgrades: ["t1", "t2b", "t3b"] },
-    { type: "lightning", upgrades: ["t1", "t2a"] },
-    { type: "earth", upgrades: ["t1"] },
-    { type: "ice", upgrades: ["t1"] },
+    { type: "archer", upgrades: ["level1", "level2", "level3"] },
+    { type: "fire", upgrades: ["level1", "level2", "level3"] },
+    { type: "lightning", upgrades: ["level1", "level2"] },
+    { type: "earth", upgrades: ["level1"] },
+    { type: "ice", upgrades: ["level1"] },
     { type: "nature" },
     { type: "holy" },
   ],
   [
-    { type: "archer", upgrades: ["t1", "t2b", "t3b"] },
-    { type: "fire", upgrades: ["t1", "t2b", "t3b"] },
-    { type: "lightning", upgrades: ["t1", "t2a", "t3a"] },
-    { type: "earth", upgrades: ["t1", "t2a"] },
-    { type: "ice", upgrades: ["t1"] },
-    { type: "nature", upgrades: ["t1"] },
+    { type: "archer", upgrades: ["level1", "level2", "level3"] },
+    { type: "fire", upgrades: ["level1", "level2", "level3"] },
+    { type: "lightning", upgrades: ["level1", "level2", "level3"] },
+    { type: "earth", upgrades: ["level1", "level2"] },
+    { type: "ice", upgrades: ["level1"] },
+    { type: "nature", upgrades: ["level1"] },
     { type: "holy" },
     { type: "dark" },
   ],
   [
-    { type: "archer", upgrades: ["t1", "t2b", "t3b"] },
-    { type: "fire", upgrades: ["t1", "t2b", "t3b"] },
-    { type: "lightning", upgrades: ["t1", "t2a", "t3a"] },
-    { type: "earth", upgrades: ["t1", "t2a"] },
-    { type: "ice", upgrades: ["t1"] },
-    { type: "nature", upgrades: ["t1"] },
+    { type: "archer", upgrades: ["level1", "level2", "level3"] },
+    { type: "fire", upgrades: ["level1", "level2", "level3"] },
+    { type: "lightning", upgrades: ["level1", "level2", "level3"] },
+    { type: "earth", upgrades: ["level1", "level2"] },
+    { type: "ice", upgrades: ["level1"] },
+    { type: "nature", upgrades: ["level1"] },
     { type: "holy" },
     { type: "dark" },
     { type: "archer" },
   ],
   [
-    { type: "archer", upgrades: ["t1", "t2b", "t3b"] },
-    { type: "fire", upgrades: ["t1", "t2b", "t3b"] },
-    { type: "lightning", upgrades: ["t1", "t2a", "t3a"] },
-    { type: "earth", upgrades: ["t1", "t2a", "t3a"] },
-    { type: "ice", upgrades: ["t1", "t2a"] },
-    { type: "nature", upgrades: ["t1"] },
+    { type: "archer", upgrades: ["level1", "level2", "level3"] },
+    { type: "fire", upgrades: ["level1", "level2", "level3"] },
+    { type: "lightning", upgrades: ["level1", "level2", "level3"] },
+    { type: "earth", upgrades: ["level1", "level2", "level3"] },
+    { type: "ice", upgrades: ["level1", "level2"] },
+    { type: "nature", upgrades: ["level1"] },
     { type: "holy" },
     { type: "dark" },
-    { type: "archer", upgrades: ["t1"] },
+    { type: "archer", upgrades: ["level1"] },
   ],
 ];
 
@@ -145,9 +145,9 @@ function applyUpgrade(tower, upgradeId) {
 }
 
 function getUpgradeCost(upgradeId) {
-  if (upgradeId === "t1") return getTowerTierCost(1);
-  if (upgradeId === "t2a" || upgradeId === "t2b") return getTowerTierCost(2);
-  if (upgradeId === "t3a" || upgradeId === "t3b") return getTowerTierCost(3);
+  if (upgradeId === "level1") return getTowerTierCost(1);
+  if (upgradeId === "level2") return getTowerTierCost(2);
+  if (upgradeId === "level3") return getTowerTierCost(3);
   return economy.baseTowerCost;
 }
 
@@ -245,8 +245,8 @@ function buildEnemyTags(role, wave) {
 function canUpgradeFrom(tower, upgradeId) {
   return getUpgradeOptionsForTower({
     type: tower.type,
-    tier: tower.upgrades.includes("t3a") || tower.upgrades.includes("t3b") ? 3 : tower.upgrades.some((id) => id.startsWith("t2")) ? 2 : tower.upgrades.includes("t1") ? 1 : 0,
-    branch: tower.upgrades.includes("t2a") ? "a" : tower.upgrades.includes("t2b") ? "b" : null,
+    tier: tower.upgrades.includes("level3") || tower.upgrades.includes("level3") ? 3 : tower.upgrades.some((id) => id.startsWith("t2")) ? 2 : tower.upgrades.includes("level1") ? 1 : 0,
+    branch: tower.upgrades.includes("level2") ? "a" : tower.upgrades.includes("level2") ? "b" : null,
   }).some((option) => option.id === upgradeId);
 }
 
@@ -374,9 +374,9 @@ function run() {
     const isBasic = towerType === "basic";
     return {
       towerType,
-      hasTier1: isBasic ? true : startOptions.some((entry) => entry.id === "t1"),
-      hasTier3A: isBasic ? true : pathA.some((entry) => entry.id === "t3a"),
-      hasTier3B: isBasic ? true : pathB.some((entry) => entry.id === "t3b"),
+      hasTier1: isBasic ? true : startOptions.some((entry) => entry.id === "level1"),
+      hasTier3A: isBasic ? true : pathA.some((entry) => entry.id === "level3"),
+      hasTier3B: isBasic ? true : pathB.some((entry) => entry.id === "level3"),
       hasConversions: isBasic ? startOptions.some((entry) => String(entry.id).startsWith("convert:")) : true,
     };
   });

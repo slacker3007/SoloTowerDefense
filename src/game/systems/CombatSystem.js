@@ -1,4 +1,4 @@
-import { balanceRules, clampUtilityBudget, economy, toWorldRange, towerCatalog } from "../balance";
+import { balanceRules, clampUtilityBudget, economy, getTowerProjectileColor, toWorldRange, towerCatalog } from "../balance";
 
 export class CombatSystem {
   constructor(scene, towerSystem, enemySystem) {
@@ -36,7 +36,9 @@ export class CombatSystem {
       if (target) {
         tower.hitCount = (tower.hitCount ?? 0) + 1;
         tower.cooldownRemaining = tower.cooldown / this.getTowerSpeedMultiplier(tower);
-        const sprite = this.scene.add.circle(tower.x, tower.y, 4, 0xf5d742);
+        const projectileColor = getTowerProjectileColor(tower.type);
+        const sprite = this.scene.add.circle(tower.x, tower.y, 4, projectileColor);
+        sprite.setStrokeStyle(1.5, 0xffffff, 0.5);
         const effectsParent = this.scene.effectsWorldLayer ?? this.scene.worldRoot;
         if (effectsParent) {
           effectsParent.add(sprite);

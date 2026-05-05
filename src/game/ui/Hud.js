@@ -19,6 +19,7 @@ export class Hud {
    *   onMainMenu?: () => void,
    *   onKeybindsChanged?: () => void,
    *   onCycleGameSpeed?: () => void,
+  *   onTogglePause?: () => void,
    * }} [options]
    */
   constructor(scene, options = {}) {
@@ -31,6 +32,7 @@ export class Hud {
     this.onMainMenu = typeof options.onMainMenu === "function" ? options.onMainMenu : () => {};
     this.onKeybindsChanged = typeof options.onKeybindsChanged === "function" ? options.onKeybindsChanged : () => {};
     this.onCycleGameSpeed = typeof options.onCycleGameSpeed === "function" ? options.onCycleGameSpeed : () => {};
+    this.onTogglePause = typeof options.onTogglePause === "function" ? options.onTogglePause : () => {};
 
     this._menuDropdownOpen = false;
     this._keybindPanelOpen = false;
@@ -59,11 +61,16 @@ export class Hud {
     this._actionHitZones = [];
     this._actionGridBackground = null;
     this._actionIcons = [];
+    this._actionAccentFrames = [];
+    this._actionCostTexts = [];
+    this._actionInfoTexts = [];
+    this._actionInfoHitZones = [];
     this._actionSlotConfigs = Array.from({ length: 12 }, () => null);
     this._hoveredActionIndex = -1;
     this._tooltipAnchor = { x: 0, y: 0 };
     this._topVisible = true;
     this._bottomVisible = true;
+    this._detailsSlotIndex = -1;
     this.root = scene.add.container(0, 0);
     this.root.setDepth(this.depth);
     this.root.setScrollFactor(0);
@@ -76,6 +83,7 @@ export class Hud {
 
     this.menuButton = this.createButton("Menu", true, () => this.toggleMenuDropdown());
     this.speedButton = this.createButton("Speed x1", true, () => this.onCycleGameSpeed());
+    this.pauseButton = this.createButton("Pause", true, () => this.onTogglePause());
 
     this.menuBackdrop = scene.add.rectangle(0, 0, 800, 600, 0x000011, 0.35);
     this.menuBackdrop.setOrigin(0, 0);
@@ -181,64 +189,21 @@ export class Hud {
       fontSize: "16px",
       color: "#ffffff",
     });
-    this.selectedTitleText = scene.add.text(0, 0, "Selected: None", {
+    this.contextPanelFrame = scene.add.rectangle(0, 0, 320, 130, 0x152235, 0.95);
+    this.contextPanelFrame.setOrigin(0, 0);
+    this.contextPanelFrame.setStrokeStyle(2, 0x7ca8d6, 0.9);
+    this.contextTitleText = scene.add.text(0, 0, "Battle Context", {
       fontFamily: "monospace",
-      fontSize: "15px",
+      fontSize: "16px",
       color: "#ffffff",
     });
-    this.selectedHpText = scene.add.text(0, 0, "HP: N/A", {
+    this.contextTitleText.setOrigin(0, 0);
+    this.contextSubtitleText = scene.add.text(0, 0, "", {
       fontFamily: "monospace",
-      fontSize: "14px",
+      fontSize: "13px",
       color: "#c8d0ff",
     });
-    this.selectedCellText = scene.add.text(0, 0, "Cell: -", {
-      fontFamily: "monospace",
-      fontSize: "14px",
-      color: "#c8d0ff",
-    });
-    this.selectedDamageText = scene.add.text(0, 0, "Damage: -", {
-      fontFamily: "monospace",
-      fontSize: "14px",
-      color: "#c8d0ff",
-    });
-    this.selectedRangeText = scene.add.text(0, 0, "Range: -", {
-      fontFamily: "monospace",
-      fontSize: "14px",
-      color: "#c8d0ff",
-    });
-
-    for (const text of [
-      this.hpText,
-      this.goldText,
-      this.towersText,
-      this.selectedTitleText,
-      this.selectedHpText,
-      this.selectedCellText,
-      this.selectedDamageText,
-      this.selectedRangeText,
-    ]) {
-      text.setOrigin(0, 0.5);
-    }
-
-    this.hpText.setOrigin(1, 0.5);
-    this.goldText.setOrigin(1, 0.5);
-    this.towersText.setOrigin(1, 0.5);
-
-    this.waveInfoFrame = scene.add.rectangle(0, 0, 180, 120, 0x152235, 0.95);
-    this.waveInfoFrame.setOrigin(0, 0);
-    this.waveInfoFrame.setStrokeStyle(2, 0x7ca8d6, 0.9);
-    this.waveInfoTitleText = scene.add.text(0, 0, "Wave Info", {
-      fontFamily: "monospace",
-      fontSize: "14px",
-      color: "#ffffff",
-    });
-    this.waveInfoTitleText.setOrigin(0, 0);
-    this.waveRoleText = scene.add.text(0, 0, "Role: Unknown", {
-      fontFamily: "monospace",
-      fontSize: "14px",
-      color: "#c8d0ff",
-    });
-    this.waveRoleText.setOrigin(0, 0);
+    this.contextSubtitleText.setOrigin(0, 0);
     this.waveCountText = scene.add.text(0, 0, "Wave: 1", {
       fontFamily: "monospace",
       fontSize: "14px",
@@ -251,11 +216,137 @@ export class Hud {
       color: "#c8d0ff",
     });
     this.waveEnemiesText.setOrigin(0, 0);
+    this.upcomingEnemiesTitleText = scene.add.text(0, 0, "Upcoming", {
+      fontFamily: "monospace",
+      fontSize: "12px",
+      color: "#9ac6f7",
+    });
+    this.upcomingEnemiesTitleText.setOrigin(0, 0);
+    this.upcomingCurrentIconBg = scene.add.rectangle(0, 0, 38, 38, 0x243549, 1);
+    this.upcomingCurrentIconBg.setOrigin(0, 0);
+    this.upcomingCurrentIconBg.setStrokeStyle(1, 0x6f99c9, 0.8);
+    this.upcomingCurrentIcon = scene.add.image(0, 0, "__WHITE");
+    this.upcomingCurrentIcon.setVisible(false);
+    this.upcomingCurrentIconLabel = scene.add.text(0, 0, "Now", {
+      fontFamily: "monospace",
+      fontSize: "11px",
+      color: "#d2e4ff",
+    });
+    this.upcomingCurrentIconLabel.setOrigin(0, 0);
+    this.upcomingNextIconBg = scene.add.rectangle(0, 0, 38, 38, 0x243549, 1);
+    this.upcomingNextIconBg.setOrigin(0, 0);
+    this.upcomingNextIconBg.setStrokeStyle(1, 0x6f99c9, 0.8);
+    this.upcomingNextIcon = scene.add.image(0, 0, "__WHITE");
+    this.upcomingNextIcon.setVisible(false);
+    this.upcomingNextIconLabel = scene.add.text(0, 0, "Next", {
+      fontFamily: "monospace",
+      fontSize: "11px",
+      color: "#d2e4ff",
+    });
+    this.upcomingNextIconLabel.setOrigin(0, 0);
+    this.towerCardIconBg = scene.add.rectangle(0, 0, 72, 72, 0x243549, 1);
+    this.towerCardIconBg.setOrigin(0, 0);
+    this.towerCardIconBg.setStrokeStyle(1, 0x6f99c9, 0.8);
+    this.towerCardIcon = scene.add.image(0, 0, "__WHITE");
+    this.towerCardIcon.setVisible(false);
+    this.towerNameTierText = scene.add.text(0, 0, "", {
+      fontFamily: "monospace",
+      fontSize: "16px",
+      color: "#ffffff",
+    });
+    this.towerNameTierText.setOrigin(0, 0);
+    this.towerDpsText = scene.add.text(0, 0, "", {
+      fontFamily: "monospace",
+      fontSize: "14px",
+      color: "#d6e7ff",
+    });
+    this.towerDpsText.setOrigin(0, 0);
+    this.towerRangeText = scene.add.text(0, 0, "", {
+      fontFamily: "monospace",
+      fontSize: "14px",
+      color: "#d6e7ff",
+    });
+    this.towerRangeText.setOrigin(0, 0);
+    this.towerRangeTrack = scene.add.rectangle(0, 0, 100, 10, 0x22313f, 1);
+    this.towerRangeTrack.setOrigin(0, 0);
+    this.towerRangeTrack.setStrokeStyle(1, 0x7ca8d6, 0.8);
+    this.towerRangeFill = scene.add.rectangle(0, 0, 2, 8, 0x8db8ff, 1);
+    this.towerRangeFill.setOrigin(0, 0);
+    this.towerEffectText = scene.add.text(0, 0, "", {
+      fontFamily: "monospace",
+      fontSize: "13px",
+      color: "#9ac6f7",
+    });
+    this.towerEffectText.setOrigin(0, 0);
+    this._contextMode = "wave";
+
+    for (const text of [
+      this.hpText,
+      this.goldText,
+      this.towersText,
+      this.contextTitleText,
+      this.contextSubtitleText,
+      this.waveCountText,
+      this.waveEnemiesText,
+      this.upcomingEnemiesTitleText,
+      this.upcomingCurrentIconLabel,
+      this.upcomingNextIconLabel,
+      this.towerNameTierText,
+      this.towerDpsText,
+      this.towerRangeText,
+      this.towerEffectText,
+    ]) {
+      text.setOrigin(0, 0.5);
+    }
+
+    this.hpText.setOrigin(1, 0.5);
+    this.goldText.setOrigin(1, 0.5);
+    this.towersText.setOrigin(1, 0.5);
+    this.contextTitleText.setOrigin(0, 0);
+    this.contextSubtitleText.setOrigin(0, 0);
+    this.waveCountText.setOrigin(0, 0);
+    this.waveEnemiesText.setOrigin(0, 0);
+    this.upcomingEnemiesTitleText.setOrigin(0, 0);
+    this.upcomingCurrentIconLabel.setOrigin(0, 0);
+    this.upcomingNextIconLabel.setOrigin(0, 0);
+    this.towerNameTierText.setOrigin(0, 0);
+    this.towerDpsText.setOrigin(0, 0);
+    this.towerRangeText.setOrigin(0, 0);
+    this.towerEffectText.setOrigin(0, 0);
+
+    this.waveProgressTrack = scene.add.rectangle(0, 0, 120, 12, 0x22313f, 1);
+    this.waveProgressTrack.setOrigin(0, 0);
+    this.waveProgressTrack.setStrokeStyle(1, 0x7ca8d6, 0.9);
+    this.waveProgressFill = scene.add.rectangle(0, 0, 2, 10, 0x5bbf8a, 1);
+    this.waveProgressFill.setOrigin(0, 0);
+    this.waveProgressText = scene.add.text(0, 0, "0%", {
+      fontFamily: "monospace",
+      fontSize: "13px",
+      color: "#b7f7da",
+    });
+    this.waveProgressText.setOrigin(0, 0);
+    this.goldDeltaText = scene.add.text(0, 0, "", {
+      fontFamily: "monospace",
+      fontSize: "14px",
+      color: "#8df5a6",
+      stroke: "#000000",
+      strokeThickness: 2,
+    });
+    this.goldDeltaText.setOrigin(0, 0.5);
+    this.goldDeltaText.setVisible(false);
+    this._lastGoldValue = null;
+    this._goldDeltaTween = null;
 
     this._actionGridBackground = this.createActionSlotBackground();
 
     const actionSlotCell = 64;
     for (let i = 0; i < 12; i += 1) {
+      const accent = this.scene.add.rectangle(0, 0, actionSlotCell - 8, actionSlotCell - 8, 0x2d3845, 0.65);
+      accent.setOrigin(0.5, 0.5);
+      accent.setStrokeStyle(2, 0x6f99c9, 0.9);
+      this._actionGridBackground.add(accent);
+      this._actionAccentFrames.push(accent);
+
       const button = this.createButton("", false, null, false);
       button.setOrigin(0.5, 0.5);
       button.setStyle({ backgroundColor: "#00000000" });
@@ -266,6 +357,33 @@ export class Hud {
       zone.setOrigin(0.5, 0.5);
       this._actionGridBackground.add(zone);
       this._actionHitZones.push(zone);
+
+      const costText = this.scene.add.text(0, 0, "", {
+        fontFamily: "monospace",
+        fontSize: "12px",
+        color: "#ffeaa0",
+        backgroundColor: "#101824cc",
+        padding: { x: 4, y: 2 },
+      });
+      costText.setOrigin(1, 1);
+      this._actionGridBackground.add(costText);
+      this._actionCostTexts.push(costText);
+
+      const infoText = this.scene.add.text(0, 0, "i", {
+        fontFamily: "monospace",
+        fontSize: "12px",
+        color: "#d7e2ff",
+        backgroundColor: "#172131dd",
+        padding: { x: 4, y: 1 },
+      });
+      infoText.setOrigin(0.5, 0.5);
+      this._actionGridBackground.add(infoText);
+      this._actionInfoTexts.push(infoText);
+
+      const infoZone = this.scene.add.zone(0, 0, 18, 18);
+      infoZone.setOrigin(0.5, 0.5);
+      this._actionGridBackground.add(infoZone);
+      this._actionInfoHitZones.push(infoZone);
 
       this._actionIcons.push(null);
     }
@@ -308,44 +426,128 @@ export class Hud {
     ]);
     this.tooltipRoot.setVisible(false);
 
+    this.detailsBackdrop = scene.add.rectangle(0, 0, 800, 600, 0x000000, 0.45);
+    this.detailsBackdrop.setOrigin(0, 0);
+    this.detailsBackdrop.setInteractive();
+    this.detailsBackdrop.on("pointerdown", () => this.hideActionDetails());
+    this.detailsBackground = scene.add.rectangle(0, 0, 520, 260, 0x0f1622, 0.97);
+    this.detailsBackground.setOrigin(0, 0);
+    this.detailsBackground.setStrokeStyle(2, 0x7ca8d6, 0.95);
+    this.detailsTitleText = scene.add.text(0, 0, "", {
+      fontFamily: "monospace",
+      fontSize: "20px",
+      color: "#ffffff",
+      fontStyle: "bold",
+    });
+    this.detailsTitleText.setOrigin(0, 0);
+    this.detailsDescriptionText = scene.add.text(0, 0, "", {
+      fontFamily: "monospace",
+      fontSize: "16px",
+      color: "#d7e2ff",
+      wordWrap: { width: 488, useAdvancedWrap: true },
+    });
+    this.detailsDescriptionText.setOrigin(0, 0);
+    this.detailsCostText = scene.add.text(0, 0, "", {
+      fontFamily: "monospace",
+      fontSize: "15px",
+      color: "#ffeaa0",
+    });
+    this.detailsCostText.setOrigin(0, 0);
+    this.detailsWarningText = scene.add.text(0, 0, "", {
+      fontFamily: "monospace",
+      fontSize: "14px",
+      color: "#ff9a9a",
+    });
+    this.detailsWarningText.setOrigin(0, 0);
+    this.detailsCloseButton = this.createButton("Close", true, () => this.hideActionDetails());
+    this.detailsCloseButton.setOrigin(1, 0);
+    this.detailsRoot = scene.add.container(0, 0, [
+      this.detailsBackdrop,
+      this.detailsBackground,
+      this.detailsTitleText,
+      this.detailsDescriptionText,
+      this.detailsCostText,
+      this.detailsWarningText,
+      this.detailsCloseButton,
+    ]);
+    this.detailsRoot.setVisible(false);
+
     this.root.add([
       this.topBackground,
       this.bottomBackground,
       this.menuButton,
       this.speedButton,
+      this.pauseButton,
       this.hpText,
       this.goldText,
+      this.goldDeltaText,
       this.towersText,
-      this.selectedTitleText,
-      this.selectedHpText,
-      this.selectedCellText,
-      this.selectedDamageText,
-      this.selectedRangeText,
-      this.waveInfoFrame,
-      this.waveInfoTitleText,
-      this.waveRoleText,
+      this.contextPanelFrame,
+      this.contextTitleText,
+      this.contextSubtitleText,
       this.waveCountText,
       this.waveEnemiesText,
+      this.upcomingEnemiesTitleText,
+      this.upcomingCurrentIconBg,
+      this.upcomingCurrentIcon,
+      this.upcomingCurrentIconLabel,
+      this.upcomingNextIconBg,
+      this.upcomingNextIcon,
+      this.upcomingNextIconLabel,
+      this.waveProgressTrack,
+      this.waveProgressFill,
+      this.waveProgressText,
+      this.towerCardIconBg,
+      this.towerCardIcon,
+      this.towerNameTierText,
+      this.towerDpsText,
+      this.towerRangeText,
+      this.towerRangeTrack,
+      this.towerRangeFill,
+      this.towerEffectText,
       this._actionGridBackground,
       this.menuBackdrop,
       this.menuDropdownRoot,
       this.keybindOverlayRoot,
       this.tooltipRoot,
+      this.detailsRoot,
     ]);
 
-    this.topUiObjects = [this.topBackground, this.menuButton, this.speedButton, this.hpText, this.goldText, this.towersText];
+    this.topUiObjects = [
+      this.topBackground,
+      this.menuButton,
+      this.speedButton,
+      this.pauseButton,
+      this.hpText,
+      this.goldText,
+      this.goldDeltaText,
+      this.towersText,
+    ];
     this.bottomUiObjects = [
       this.bottomBackground,
-      this.waveInfoFrame,
-      this.waveInfoTitleText,
-      this.waveRoleText,
+      this.contextPanelFrame,
+      this.contextTitleText,
+      this.contextSubtitleText,
       this.waveCountText,
       this.waveEnemiesText,
-      this.selectedTitleText,
-      this.selectedHpText,
-      this.selectedCellText,
-      this.selectedDamageText,
-      this.selectedRangeText,
+      this.upcomingEnemiesTitleText,
+      this.upcomingCurrentIconBg,
+      this.upcomingCurrentIcon,
+      this.upcomingCurrentIconLabel,
+      this.upcomingNextIconBg,
+      this.upcomingNextIcon,
+      this.upcomingNextIconLabel,
+      this.waveProgressTrack,
+      this.waveProgressFill,
+      this.waveProgressText,
+      this.towerCardIconBg,
+      this.towerCardIcon,
+      this.towerNameTierText,
+      this.towerDpsText,
+      this.towerRangeText,
+      this.towerRangeTrack,
+      this.towerRangeFill,
+      this.towerEffectText,
       this._actionGridBackground,
     ];
     this.uiObjects = [
@@ -474,17 +676,16 @@ export class Hud {
   }
 
   setActionSlots(slots = []) {
-    const hoveredBefore = this._hoveredActionIndex;
     for (let i = 0; i < this._actionSlotConfigs.length; i += 1) {
       this._actionSlotConfigs[i] = slots[i] ?? null;
       this.updateActionSlotInteractivity(i);
     }
-    const hoveredSlot = hoveredBefore >= 0 ? this._actionSlotConfigs[hoveredBefore] : null;
-    if (hoveredBefore >= 0 && this.hasActionTooltip(hoveredSlot)) {
-      this._hoveredActionIndex = hoveredBefore;
-    } else {
-      this.hideActionTooltip();
+    if (this._detailsSlotIndex >= 0 && !this.hasActionTooltip(this._actionSlotConfigs[this._detailsSlotIndex])) {
+      this.hideActionDetails();
+    } else if (this._detailsSlotIndex >= 0) {
+      this.showActionDetails(this._detailsSlotIndex);
     }
+    this.hideActionTooltip();
     this.layout();
   }
 
@@ -506,35 +707,56 @@ export class Hud {
 
   updateActionSlotInteractivity(index) {
     const zone = this._actionHitZones[index];
+    const infoZone = this._actionInfoHitZones[index];
     const slot = this._actionSlotConfigs[index];
     zone.removeAllListeners();
+    infoZone.removeAllListeners();
     if (!slot) {
       zone.disableInteractive();
+      infoZone.disableInteractive();
       return;
     }
     const canClick = Boolean(slot.enabled && typeof slot.onClick === "function");
-    const canHover = this.hasActionTooltip(slot);
-    if (!canClick && !canHover) {
+    if (!canClick) {
       zone.disableInteractive();
-      return;
-    }
-    zone.setInteractive({ useHandCursor: canClick });
-    if (canClick) {
+    } else {
+      zone.setInteractive({ useHandCursor: true });
       zone.on("pointerdown", () => slot.onClick());
     }
-    if (canHover) {
-      zone.on("pointerover", (pointer) => {
-        this._hoveredActionIndex = index;
-        this.layout();
-        this.showActionTooltip(index, pointer);
-      });
-      zone.on("pointermove", (pointer) => this.moveActionTooltip(pointer));
-      zone.on("pointerout", () => {
-        this._hoveredActionIndex = -1;
-        this.layout();
-        this.hideActionTooltip();
-      });
+    const canShowInfo = slot.showInfoButton !== false && this.hasActionTooltip(slot);
+    if (!canShowInfo) {
+      infoZone.disableInteractive();
+    } else {
+      infoZone.setInteractive({ useHandCursor: true });
+      infoZone.on("pointerdown", () => this.showActionDetails(index));
     }
+  }
+
+  showActionDetails(index) {
+    const slot = this._actionSlotConfigs[index];
+    if (!slot || !this.hasActionTooltip(slot)) {
+      this.hideActionDetails();
+      return;
+    }
+    this._detailsSlotIndex = index;
+    const title = slot.tooltipTitle || slot.label || "Action";
+    const description = slot.tooltipDescription || "";
+    const hasCost = slot.tooltipCost != null;
+    const resource = slot.tooltipResource || "gold";
+    const warning = slot.tooltipWarning || "";
+    const costText = hasCost ? `Cost: ${slot.tooltipCost} ${resource}` : "Cost: Free";
+    this.detailsTitleText.setText(title);
+    this.detailsDescriptionText.setText(description);
+    this.detailsCostText.setText(costText);
+    this.detailsWarningText.setText(warning);
+    this.detailsWarningText.setVisible(warning.length > 0);
+    this.detailsRoot.setVisible(this._bottomVisible);
+    this.layout();
+  }
+
+  hideActionDetails() {
+    this._detailsSlotIndex = -1;
+    this.detailsRoot.setVisible(false);
   }
 
   hasActionTooltip(slot) {
@@ -695,19 +917,28 @@ export class Hud {
 
       const statFontSize = this.clamp(Math.round(topHeight * 0.36), 16, 24);
       const buttonFontSize = this.clamp(Math.round(topHeight * 0.3), 14, 20);
+      const speedButtonFontSize = this.clamp(Math.round(topHeight * 0.36), 16, 24);
       this.menuButton.setStyle({ fontSize: `${buttonFontSize}px`, padding: { x: 10, y: 6 } });
-      this.speedButton.setStyle({ fontSize: `${buttonFontSize}px`, padding: { x: 10, y: 6 } });
+      this.speedButton.setStyle({ fontSize: `${speedButtonFontSize}px`, padding: { x: 14, y: 9 } });
+      this.pauseButton.setStyle({ fontSize: `${buttonFontSize}px`, padding: { x: 12, y: 7 } });
       this.hpText.setStyle({ fontSize: `${statFontSize}px` });
       this.goldText.setStyle({ fontSize: `${statFontSize}px` });
       this.towersText.setStyle({ fontSize: `${statFontSize}px` });
 
-      const selectedTitleSize = this.clamp(Math.round(bottomHeight * 0.14), 16, 24);
-      const selectedInfoSize = this.clamp(Math.round(bottomHeight * 0.1), 14, 20);
-      this.selectedTitleText.setStyle({ fontSize: `${selectedTitleSize}px` });
-      this.selectedHpText.setStyle({ fontSize: `${selectedInfoSize}px` });
-      this.selectedCellText.setStyle({ fontSize: `${selectedInfoSize}px` });
-      this.selectedDamageText.setStyle({ fontSize: `${selectedInfoSize}px` });
-      this.selectedRangeText.setStyle({ fontSize: `${selectedInfoSize}px` });
+      const contextTitleSize = this.clamp(Math.round(bottomHeight * 0.13), 15, 24);
+      const contextInfoSize = this.clamp(Math.round(bottomHeight * 0.1), 12, 18);
+      const contextSubSize = this.clamp(Math.round(bottomHeight * 0.085), 11, 16);
+      this.contextTitleText.setStyle({ fontSize: `${contextTitleSize}px` });
+      this.contextSubtitleText.setStyle({ fontSize: `${contextSubSize}px` });
+      this.waveCountText.setStyle({ fontSize: `${contextInfoSize}px` });
+      this.waveEnemiesText.setStyle({ fontSize: `${contextInfoSize}px` });
+      this.upcomingEnemiesTitleText.setStyle({ fontSize: `${contextSubSize}px` });
+      this.upcomingCurrentIconLabel.setStyle({ fontSize: `${contextSubSize}px` });
+      this.upcomingNextIconLabel.setStyle({ fontSize: `${contextSubSize}px` });
+      this.towerNameTierText.setStyle({ fontSize: `${contextTitleSize}px` });
+      this.towerDpsText.setStyle({ fontSize: `${contextInfoSize}px` });
+      this.towerRangeText.setStyle({ fontSize: `${contextInfoSize}px` });
+      this.towerEffectText.setStyle({ fontSize: `${contextSubSize}px` });
 
       this.topBackground.setSize(rootWidth, this.topBarHeight);
       this.topBackground.setPosition(0, 0);
@@ -720,6 +951,7 @@ export class Hud {
       this.menuButton.setPosition(leftPadding, centerY);
       const speedGap = 10;
       this.speedButton.setPosition(this.menuButton.x + this.menuButton.width + speedGap, centerY);
+      this.pauseButton.setPosition(this.speedButton.x + this.speedButton.width + speedGap, centerY);
 
       const menuPad = 8;
       this.menuBackdrop.setPosition(0, this.topBarHeight);
@@ -775,6 +1007,7 @@ export class Hud {
       this.towersText.setPosition(rootWidth - rightPadding, centerY);
       this.goldText.setPosition(this.towersText.x - this.towersText.width - statGap, centerY);
       this.hpText.setPosition(this.goldText.x - this.goldText.width - statGap, centerY);
+      this.goldDeltaText.setPosition(this.goldText.x + 8, centerY - Math.max(10, Math.round(topHeight * 0.28)));
 
       const bottomY = Math.max(0, rootHeight - activeBottomHeight);
       let panelPadding = this.clamp(Math.round(rootWidth * 0.015), 8, 14);
@@ -783,42 +1016,69 @@ export class Hud {
         panelPadding = Math.max(6, panelPadding - 2);
       }
 
-      const infoPanelW = this.clamp(Math.round(rootWidth * 0.2), compactBottom ? 96 : 120, 220);
-      const infoPanelH = this.clamp(
-        Math.round(this.bottomBarHeight * (compactBottom ? 0.5 : 0.6)),
-        compactBottom ? 78 : 90,
-        Math.max(compactBottom ? 78 : 90, this.bottomBarHeight - panelPadding * 2),
+      const contextPanelW = this.clamp(Math.round(rootWidth * 0.36), 260, 500);
+      const contextPanelH = this.clamp(
+        Math.round(this.bottomBarHeight * (compactBottom ? 0.82 : 0.86)),
+        compactBottom ? 118 : 132,
+        Math.max(compactBottom ? 118 : 132, this.bottomBarHeight - panelPadding * 2),
       );
-      this.waveInfoFrame.setSize(infoPanelW, infoPanelH);
-      this.waveInfoFrame.setPosition(panelPadding, bottomY + panelPadding);
-      const waveInfoPad = this.clamp(Math.round(infoPanelW * 0.08), 8, 14);
-      const waveInfoTitleSize = this.clamp(Math.round(infoPanelH * 0.18), 12, 20);
-      const waveInfoValueSize = this.clamp(Math.round(infoPanelH * 0.17), 12, 20);
-      this.waveInfoTitleText.setStyle({ fontSize: `${waveInfoTitleSize}px` });
-      this.waveRoleText.setStyle({ fontSize: `${waveInfoValueSize}px` });
-      this.waveCountText.setStyle({ fontSize: `${waveInfoValueSize}px` });
-      this.waveEnemiesText.setStyle({ fontSize: `${waveInfoValueSize}px` });
-      this.waveInfoTitleText.setPosition(this.waveInfoFrame.x + waveInfoPad, this.waveInfoFrame.y + waveInfoPad);
-      this.waveRoleText.setPosition(
-        this.waveInfoFrame.x + waveInfoPad,
-        this.waveInfoTitleText.y + this.waveInfoTitleText.height + Math.max(4, Math.round(waveInfoPad * 0.5)),
+      this.contextPanelFrame.setSize(contextPanelW, contextPanelH);
+      this.contextPanelFrame.setPosition(panelPadding, bottomY + panelPadding);
+      const contextPad = this.clamp(Math.round(contextPanelW * 0.06), 10, 16);
+      this.contextTitleText.setPosition(this.contextPanelFrame.x + contextPad, this.contextPanelFrame.y + contextPad + 2);
+      this.contextSubtitleText.setPosition(
+        this.contextTitleText.x,
+        this.contextTitleText.y + this.contextTitleText.height + Math.max(3, Math.round(contextPad * 0.25)),
       );
       this.waveCountText.setPosition(
-        this.waveInfoFrame.x + waveInfoPad,
-        this.waveRoleText.y + this.waveRoleText.height + Math.max(2, Math.round(waveInfoPad * 0.4)),
+        this.contextTitleText.x,
+        this.contextSubtitleText.y + this.contextSubtitleText.height + Math.max(4, Math.round(contextPad * 0.3)),
       );
       this.waveEnemiesText.setPosition(
-        this.waveInfoFrame.x + waveInfoPad,
-        this.waveCountText.y + this.waveCountText.height + Math.max(2, Math.round(waveInfoPad * 0.4)),
+        this.contextTitleText.x,
+        this.waveCountText.y + this.waveCountText.height + Math.max(3, Math.round(contextPad * 0.24)),
       );
-
-      let selectionGap = compactBottom ? 10 : 18;
-      let selectionX = this.waveInfoFrame.x + this.waveInfoFrame.width + selectionGap;
-      this.selectedTitleText.setPosition(selectionX, bottomY + panelPadding + selectedTitleSize * 0.8);
-      this.selectedHpText.setPosition(selectionX, this.selectedTitleText.y + selectedInfoSize * 1.7);
-      this.selectedCellText.setPosition(selectionX, this.selectedHpText.y + selectedInfoSize * 1.5);
-      this.selectedDamageText.setPosition(selectionX, this.selectedCellText.y + selectedInfoSize * 1.5);
-      this.selectedRangeText.setPosition(selectionX, this.selectedDamageText.y + selectedInfoSize * 1.5);
+      const progressTrackY = this.waveEnemiesText.y + this.waveEnemiesText.height + Math.max(3, Math.round(contextPad * 0.24));
+      const progressTrackW = Math.max(70, contextPanelW - contextPad * 2);
+      const progressTrackH = this.clamp(Math.round(contextPanelH * 0.08), 10, 16);
+      this.waveProgressTrack.setPosition(this.contextPanelFrame.x + contextPad, progressTrackY);
+      this.waveProgressTrack.setSize(progressTrackW, progressTrackH);
+      this.waveProgressFill.setPosition(this.waveProgressTrack.x + 1, this.waveProgressTrack.y + 1);
+      this.waveProgressFill.setSize(2, Math.max(2, progressTrackH - 2));
+      this.waveProgressText.setStyle({ fontSize: `${this.clamp(Math.round(progressTrackH * 0.95), 11, 16)}px` });
+      this.waveProgressText.setPosition(
+        this.waveProgressTrack.x,
+        this.waveProgressTrack.y + this.waveProgressTrack.height + Math.max(2, Math.round(contextPad * 0.35)),
+      );
+      const chipY = this.waveProgressText.y + this.waveProgressText.height + Math.max(2, Math.round(contextPad * 0.25));
+      this.upcomingEnemiesTitleText.setPosition(this.contextPanelFrame.x + contextPad, chipY);
+      const chipTop = this.upcomingEnemiesTitleText.y + this.upcomingEnemiesTitleText.height + Math.max(2, Math.round(contextPad * 0.2));
+      this.upcomingCurrentIconBg.setPosition(this.contextPanelFrame.x + contextPad, chipTop);
+      this.upcomingCurrentIcon.setPosition(
+        this.upcomingCurrentIconBg.x + this.upcomingCurrentIconBg.width / 2,
+        this.upcomingCurrentIconBg.y + this.upcomingCurrentIconBg.height / 2,
+      );
+      this.upcomingCurrentIconLabel.setPosition(this.upcomingCurrentIconBg.x, this.upcomingCurrentIconBg.y + this.upcomingCurrentIconBg.height + 2);
+      const nextX = this.upcomingCurrentIconBg.x + this.upcomingCurrentIconBg.width + Math.max(10, Math.round(contextPad * 0.45));
+      this.upcomingNextIconBg.setPosition(nextX, chipTop);
+      this.upcomingNextIcon.setPosition(
+        this.upcomingNextIconBg.x + this.upcomingNextIconBg.width / 2,
+        this.upcomingNextIconBg.y + this.upcomingNextIconBg.height / 2,
+      );
+      this.upcomingNextIconLabel.setPosition(this.upcomingNextIconBg.x, this.upcomingNextIconBg.y + this.upcomingNextIconBg.height + 2);
+      this.towerCardIconBg.setPosition(this.contextPanelFrame.x + contextPad, this.contextSubtitleText.y + this.contextSubtitleText.height + 4);
+      this.towerCardIcon.setPosition(
+        this.towerCardIconBg.x + this.towerCardIconBg.width / 2,
+        this.towerCardIconBg.y + this.towerCardIconBg.height / 2,
+      );
+      const towerContentX = this.towerCardIconBg.x + this.towerCardIconBg.width + Math.max(10, Math.round(contextPad * 0.45));
+      this.towerNameTierText.setPosition(towerContentX, this.towerCardIconBg.y);
+      this.towerDpsText.setPosition(towerContentX, this.towerNameTierText.y + this.towerNameTierText.height + 4);
+      this.towerRangeText.setPosition(towerContentX, this.towerDpsText.y + this.towerDpsText.height + 3);
+      this.towerRangeTrack.setPosition(towerContentX, this.towerRangeText.y + this.towerRangeText.height + 4);
+      this.towerRangeTrack.setSize(Math.max(60, contextPanelW - (towerContentX - this.contextPanelFrame.x) - contextPad), 10);
+      this.towerRangeFill.setPosition(this.towerRangeTrack.x + 1, this.towerRangeTrack.y + 1);
+      this.towerEffectText.setPosition(towerContentX, this.towerRangeTrack.y + this.towerRangeTrack.height + 4);
 
       const gridCols = 4;
       const frameW = 384;
@@ -858,6 +1118,10 @@ export class Hud {
         const y = contentPadY + row * contentCellH + contentCellH / 2;
         const slot = this._actionSlotConfigs[i];
         const icon = this._actionIcons[i];
+        const accent = this._actionAccentFrames[i];
+        const costText = this._actionCostTexts[i];
+        const infoText = this._actionInfoTexts[i];
+        const infoZone = this._actionInfoHitZones[i];
         
         const textureExists = slot?.iconKey ? this.scene.textures.exists(slot.iconKey) : false;
 
@@ -876,13 +1140,20 @@ export class Hud {
 
         const currentIcon = this._actionIcons[i];
         const iconSize = Math.round(Math.min(contentCellW, contentCellH) * 0.75);
+        const accentColor = Number.isFinite(slot?.accentColor) ? slot.accentColor : 0x6f99c9;
+        accent
+          .setPosition(x, y)
+          .setVisible(Boolean(slot))
+          .setFillStyle(accentColor, slot?.enabled === false ? 0.18 : 0.34)
+          .setStrokeStyle(2, accentColor, slot?.enabled === false ? 0.35 : 0.85);
         if (currentIcon) {
           const offsetX = slot?.iconOffsetX ?? 0;
           const offsetY = slot?.iconOffsetY ?? 0;
           currentIcon
             .setVisible(Boolean(slot))
             .setPosition(x + offsetX, y + offsetY)
-            .setDisplaySize(iconSize, iconSize);
+            .setDisplaySize(iconSize, iconSize)
+            .setAlpha(slot?.enabled === false ? 0.5 : 1);
         }
 
         const button = this._actionButtons[i];
@@ -899,6 +1170,26 @@ export class Hud {
           .setText(showInlineLabel ? slot.label : "")
           .setStyle({ fontSize: `${actionFontSize}px`, padding: { x: 6, y: 5 } });
 
+        if (slot && slot.cost != null) {
+          costText
+            .setVisible(true)
+            .setPosition(x + (contentCellW / 2) - 3, y + (contentCellH / 2) - 3)
+            .setText(`${slot.cost}g`)
+            .setAlpha(slot.enabled === false ? 0.7 : 1);
+        } else {
+          costText.setVisible(false);
+        }
+
+        const showInfo = Boolean(slot && slot.showInfoButton !== false && this.hasActionTooltip(slot));
+        infoText
+          .setVisible(showInfo)
+          .setPosition(x + (contentCellW / 2) - 10, y - (contentCellH / 2) + 10)
+          .setAlpha(slot?.enabled === false ? 0.7 : 1);
+        infoZone
+          .setPosition(infoText.x, infoText.y)
+          .setSize(18, 18)
+          .setVisible(showInfo);
+
         if (currentIcon && showInlineLabel) {
           button.setOrigin(1, 0.5);
           button.setX(x - (iconSize / 2) - 8);
@@ -907,12 +1198,30 @@ export class Hud {
           button.setOrigin(0.5, 0.5);
         }
       }
+      for (const infoZone of this._actionInfoHitZones) {
+        this._actionGridBackground.bringToTop(infoZone);
+      }
       for (const z of this._actionHitZones) {
         this._actionGridBackground.bringToTop(z);
       }
       if (this.tooltipRoot.visible) {
         this.moveActionTooltip();
       }
+
+      this.detailsBackdrop.setPosition(0, 0);
+      this.detailsBackdrop.setSize(rootWidth, rootHeight);
+      const detailsW = this.clamp(Math.round(rootWidth * 0.4), 420, 560);
+      const detailsH = this.clamp(Math.round(rootHeight * 0.35), 220, 320);
+      const detailsX = this.clamp(Math.round(rootWidth * 0.5 - detailsW / 2), 8, rootWidth - detailsW - 8);
+      const detailsY = this.clamp(Math.round(rootHeight * 0.5 - detailsH / 2), 8, rootHeight - detailsH - 8);
+      this.detailsBackground.setPosition(detailsX, detailsY);
+      this.detailsBackground.setSize(detailsW, detailsH);
+      this.detailsDescriptionText.setWordWrapWidth(detailsW - 32, true);
+      this.detailsTitleText.setPosition(detailsX + 14, detailsY + 12);
+      this.detailsDescriptionText.setPosition(detailsX + 14, this.detailsTitleText.y + this.detailsTitleText.height + 8);
+      this.detailsCostText.setPosition(detailsX + 14, this.detailsDescriptionText.y + this.detailsDescriptionText.height + 8);
+      this.detailsWarningText.setPosition(detailsX + 14, this.detailsCostText.y + this.detailsCostText.height + 6);
+      this.detailsCloseButton.setPosition(detailsX + detailsW - 10, detailsY + 8);
     } catch (e) {
       console.error("[HUD] Layout error:", e);
     }
@@ -926,30 +1235,53 @@ export class Hud {
     for (const obj of this.bottomUiObjects) {
       obj.setVisible(this._bottomVisible);
     }
-    const showWavePanel = this._bottomVisible && this._selectedBuilding == null;
-    this.waveInfoFrame.setVisible(showWavePanel);
-    this.waveInfoTitleText.setVisible(showWavePanel);
-    this.waveRoleText.setVisible(showWavePanel);
+    const showWavePanel = this._bottomVisible && this._contextMode === "wave";
+    const showTowerPanel = this._bottomVisible && this._contextMode === "tower";
+    this.contextPanelFrame.setVisible(this._bottomVisible);
+    this.contextTitleText.setVisible(this._bottomVisible);
+    this.contextSubtitleText.setVisible(this._bottomVisible);
     this.waveCountText.setVisible(showWavePanel);
     this.waveEnemiesText.setVisible(showWavePanel);
+    this.waveProgressTrack.setVisible(showWavePanel);
+    this.waveProgressFill.setVisible(showWavePanel);
+    this.waveProgressText.setVisible(showWavePanel);
+    this.upcomingEnemiesTitleText.setVisible(showWavePanel);
+    this.upcomingCurrentIconBg.setVisible(showWavePanel);
+    this.upcomingCurrentIcon.setVisible(showWavePanel && this.upcomingCurrentIcon.visible);
+    this.upcomingCurrentIconLabel.setVisible(showWavePanel);
+    this.upcomingNextIconBg.setVisible(showWavePanel);
+    this.upcomingNextIcon.setVisible(showWavePanel && this.upcomingNextIcon.visible);
+    this.upcomingNextIconLabel.setVisible(showWavePanel);
+    this.towerCardIconBg.setVisible(showTowerPanel);
+    this.towerCardIcon.setVisible(showTowerPanel && this.towerCardIcon.visible);
+    this.towerNameTierText.setVisible(showTowerPanel);
+    this.towerDpsText.setVisible(showTowerPanel);
+    this.towerRangeText.setVisible(showTowerPanel);
+    this.towerRangeTrack.setVisible(showTowerPanel);
+    this.towerRangeFill.setVisible(showTowerPanel);
+    this.towerEffectText.setVisible(showTowerPanel);
     if (!this._bottomVisible) {
       this.hideActionTooltip();
+      this.hideActionDetails();
     }
     for (let idx = 0; idx < this._actionHitZones.length; idx += 1) {
       const zone = this._actionHitZones[idx];
+      const infoZone = this._actionInfoHitZones[idx];
       const slot = this._actionSlotConfigs[idx];
-      const wantsInput = Boolean(
-        this._bottomVisible &&
-        slot &&
-        ((slot?.enabled && typeof slot?.onClick === "function") || this.hasActionTooltip(slot)),
-      );
+      const wantsInput = Boolean(this._bottomVisible && slot && slot?.enabled && typeof slot?.onClick === "function");
       if (wantsInput) {
-        const canClick = Boolean(slot.enabled && typeof slot.onClick === "function");
-        zone.setInteractive({ useHandCursor: canClick });
+        zone.setInteractive({ useHandCursor: true });
       } else {
         zone.disableInteractive();
       }
+      const wantsInfo = Boolean(this._bottomVisible && slot && slot.showInfoButton !== false && this.hasActionTooltip(slot));
+      if (wantsInfo) {
+        infoZone.setInteractive({ useHandCursor: true });
+      } else {
+        infoZone.disableInteractive();
+      }
     }
+    this.detailsRoot.setVisible(this._bottomVisible && this._detailsSlotIndex >= 0);
   }
 
   setBottomVisible(visible) {
@@ -1019,8 +1351,11 @@ export class Hud {
     const gameSpeed =
       Number.isFinite(rawSpeed) ? Math.max(1, Math.min(3, Math.round(rawSpeed))) : 1;
     this.speedButton.setText(`Speed x${gameSpeed}`);
+    this.applySpeedButtonStyle(gameSpeed);
+    this.pauseButton.setText(state.paused ? "Resume" : "Pause");
     const hpMax = typeof maxLives === "number" && maxLives > 0 ? maxLives : state.lives;
     this.hpText.setText(`HP: ${state.lives}/${hpMax}`);
+    this.updateGoldDelta(state.gold);
     this.goldText.setText(`Gold: ${state.gold}`);
     this.towersText.setText(`Towers: ${towerCount}`);
     this.updateSelectionText();
@@ -1029,58 +1364,159 @@ export class Hud {
 
   updateSelectionText() {
     const selected = this._selectedBuilding;
-    if (!selected) {
-      this.selectedTitleText.setText("Selected: None");
-      this.selectedHpText.setText("HP: N/A");
-      this.selectedCellText.setText("Cell: -");
-      this.selectedDamageText.setVisible(false);
-      this.selectedRangeText.setVisible(false);
-      this.waveInfoFrame.setVisible(true);
-      this.waveInfoTitleText.setVisible(true);
-      this.waveRoleText.setVisible(true);
-      this.waveCountText.setVisible(true);
-      this.waveEnemiesText.setVisible(true);
-      const rawRole = typeof this._waveInfo?.role === "string" ? this._waveInfo.role : "unknown";
-      const formattedRole = rawRole
-        .split("_")
-        .join(" ")
-        .split(" ")
-        .filter(Boolean)
-        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-        .join(" ");
-      this.waveRoleText.setText(`Role: ${formattedRole || "Unknown"}`);
+    if (!selected || selected.kind !== "tower") {
+      this._contextMode = "wave";
       const waveNumber = Number.isFinite(this._waveInfo?.wave) ? this._waveInfo.wave : 1;
       const enemiesAlive = Number.isFinite(this._waveInfo?.enemiesAlive) ? this._waveInfo.enemiesAlive : 0;
+      const totalSpawned = Number.isFinite(this._waveInfo?.totalSpawned) ? this._waveInfo.totalSpawned : 0;
+      const spawnTarget = Number.isFinite(this._waveInfo?.spawnTarget) ? this._waveInfo.spawnTarget : 0;
+      this.contextTitleText.setText("Wave Status");
+      this.contextSubtitleText.setText(this.formatRoleSubtitle(this._waveInfo?.upcoming?.current));
       this.waveCountText.setText(`Wave: ${waveNumber}`);
-      this.waveEnemiesText.setText(`Enemies: ${enemiesAlive}`);
+      this.waveEnemiesText.setText(`Enemies: ${enemiesAlive}  Spawned: ${totalSpawned}/${spawnTarget}`);
+      this.upcomingCurrentIconLabel.setText(`Now: ${this.formatRoleLabel(this._waveInfo?.upcoming?.current?.role)}`);
+      this.upcomingNextIconLabel.setText(`Next: ${this.formatRoleLabel(this._waveInfo?.upcoming?.next?.role)}`);
+      this.applyPreviewIcon(this.upcomingCurrentIcon, this._waveInfo?.upcoming?.current);
+      this.applyPreviewIcon(this.upcomingNextIcon, this._waveInfo?.upcoming?.next);
+      this.setWaveProgressVisual(this._waveInfo?.progress);
       return;
     }
-    this.waveInfoFrame.setVisible(false);
-    this.waveInfoTitleText.setVisible(false);
-    this.waveRoleText.setVisible(false);
-    this.waveCountText.setVisible(false);
-    this.waveEnemiesText.setVisible(false);
+    this._contextMode = "tower";
     const selectedCount = Number(selected.selectedCount);
-    const hasGroupSelection = selected.kind === "tower" && Number.isFinite(selectedCount) && selectedCount > 1;
-    const selectedSuffix = hasGroupSelection ? ` x${Math.floor(selectedCount)}` : "";
-    this.selectedTitleText.setText(`Selected: ${selected.label}${selectedSuffix}`);
-    if (typeof selected.hpCurrent === "number" && typeof selected.hpMax === "number") {
-      this.selectedHpText.setText(`HP: ${selected.hpCurrent}/${selected.hpMax}`);
-    } else {
-      this.selectedHpText.setText("HP: N/A");
+    const hasGroupSelection = Number.isFinite(selectedCount) && selectedCount > 1;
+    const tierValue = Number.isFinite(selected.tier) ? selected.tier + 1 : 1;
+    this.contextTitleText.setText("Tower Details");
+    this.contextSubtitleText.setText(hasGroupSelection ? `${Math.floor(selectedCount)} selected` : "Single selection");
+    this.towerNameTierText.setText(`${selected.label} · Tier ${tierValue}`);
+    const damage = Number.isFinite(selected.damage) ? selected.damage : 0;
+    const cooldown = Number.isFinite(selected.cooldown) && selected.cooldown > 0 ? selected.cooldown : 1;
+    const dps = damage / cooldown;
+    const range = Number.isFinite(selected.range) ? selected.range : 0;
+    this.towerDpsText.setText(`DPS: ${dps.toFixed(dps >= 10 ? 1 : 2)}`);
+    this.towerRangeText.setText(`Range: ${Math.round(range)}`);
+    this.setTowerRangeVisual(range);
+    this.towerEffectText.setText(`Effect: ${selected.effectSummary || "No special effects"}`);
+    this.applyTowerIcon(this.towerCardIcon, selected.iconKey);
+  }
+
+  formatRoleLabel(rawRole) {
+    const role = typeof rawRole === "string" && rawRole.length > 0 ? rawRole : "normal";
+    return role
+      .split("_")
+      .join(" ")
+      .split(" ")
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ");
+  }
+
+  formatRoleSubtitle(currentWavePreview) {
+    if (!currentWavePreview) {
+      return "Role: Unknown";
     }
-    this.selectedCellText.setText(`Position: ${selected.cellX},${selected.cellY}`);
-    if (selected.kind === "tower") {
-      const damageValue = Number.isFinite(selected.damage) ? Math.round(selected.damage * 10) / 10 : null;
-      const rangeValue = Number.isFinite(selected.range) ? Math.round(selected.range) : null;
-      this.selectedDamageText.setText(`Damage: ${damageValue ?? "-"}`);
-      this.selectedRangeText.setText(`Range: ${rangeValue ?? "-"}`);
-      this.selectedDamageText.setVisible(true);
-      this.selectedRangeText.setVisible(true);
+    const primary = this.formatRoleLabel(currentWavePreview.role);
+    const secondary = currentWavePreview.secondaryRole ? this.formatRoleLabel(currentWavePreview.secondaryRole) : null;
+    return secondary ? `Role: ${primary} + ${secondary}` : `Role: ${primary}`;
+  }
+
+  applyPreviewIcon(image, preview) {
+    if (!image) {
       return;
     }
-    this.selectedDamageText.setVisible(false);
-    this.selectedRangeText.setVisible(false);
+    const keys = [
+      preview?.iconKey,
+      preview?.visual?.textureKey,
+      "redWarriorRunSheet",
+    ];
+    for (const key of keys) {
+      if (typeof key !== "string" || key.length === 0) {
+        continue;
+      }
+      if (!this.scene.textures.exists(key)) {
+        continue;
+      }
+      image.setTexture(key);
+      image.setDisplaySize(28, 28);
+      image.setVisible(true);
+      return;
+    }
+    image.setVisible(false);
+  }
+
+  applyTowerIcon(image, iconKey) {
+    if (!image) {
+      return;
+    }
+    const fallback = "blueTower";
+    const nextKey = this.scene.textures.exists(iconKey) ? iconKey : this.scene.textures.exists(fallback) ? fallback : null;
+    if (!nextKey) {
+      image.setVisible(false);
+      return;
+    }
+    image.setTexture(nextKey);
+    image.setDisplaySize(54, 54);
+    image.setVisible(true);
+  }
+
+  setTowerRangeVisual(rawRange) {
+    const maxRange = 220;
+    const range = Number.isFinite(rawRange) ? this.clamp(rawRange, 0, maxRange) : 0;
+    const ratio = maxRange > 0 ? range / maxRange : 0;
+    const trackInnerWidth = Math.max(2, this.towerRangeTrack.width - 2);
+    this.towerRangeFill.width = Math.max(2, Math.round(trackInnerWidth * ratio));
+    this.towerRangeFill.height = Math.max(2, this.towerRangeTrack.height - 2);
+  }
+
+  setWaveProgressVisual(rawProgress) {
+    const progress = Number.isFinite(rawProgress) ? this.clamp(rawProgress, 0, 1) : 0;
+    const trackInnerWidth = Math.max(2, this.waveProgressTrack.width - 2);
+    this.waveProgressFill.width = Math.max(2, Math.round(trackInnerWidth * progress));
+    const pct = Math.round(progress * 100);
+    this.waveProgressText.setText(`Progress: ${pct}%`);
+  }
+
+  applySpeedButtonStyle(gameSpeed) {
+    if (gameSpeed >= 3) {
+      this.speedButton.setStyle({ backgroundColor: "#9a6a2a", color: "#fff7dd" });
+      return;
+    }
+    if (gameSpeed === 2) {
+      this.speedButton.setStyle({ backgroundColor: "#5e6b3a", color: "#f1ffe2" });
+      return;
+    }
+    this.speedButton.setStyle({ backgroundColor: "#4f3f38", color: cozyTheme.colors.textPrimary });
+  }
+
+  updateGoldDelta(rawGold) {
+    const nextGold = Math.floor(Number(rawGold) || 0);
+    if (this._lastGoldValue == null) {
+      this._lastGoldValue = nextGold;
+      return;
+    }
+    const delta = nextGold - this._lastGoldValue;
+    this._lastGoldValue = nextGold;
+    if (delta === 0) {
+      return;
+    }
+    this._goldDeltaTween?.stop?.();
+    this._goldDeltaTween?.remove?.();
+    const positive = delta > 0;
+    this.goldDeltaText.setText(`${positive ? "+" : ""}${delta}`);
+    this.goldDeltaText.setStyle({ color: positive ? "#8df5a6" : "#ff9d9d" });
+    this.goldDeltaText.setAlpha(1);
+    this.goldDeltaText.setVisible(true);
+    this.goldDeltaText.y -= 4;
+    this._goldDeltaTween = this.scene.tweens.add({
+      targets: this.goldDeltaText,
+      y: this.goldDeltaText.y - 16,
+      alpha: 0,
+      duration: 420,
+      ease: "Sine.easeOut",
+      onComplete: () => {
+        this.goldDeltaText.setVisible(false);
+        this.goldDeltaText.setAlpha(1);
+      },
+    });
   }
 
 }

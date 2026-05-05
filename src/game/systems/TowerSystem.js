@@ -98,7 +98,6 @@ export class TowerSystem {
       sprite,
       type: resolvedTowerType,
       tier: 0,
-      branch: null,
       effects: [],
       hitCount: 0,
       lifestealPool: 0,
@@ -226,7 +225,6 @@ export class TowerSystem {
       gameState.gold -= option.cost;
       tower.type = targetType;
       tower.tier = 0;
-      tower.branch = null;
       tower.damage = target.damage;
       tower.baseDamage = target.damage;
       tower.cooldown = 1 / target.rate;
@@ -256,9 +254,6 @@ export class TowerSystem {
     }
     gameState.gold -= option.cost;
     tower.tier = option.tier;
-    if (option.path) {
-      tower.branch = option.path;
-    }
     if (typeof upgradeData.damageMultiplier === "number") {
       tower.damage *= upgradeData.damageMultiplier;
     }
@@ -272,7 +267,7 @@ export class TowerSystem {
       tower.effects.push(...upgradeData.effects);
     }
     // #region agent log
-    fetch('http://127.0.0.1:7576/ingest/1dec1a9b-9444-4174-b16c-c421bd677924',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'3311f3'},body:JSON.stringify({sessionId:'3311f3',runId:'run1',hypothesisId:'H5',location:'src/game/systems/TowerSystem.js:tryUpgradeTowerAtCell:upgrade-success',message:'Non-conversion upgrade applied',data:{optionId,newTier:tower.tier,newBranch:tower.branch,remainingGold:gameState.gold},timestamp:Date.now()})}).catch(()=>{});
+    fetch('http://127.0.0.1:7576/ingest/1dec1a9b-9444-4174-b16c-c421bd677924',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'3311f3'},body:JSON.stringify({sessionId:'3311f3',runId:'run1',hypothesisId:'H5',location:'src/game/systems/TowerSystem.js:tryUpgradeTowerAtCell:upgrade-success',message:'Non-conversion upgrade applied',data:{optionId,newTier:tower.tier,remainingGold:gameState.gold},timestamp:Date.now()})}).catch(()=>{});
     // #endregion
     return true;
   }

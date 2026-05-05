@@ -4,15 +4,8 @@ const CC_WINDOW_SECONDS = 12;
 const MAX_CHAIN_TARGETS = 6;
 const MAX_VOLLEY_ARROWS = 7;
 
-const UPGRADE_GRAPH = {
-  base: [{ id: "t1", tier: 1, path: null }],
-  t1: [
-    { id: "t2a", tier: 2, path: "a" },
-    { id: "t2b", tier: 2, path: "b" },
-  ],
-  t2a: [{ id: "t3a", tier: 3, path: "a" }],
-  t2b: [{ id: "t3b", tier: 3, path: "b" }],
-};
+const UPGRADE_PATH = ["level1", "level2", "level3"];
+export const MAX_TOWER_LEVEL = UPGRADE_PATH.length;
 
 export const BASIC_CONVERSION_ORDER = ["archer", "lightning", "earth", "fire", "holy", "ice", "dark", "nature"];
 const ELEMENT_CONVERSIONS = [...BASIC_CONVERSION_ORDER];
@@ -71,6 +64,55 @@ export const towerVisuals = {
   nature: { textureKey: "tower_nature_building" },
 };
 
+export const towerProjectileColors = {
+  basic: 0xf5d742,
+  fire: 0xff5a1f,
+  ice: 0x66e0ff,
+  lightning: 0xfff066,
+  nature: 0x7ad858,
+  earth: 0xb98648,
+  dark: 0x9b3bd6,
+  holy: 0xfff3b0,
+  archer: 0xe6d0a4,
+};
+
+export const towerUiAccentColors = {
+  basic: 0x6aa9ff,
+  fire: 0xff6b3d,
+  ice: 0x66dbff,
+  lightning: 0xffeb66,
+  nature: 0x7ad858,
+  earth: 0xc79a63,
+  dark: 0xb06cff,
+  holy: 0xfff2b3,
+  archer: 0xe6d0a4,
+};
+
+export const statusColors = {
+  burn: { tint: 0xff7a3a, ring: 0xff5a1f },
+  poison: { tint: 0x9bd66c, ring: 0x4ea93a },
+  slow: { tint: 0x9adfff, ring: 0x3aa4d8 },
+  stun: { tint: 0xfff39e, ring: 0xffd23a },
+  root: { tint: 0x9ed18d, ring: 0x3a8a3a },
+  curse: { tint: 0xc7a5ff, ring: 0x7d3ad3 },
+  weakening: { tint: 0xb59bd9, ring: 0x6b4dab },
+  vulnerability: { tint: 0xff9bb4, ring: 0xd84a7a },
+};
+
+export const STATUS_PRIORITY = ["stun", "root", "burn", "poison", "vulnerability", "slow", "curse", "weakening"];
+
+export function getTowerProjectileColor(towerType) {
+  return towerProjectileColors[towerType] ?? towerProjectileColors.basic;
+}
+
+export function getTowerUiAccentColor(towerType) {
+  return towerUiAccentColors[towerType] ?? towerUiAccentColors.basic;
+}
+
+export function getStatusColors(statusType) {
+  return statusColors[statusType] ?? null;
+}
+
 export const economy = {
   startingGold: 220,
   startingLives: 20,
@@ -86,69 +128,182 @@ export const economy = {
 
 export const upgrades = {
   fire: {
-    t1: { damageMultiplier: 1.25, effects: [{ type: "burn", dpsFactor: 0.4, duration: 3 }] },
-    t2a: { effects: [{ type: "burnStacking", maxStacks: 3, duration: 5 }] },
-    t2b: { effects: [{ type: "splash", radiusTiles: 1.5, ratio: 0.6 }] },
-    t3a: { effects: [{ type: "deathExplosionBurn" }] },
-    t3b: { effects: [{ type: "critExplosion", chance: 0.2, multiplier: 2 }] },
+    level1: {
+      damageMultiplier: 1.25,
+      effects: [{ type: "burn", dpsFactor: 0.4, duration: 3 }],
+      summary: "Adds burn DoT and boosts damage.",
+    },
+    level2: {
+      damageMultiplier: 1.2,
+      effects: [
+        { type: "burnStacking", maxStacks: 3, duration: 5 },
+        { type: "splash", radiusTiles: 1.5, ratio: 0.6 },
+      ],
+      summary: "Stacking burns and splash damage.",
+    },
+    level3: {
+      damageMultiplier: 1.2,
+      effects: [
+        { type: "deathExplosionBurn" },
+        { type: "critExplosion", chance: 0.2, multiplier: 2 },
+      ],
+      summary: "Death explosions and critical bursts.",
+    },
   },
   ice: {
-    t1: { effects: [{ type: "slow", ratio: 0.3, duration: 1.5 }] },
-    t2a: { effects: [{ type: "stunChance", chance: 0.15, duration: 1.2 }] },
-    t2b: { effects: [{ type: "auraSlow", ratio: 0.15, radiusTiles: 2.5 }] },
-    t3a: { effects: [{ type: "doubleDamageVsFrozen" }] },
-    t3b: { effects: [{ type: "auraVulnerability", ratio: 0.25 }] },
+    level1: {
+      damageMultiplier: 1.1,
+      effects: [{ type: "slow", ratio: 0.3, duration: 1.5 }],
+      summary: "Slows enemies on hit.",
+    },
+    level2: {
+      damageMultiplier: 1.18,
+      effects: [
+        { type: "stunChance", chance: 0.15, duration: 1.2 },
+        { type: "auraSlow", ratio: 0.15, radiusTiles: 2.5 },
+      ],
+      summary: "Adds stun chance and a slowing aura.",
+    },
+    level3: {
+      damageMultiplier: 1.23,
+      effects: [
+        { type: "doubleDamageVsFrozen" },
+        { type: "auraVulnerability", ratio: 0.25 },
+      ],
+      summary: "Double damage vs frozen, vulnerability aura.",
+    },
   },
   lightning: {
-    t1: { effects: [{ type: "chain", targets: 2 }] },
-    t2a: { rangeMultiplier: 1.2, effects: [{ type: "chain", targets: 4 }] },
-    t2b: { effects: [{ type: "burstEveryHits", every: 5, multiplier: 3 }] },
-    t3a: { effects: [{ type: "chainNoDecay" }] },
-    t3b: { effects: [{ type: "burstAllInRange" }] },
+    level1: {
+      damageMultiplier: 1.15,
+      effects: [{ type: "chain", targets: 2 }],
+      summary: "Chains to a nearby enemy.",
+    },
+    level2: {
+      damageMultiplier: 1.18,
+      rangeMultiplier: 1.2,
+      effects: [{ type: "chain", targets: 4 }],
+      summary: "Chains to four enemies and gains range.",
+    },
+    level3: {
+      damageMultiplier: 1.18,
+      effects: [{ type: "chainNoDecay" }, { type: "burstAllInRange" }],
+      summary: "Chains never decay and burst all enemies in range.",
+    },
   },
   nature: {
-    t1: { effects: [{ type: "poison", dpsFactor: 0.6, duration: 4 }] },
-    t2a: { effects: [{ type: "poisonSpreadOnDeath" }] },
-    t2b: { effects: [{ type: "rootChance", chance: 0.1, duration: 1.5 }] },
-    t3a: { effects: [{ type: "poisonInfiniteStack" }] },
-    t3b: { effects: [{ type: "bonusDamageVsRooted", ratio: 0.5 }] },
+    level1: {
+      damageMultiplier: 1.15,
+      effects: [{ type: "poison", dpsFactor: 0.6, duration: 4 }],
+      summary: "Applies long poison DoT.",
+    },
+    level2: {
+      damageMultiplier: 1.22,
+      effects: [
+        { type: "poisonSpreadOnDeath" },
+        { type: "rootChance", chance: 0.1, duration: 1.5 },
+      ],
+      summary: "Poison spreads on death and roots enemies.",
+    },
+    level3: {
+      damageMultiplier: 1.21,
+      effects: [
+        { type: "poisonInfiniteStack" },
+        { type: "bonusDamageVsRooted", ratio: 0.5 },
+      ],
+      summary: "Poison stacks endlessly, +50% damage vs rooted.",
+    },
   },
   earth: {
-    t1: { effects: [{ type: "splash", radiusTiles: 1.2, ratio: 0.75 }] },
-    t2a: { damageMultiplier: 1.8, cooldownMultiplier: 1.3 },
-    t2b: { effects: [{ type: "knockback", distanceTiles: 0.3 }] },
-    t3a: { effects: [{ type: "aoeStun", duration: 0.8 }] },
-    t3b: { effects: [{ type: "chainKnockbackSlow", ratio: 0.2, duration: 1.2 }] },
+    level1: {
+      damageMultiplier: 1.1,
+      effects: [{ type: "splash", radiusTiles: 1.2, ratio: 0.75 }],
+      summary: "Heavy splash damage.",
+    },
+    level2: {
+      damageMultiplier: 1.36,
+      effects: [{ type: "knockback", distanceTiles: 0.3 }],
+      summary: "Higher damage and knockback.",
+    },
+    level3: {
+      damageMultiplier: 1.27,
+      effects: [
+        { type: "aoeStun", duration: 0.8 },
+        { type: "chainKnockbackSlow", ratio: 0.2, duration: 1.2 },
+      ],
+      summary: "AoE stun and chain knockback slow.",
+    },
   },
   dark: {
-    t1: { effects: [{ type: "curse", ratio: 0.15, duration: 4 }] },
-    t2a: { effects: [{ type: "drain", ratio: 0.2 }] },
-    t2b: { effects: [{ type: "weakening", ratio: 0.25, duration: 3 }] },
-    t3a: { effects: [{ type: "overhealShield" }] },
-    t3b: { effects: [{ type: "curseSpread" }] },
+    level1: {
+      damageMultiplier: 1.15,
+      effects: [{ type: "curse", ratio: 0.15, duration: 4 }],
+      summary: "Curses enemies to take more damage.",
+    },
+    level2: {
+      damageMultiplier: 1.18,
+      effects: [
+        { type: "drain", ratio: 0.2 },
+        { type: "weakening", ratio: 0.25, duration: 3 },
+      ],
+      summary: "Drains lives and weakens enemy speed.",
+    },
+    level3: {
+      damageMultiplier: 1.18,
+      effects: [{ type: "overhealShield" }, { type: "curseSpread" }],
+      summary: "Overheal shield and spreading curse.",
+    },
   },
   holy: {
-    t1: { effects: [{ type: "bonusVsDark", ratio: 0.5 }] },
-    t2a: { effects: [{ type: "towerAuraSpeed", ratio: 0.2, radiusTiles: 2.5 }] },
-    t2b: { effects: [{ type: "trueDamageEveryHits", every: 4 }] },
-    t3a: { effects: [{ type: "towerAuraRange", ratio: 0.15 }] },
-    t3b: { effects: [{ type: "smiteBeamTargets", targets: 3 }] },
+    level1: {
+      damageMultiplier: 1.2,
+      effects: [{ type: "bonusVsDark", ratio: 0.5 }],
+      summary: "+50% damage vs dark enemies.",
+    },
+    level2: {
+      damageMultiplier: 1.21,
+      effects: [
+        { type: "towerAuraSpeed", ratio: 0.2, radiusTiles: 2.5 },
+        { type: "trueDamageEveryHits", every: 4 },
+      ],
+      summary: "Speed aura and periodic true damage.",
+    },
+    level3: {
+      damageMultiplier: 1.21,
+      effects: [
+        { type: "towerAuraRange", ratio: 0.15 },
+        { type: "smiteBeamTargets", targets: 3 },
+      ],
+      summary: "Range aura and smite beam.",
+    },
   },
   archer: {
-    t1: { cooldownMultiplier: 0.75 },
-    t2a: { rangeMultiplier: 1.25, effects: [{ type: "crit", chance: 0.25, multiplier: 2 }] },
-    t2b: { effects: [{ type: "volley", arrows: 3 }] },
-    t3a: { effects: [{ type: "headshotThreshold", hpThreshold: 0.15 }] },
-    t3b: { effects: [{ type: "volleyPierce", arrows: 5, pierce: 2 }] },
+    level1: {
+      damageMultiplier: 1.1,
+      cooldownMultiplier: 0.75,
+      summary: "Faster shots and more damage.",
+    },
+    level2: {
+      damageMultiplier: 1.22,
+      rangeMultiplier: 1.25,
+      effects: [{ type: "crit", chance: 0.25, multiplier: 2 }],
+      summary: "Greater range and crit chance.",
+    },
+    level3: {
+      damageMultiplier: 1.22,
+      effects: [
+        { type: "headshotThreshold", hpThreshold: 0.15 },
+        { type: "volleyPierce", arrows: 5, pierce: 2 },
+      ],
+      summary: "Execute low-HP enemies and pierce volley.",
+    },
   },
 };
 
 export const upgradeMeta = {
-  t1: { label: "Tier 1", cost: () => getTowerTierCost(1) },
-  t2a: { label: "Path A", cost: () => getTowerTierCost(2) },
-  t2b: { label: "Path B", cost: () => getTowerTierCost(2) },
-  t3a: { label: "Tier 3A", cost: () => getTowerTierCost(3) },
-  t3b: { label: "Tier 3B", cost: () => getTowerTierCost(3) },
+  level1: { label: "Level 1", cost: () => getTowerTierCost(1) },
+  level2: { label: "Level 2", cost: () => getTowerTierCost(2) },
+  level3: { label: "Level 3", cost: () => getTowerTierCost(3) },
 };
 
 export const enemyRoleModifiers = {
@@ -225,13 +380,22 @@ export function getUpgradeOptionsForTower(tower) {
       cost: economy.conversionCost,
     }));
   }
-  const graphKey = tower.tier <= 0 ? "base" : tower.tier === 1 ? "t1" : tower.branch === "a" ? "t2a" : "t2b";
-  const ids = UPGRADE_GRAPH[graphKey] ?? [];
-  return ids.map((entry) => ({
-    ...entry,
-    label: upgradeMeta[entry.id]?.label ?? entry.id,
-    cost: upgradeMeta[entry.id]?.cost?.() ?? economy.baseTowerCost,
-  }));
+  const currentTier = Math.max(0, Math.min(MAX_TOWER_LEVEL, tower.tier ?? 0));
+  if (currentTier >= MAX_TOWER_LEVEL) {
+    return [];
+  }
+  const id = UPGRADE_PATH[currentTier];
+  const nextTier = currentTier + 1;
+  return [
+    {
+      id,
+      tier: nextTier,
+      path: null,
+      label: upgradeMeta[id]?.label ?? `Level ${nextTier}`,
+      cost: upgradeMeta[id]?.cost?.() ?? economy.baseTowerCost,
+      summary: upgrades[tower.type]?.[id]?.summary ?? "",
+    },
+  ];
 }
 
 export function isValidConversionTarget(towerType) {
@@ -257,6 +421,40 @@ export function getTowerTooltipSummary(towerType) {
 
 export function getTowerTextureKey(towerType) {
   return towerVisuals[towerType]?.textureKey ?? towerVisuals.basic.textureKey;
+}
+
+export function getTowerEffectShortSummary(effects = []) {
+  if (!Array.isArray(effects) || effects.length === 0) {
+    return "No special effects";
+  }
+  const labels = [];
+  for (const effect of effects) {
+    const type = effect?.type;
+    if (type === "burn") labels.push("Burn");
+    else if (type === "poison") labels.push("Poison");
+    else if (type === "slow") labels.push("Slow");
+    else if (type === "stunChance") labels.push("Stun chance");
+    else if (type === "rootChance") labels.push("Root chance");
+    else if (type === "chain") labels.push("Chain");
+    else if (type === "chainNoDecay") labels.push("Full chain");
+    else if (type === "splash") labels.push("Splash");
+    else if (type === "crit") labels.push("Crit");
+    else if (type === "towerAuraSpeed") labels.push("Speed aura");
+    else if (type === "towerAuraRange") labels.push("Range aura");
+    else if (type === "curse") labels.push("Curse");
+    else if (type === "drain") labels.push("Drain");
+    else if (type === "knockback") labels.push("Knockback");
+    else if (type === "smiteBeamTargets") labels.push("Smite");
+    else if (type === "volley" || type === "volleyPierce") labels.push("Volley");
+  }
+  const unique = [...new Set(labels)];
+  if (unique.length === 0) {
+    return "No special effects";
+  }
+  if (unique.length <= 3) {
+    return unique.join(" | ");
+  }
+  return `${unique.slice(0, 3).join(" | ")} +${unique.length - 3}`;
 }
 
 export function clampUtilityBudget(towerType, damage, cooldownSeconds) {

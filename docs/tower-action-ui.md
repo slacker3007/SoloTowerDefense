@@ -1,14 +1,14 @@
 # Tower Action UI
 
-This document describes how tower action text and tooltips are produced and rendered in the HUD.
+This document describes the icon-first tower action UX and how details are surfaced through explicit info buttons.
 
 ## Why This Exists
 
-The action panel now surfaces richer context so players can make decisions without memorizing tower stats:
+The action panel now prioritizes instant decisions:
 
-- Per-tower descriptions and stat summaries in tooltips
-- Cost and affordability warning in tooltip details
-- Hover-only inline label text on conversion icon buttons
+- 3x3 icon-first conversion grid for basic towers
+- Always-visible cost badges on actionable icons
+- Explicit per-slot info button for secondary details
 
 ## Source Of Truth
 
@@ -25,10 +25,13 @@ This keeps tooltip text logic out of scene/HUD layout code.
 ## Data Flow
 
 1. `GameScene.updateHudActions()` builds slot definitions from game state.
-2. Slot definitions include `tooltipTitle`, `tooltipDescription`, `tooltipCost`, and `tooltipWarning`.
-3. `Hud.setActionSlots()` stores the slot set and binds interactivity.
-4. `Hud.showActionTooltip()` renders tooltip text for hovered slot.
-5. `Hud.layout()` renders icon buttons and conditionally shows inline labels.
+2. Slot definitions include:
+   - details fields (`tooltipTitle`, `tooltipDescription`, `tooltipCost`, `tooltipWarning`)
+   - icon UX fields (`accentColor`, `cost`, `showInfoButton`)
+3. `Hud.setActionSlots()` stores slots and binds:
+   - main slot click for immediate action
+   - info-button click for details panel
+4. `Hud.layout()` renders color accents, icon art, cost badges, and info affordances.
 
 ## Behavior By Context
 
@@ -36,14 +39,20 @@ This keeps tooltip text logic out of scene/HUD layout code.
 
 - Build action uses basic-tower description + summary.
 - Type info row mirrors that metadata for consistency.
-- Cost and affordability warning are provided through tooltip fields.
+- Cost is also surfaced on the icon slot via `cost`.
 
-## Basic Tower Conversion Grid
+## Basic Tower Conversion Grid (3x3)
 
+- Grid uses nine element-themed cells in the left 3 columns:
+  - archer, lightning, earth
+  - fire, basic (current type marker), holy
+  - ice, dark, nature
 - Conversion entries use:
   - `tooltipTitle = getTowerDisplayName(cell.towerType)`
   - `tooltipDescription = getTowerDescription(...) + getTowerTooltipSummary(...)`
-- Conversion icon buttons keep `label` text, but label visibility is hover-gated in HUD.
+  - `accentColor = getTowerUiAccentColor(cell.towerType)`
+  - `cost = option.cost`
+- Click on an enabled element icon converts instantly.
 
 ## Non-Basic Upgrade Slots
 
@@ -51,40 +60,29 @@ This keeps tooltip text logic out of scene/HUD layout code.
   - current tower description
   - current tower summary
   - selected upgrade label
-- This replaces generic upgrade-only copy and keeps context visible.
+- This keeps context visible while still allowing immediate icon click for upgrade.
 
-## Hover-Only Inline Label Rule
+## Secondary Details Layer
 
 In `src/game/ui/Hud.js`:
 
-- `showInlineLabel = Boolean(slot?.label) && this._hoveredActionIndex === i`
-- Label text is rendered only when slot index is currently hovered.
-- Icon-adjacent button positioning applies only when `showInlineLabel` is true.
-
-This prevents always-on labels and avoids interaction/hit-area drift.
-
-## Hover State Stability
-
-`setActionSlots()` preserves hover when valid:
-
-- Save previous hovered index
-- Rebind slots
-- Restore hover index only if that slot still exists and has tooltip content
-- Otherwise hide tooltip/reset hover state
-
-This avoids flicker or missing hover labels during frequent action slot refreshes.
+- Each slot can expose a small `i` info button via `showInfoButton`.
+- Pressing info opens a details panel with title, description, cost, and warning text.
+- Details are explicitly opened/closed (no hover requirement).
 
 ## QA Checklist
 
 - Select Blue Barracks, open build menu:
-  - Build tooltip shows basic description + stat summary + cost.
+  - Build slot shows cost directly.
+  - Info button opens details with description + summary + cost.
 - Select a basic tower:
-  - Conversion icons show tooltip title/description/cost for each target tower.
-  - Inline label appears only while hovering a conversion icon.
-  - Inline label disappears on pointer out.
+  - Nine element-themed icons fill a 3x3 grid in left columns.
+  - Every actionable conversion icon shows visible cost without hover.
+  - Disabled entries retain visible cost and reduced alpha styling.
+  - Info button opens the correct details panel content.
 - Select a non-basic tower:
-  - Upgrade A/B tooltip descriptions include tower context and upgrade label.
-  - Disabled upgrade states show affordability warning.
+  - Upgrade icon shows cost badge directly.
+  - Info button opens context-rich upgrade details and warnings.
 - Confirm no debug instrumentation remains in scene/HUD files.
 
 ## Related Docs

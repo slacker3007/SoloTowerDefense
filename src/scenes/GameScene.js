@@ -34,7 +34,13 @@ import {
   getAdaptiveAdjustment,
   getTowerDescription,
   getTowerDisplayName,
+  getTowerEffectShortSummary,
+  getTowerProjectileColor,
+  getTowerUiAccentColor,
+  getTowerTextureKey,
   getTowerTooltipSummary,
+  toWorldRange,
+  towerCatalog,
 } from "../game/balance";
 import { MapEditor } from "../game/editor/MapEditor";
 import { EditorPanel } from "../game/editor/EditorPanel";
@@ -79,6 +85,9 @@ const TOWER_DOUBLE_CLICK_MS = 300;
  * @property {number | null} [tooltipCost]
  * @property {string} [tooltipResource]
  * @property {string} [tooltipWarning]
+ * @property {number} [accentColor]
+ * @property {number | null} [cost]
+ * @property {boolean} [showInfoButton]
  */
 
 export class GameScene extends Phaser.Scene {
@@ -111,6 +120,19 @@ export class GameScene extends Phaser.Scene {
   }
 
   create() {
+    // Phaser reuses this scene instance on `restart()`; constructor does not run again.
+    this._runEnded = false;
+    this._pauseOverlayOpen = false;
+    this._settingsReturnToPause = false;
+    this._placementReturnMode = null;
+    this.selectedBuilding = null;
+    this.clearTowerGroupSelection();
+    this._hudActionMode = "empty";
+    this._towerConversionPage = 0;
+    this._towerDoubleClick = { signature: null, at: 0 };
+    this._cameraPanning = false;
+    this._performance = { clearedWaves: 0, leaksInWave: 0, livesAtWaveStart: STARTING_LIVES, waveTimer: 0 };
+
     this.map = createFreshMap001();
     this.gameState = {
       gold: STARTING_GOLD,
@@ -177,6 +199,7 @@ export class GameScene extends Phaser.Scene {
       onMainMenu: () => this.backToMainMenu(),
       onKeybindsChanged: () => {},
       onCycleGameSpeed: () => this.cycleGameSpeed(),
+      onTogglePause: () => this.togglePause(),
     });
     this.debugOverlay = new DebugOverlay(this);
     this.debugOverlay.redraw();
@@ -196,6 +219,7 @@ export class GameScene extends Phaser.Scene {
     this.uiCamera.setZoom(1);
     this.uiCamera.ignore(this.worldRoot);
 
+    this.unbindInput();
     this.bindInput();
     this.createPauseOverlay();
     this.createRunEndOverlay();
@@ -212,8 +236,10 @@ export class GameScene extends Phaser.Scene {
   }
 
   shutdown() {
-    if (this._onGameplayKeyDown) {
-      this.input.keyboard?.off(Phaser.Input.Keyboard.Events.ANY_KEY_DOWN, this._onGameplayKeyDown);
+    this.unbindInput();
+    if (this.uiCamera) {
+      this.cameras.remove(this.uiCamera, true);
+      this.uiCamera = null;
     }
     this.clearTowerPlacement();
     this.builderSystem?.destroy?.();
@@ -275,11 +301,17 @@ export class GameScene extends Phaser.Scene {
       this._towerConversionPage = 0;
       this.selectedBuilding = {
         kind: "tower",
+        type: tower.type,
+        tier: tower.tier,
         label: getTowerDisplayName(tower.type),
+        iconKey: getTowerTextureKey(tower.type),
         cellX,
         cellY,
         damage: tower.damage,
+        cooldown: tower.cooldown,
         range: tower.range,
+        effects: tower.effects ?? [],
+        effectSummary: getTowerEffectShortSummary(tower.effects ?? []),
         selectedCount: 1,
       };
       return true;
@@ -338,11 +370,17 @@ export class GameScene extends Phaser.Scene {
     this._selectedTowerCells = entries.map((entry) => ({ x: entry.cellX, y: entry.cellY }));
     this.selectedBuilding = {
       kind: "tower",
+      type: towerType,
+      tier: tower.tier,
       label: getTowerDisplayName(towerType),
+      iconKey: getTowerTextureKey(towerType),
       cellX: anchorCellX,
       cellY: anchorCellY,
       damage: tower.damage,
+      cooldown: tower.cooldown,
       range: tower.range,
+      effects: tower.effects ?? [],
+      effectSummary: getTowerEffectShortSummary(tower.effects ?? []),
       selectedCount: Math.max(1, entries.length),
     };
     return true;
@@ -360,9 +398,15 @@ export class GameScene extends Phaser.Scene {
     }
     const entries = this.towerSystem.getTowerEntriesByType(this._selectedTowerType);
     this._selectedTowerCells = entries.map((entry) => ({ x: entry.cellX, y: entry.cellY }));
+    this.selectedBuilding.type = anchorTower.type;
+    this.selectedBuilding.tier = anchorTower.tier;
     this.selectedBuilding.label = getTowerDisplayName(anchorTower.type);
+    this.selectedBuilding.iconKey = getTowerTextureKey(anchorTower.type);
     this.selectedBuilding.damage = anchorTower.damage;
+    this.selectedBuilding.cooldown = anchorTower.cooldown;
     this.selectedBuilding.range = anchorTower.range;
+    this.selectedBuilding.effects = anchorTower.effects ?? [];
+    this.selectedBuilding.effectSummary = getTowerEffectShortSummary(anchorTower.effects ?? []);
     this.selectedBuilding.selectedCount = Math.max(1, entries.length);
   }
 
@@ -376,23 +420,33 @@ export class GameScene extends Phaser.Scene {
     if (!selected) {
       return;
     }
-    const shadowColor = 0x000000;
-    const towerShadowAlpha = 0.26;
-    const barracksShadowAlpha = 0.22;
     if (selected.kind === "tower") {
       const cells =
         this._selectedTowerType && this._selectedTowerCells.length > 0
           ? this._selectedTowerCells
           : [{ x: selected.cellX, y: selected.cellY }];
-      const shadowRadiusX = TILE_SIZE * 0.42;
-      const shadowRadiusY = TILE_SIZE * 0.2;
+      const time = this.time?.now ?? 0;
+      const pulse = 0.7 + 0.3 * Math.sin(time / 220);
+      const glowColor = cozyTheme.colors.panelBorder ?? 0xbda67a;
+      const glowAlpha = 0.32;
+      const innerOutlineAlpha = 0.45 * pulse + 0.35;
+      const ringRadiusX = TILE_SIZE * 0.55;
+      const ringRadiusY = TILE_SIZE * 0.22;
       for (const cell of cells) {
         if (!cell || !Number.isFinite(cell.x) || !Number.isFinite(cell.y)) {
           continue;
         }
         const world = cellToWorld(cell.x, cell.y);
-        gfx.fillStyle(shadowColor, towerShadowAlpha);
-        gfx.fillEllipse(world.x, world.y + TILE_SIZE * 0.22, shadowRadiusX * 2, shadowRadiusY * 2);
+        const baseY = world.y + TILE_SIZE * 0.22;
+        gfx.fillStyle(glowColor, glowAlpha);
+        gfx.fillEllipse(world.x, baseY, ringRadiusX * 2, ringRadiusY * 2);
+        gfx.lineStyle(3, glowColor, innerOutlineAlpha);
+        gfx.strokeEllipse(world.x, baseY, ringRadiusX * 2, ringRadiusY * 2);
+        const tower = this.getTowerAtCell(cell.x, cell.y);
+        if (tower) {
+          const rangeColor = getTowerProjectileColor(tower.type);
+          this._drawDashedRangeCircle(gfx, tower.x, tower.y, tower.range, rangeColor, 0.65);
+        }
       }
       return;
     }
@@ -400,8 +454,37 @@ export class GameScene extends Phaser.Scene {
       const world = cellToWorld(selected.cellX, selected.cellY);
       const shadowW = BARRACKS_CLICK_WIDTH * 0.9;
       const shadowH = BARRACKS_CLICK_HEIGHT * 0.28;
-      gfx.fillStyle(shadowColor, barracksShadowAlpha);
+      const time = this.time?.now ?? 0;
+      const pulse = 0.7 + 0.3 * Math.sin(time / 220);
+      const glowColor = cozyTheme.colors.panelBorder ?? 0xbda67a;
+      gfx.fillStyle(glowColor, 0.28);
       gfx.fillEllipse(world.x, world.y + TILE_SIZE * 0.26, shadowW, shadowH);
+      gfx.lineStyle(3, glowColor, 0.45 * pulse + 0.35);
+      gfx.strokeEllipse(world.x, world.y + TILE_SIZE * 0.26, shadowW, shadowH);
+    }
+  }
+
+  /**
+   * @param {Phaser.GameObjects.Graphics} gfx
+   * @param {number} cx
+   * @param {number} cy
+   * @param {number} radius
+   * @param {number} color
+   * @param {number} alpha
+   */
+  _drawDashedRangeCircle(gfx, cx, cy, radius, color, alpha) {
+    if (!gfx || !(radius > 0)) {
+      return;
+    }
+    const segmentCount = 36;
+    const arcSpan = (Math.PI * 2) / segmentCount;
+    const dashSpan = arcSpan * 0.6;
+    gfx.lineStyle(2, color, alpha);
+    for (let i = 0; i < segmentCount; i += 1) {
+      const startAngle = i * arcSpan;
+      gfx.beginPath();
+      gfx.arc(cx, cy, radius, startAngle, startAngle + dashSpan, false);
+      gfx.strokePath();
     }
   }
 
@@ -511,6 +594,9 @@ export class GameScene extends Phaser.Scene {
         tooltipCost: typeof def.tooltipCost === "number" ? def.tooltipCost : def.tooltipCost === null ? null : undefined,
         tooltipResource: typeof def.tooltipResource === "string" ? def.tooltipResource : undefined,
         tooltipWarning: typeof def.tooltipWarning === "string" ? def.tooltipWarning : undefined,
+        accentColor: typeof def.accentColor === "number" ? def.accentColor : undefined,
+        cost: typeof def.cost === "number" ? def.cost : def.cost === null ? null : undefined,
+        showInfoButton: def.showInfoButton !== false,
       };
     }
     return slots;
@@ -545,6 +631,8 @@ export class GameScene extends Phaser.Scene {
             tooltipCost: this.towerSystem.towerCost,
             tooltipResource: "gold",
             tooltipWarning: canAffordTower ? "" : "Not enough gold",
+            accentColor: getTowerUiAccentColor("basic"),
+            cost: this.towerSystem.towerCost,
           },
           {
             innerRow: 1,
@@ -569,6 +657,8 @@ export class GameScene extends Phaser.Scene {
             tooltipDescription: "Return to the barracks action menu.",
             tooltipCost: null,
             tooltipResource: "gold",
+            cost: null,
+            showInfoButton: false,
           },
         ]);
         this.hud.setActionSlots(slots);
@@ -586,6 +676,7 @@ export class GameScene extends Phaser.Scene {
           tooltipDescription: "Open the tower crafting options for blue barracks.",
           tooltipCost: null,
           tooltipResource: "gold",
+          showInfoButton: false,
         },
         {
           innerRow: 3,
@@ -598,6 +689,7 @@ export class GameScene extends Phaser.Scene {
           tooltipDescription: "Close the current selection.",
           tooltipCost: null,
           tooltipResource: "gold",
+          showInfoButton: false,
         },
       ]));
       return;
@@ -614,28 +706,45 @@ export class GameScene extends Phaser.Scene {
           const type = option.id.slice("convert:".length);
           conversionByType.set(type, option);
         }
+        const conversionIconByType = {
+          basic: "blueTower",
+          archer: "tower_archer_icon",
+          lightning: "tower_lightning_icon",
+          earth: "tower_earth_icon",
+          fire: "tower_fire_icon",
+          holy: "tower_holy_icon",
+          ice: "tower_ice_icon",
+          dark: "tower_dark_icon",
+          nature: "tower_nature_icon",
+        };
         const gridCells = [
-          { innerRow: 1, innerCol: 1, towerType: "archer", iconKey: "tower_archer_icon" },
-          { innerRow: 1, innerCol: 2, towerType: "lightning", iconKey: "tower_lightning_icon" },
-          { innerRow: 1, innerCol: 3, towerType: "earth", iconKey: "tower_earth_icon" },
-          { innerRow: 1, innerCol: 4, towerType: "fire", iconKey: "tower_fire_icon" },
-          { innerRow: 2, innerCol: 1, towerType: "holy", iconKey: "tower_holy_icon" },
-          { innerRow: 2, innerCol: 2, towerType: "ice", iconKey: "tower_ice_icon" },
-          { innerRow: 2, innerCol: 3, towerType: "dark", iconKey: "tower_dark_icon" },
-          { innerRow: 2, innerCol: 4, towerType: "nature", iconKey: "tower_nature_icon" },
-          { innerRow: 3, innerCol: 1, towerType: null },
-          { innerRow: 3, innerCol: 2, towerType: null },
+          { innerRow: 1, innerCol: 1, towerType: "archer" },
+          { innerRow: 1, innerCol: 2, towerType: "lightning" },
+          { innerRow: 1, innerCol: 3, towerType: "earth" },
+          { innerRow: 2, innerCol: 1, towerType: "fire" },
+          { innerRow: 2, innerCol: 2, towerType: "basic" },
+          { innerRow: 2, innerCol: 3, towerType: "holy" },
+          { innerRow: 3, innerCol: 1, towerType: "ice" },
+          { innerRow: 3, innerCol: 2, towerType: "dark" },
+          { innerRow: 3, innerCol: 3, towerType: "nature" },
         ];
         const actionDefs = [];
         for (const cell of gridCells) {
-          if (!cell.towerType) {
+          const iconKey = conversionIconByType[cell.towerType] ?? conversionIconByType.basic;
+          if (cell.towerType === "basic") {
             actionDefs.push({
               innerRow: cell.innerRow,
               innerCol: cell.innerCol,
-              actionId: "conversionReserved",
+              actionId: "conversionCurrent",
               label: "",
               enabled: false,
-              iconKey: cell.iconKey,
+              iconKey,
+              tooltipTitle: "Basic Tower",
+              tooltipDescription: "Current tower type. Pick any element icon to convert instantly.",
+              tooltipCost: null,
+              tooltipResource: "gold",
+              accentColor: getTowerUiAccentColor("basic"),
+              cost: null,
             });
             continue;
           }
@@ -651,19 +760,21 @@ export class GameScene extends Phaser.Scene {
             innerRow: cell.innerRow,
             innerCol: cell.innerCol,
             actionId: `upgrade:${option.id}`,
-            label: conversionButtonLabel,
+            label: conversionButtonLabel.length <= 5 ? conversionButtonLabel : "",
             enabled: this.gameState.gold >= option.cost,
-            iconKey: cell.iconKey,
+            iconKey,
             tooltipTitle: getTowerDisplayName(cell.towerType),
             tooltipDescription: `${getTowerDescription(cell.towerType)} ${getTowerTooltipSummary(cell.towerType)}`,
             tooltipCost: option.cost,
             tooltipResource: "gold",
             tooltipWarning: this.gameState.gold >= option.cost ? "" : "Not enough gold",
+            accentColor: getTowerUiAccentColor(cell.towerType),
+            cost: option.cost,
           });
         }
         actionDefs.push({
-          innerRow: 3,
-          innerCol: 3,
+          innerRow: 2,
+          innerCol: 4,
           actionId: "sellTower",
           label: "",
           enabled: true,
@@ -672,6 +783,8 @@ export class GameScene extends Phaser.Scene {
           tooltipDescription: "Remove this tower and receive a gold refund.",
           tooltipCost: null,
           tooltipResource: "gold",
+          showInfoButton: false,
+          cost: null,
         });
         actionDefs.push({
           innerRow: 3,
@@ -683,12 +796,26 @@ export class GameScene extends Phaser.Scene {
           tooltipDescription: "Close this tower menu.",
           tooltipCost: null,
           tooltipResource: "gold",
+          iconKey: "hammerIcon08",
+          showInfoButton: false,
+          cost: null,
         });
         this.hud.setActionSlots(this.buildHudActionSlots(actionDefs));
         return;
       }
+      const upgradeIconByType = {
+        archer: "tower_archer_icon",
+        lightning: "tower_lightning_icon",
+        earth: "tower_earth_icon",
+        fire: "tower_fire_icon",
+        holy: "tower_holy_icon",
+        ice: "tower_ice_icon",
+        dark: "tower_dark_icon",
+        nature: "tower_nature_icon",
+      };
+      const upgradeIconKey = upgradeIconByType[tower?.type];
       const actionDefs = [{
-        innerRow: 1,
+        innerRow: 3,
         innerCol: 1,
         actionId: "sellTower",
         label: "",
@@ -698,35 +825,44 @@ export class GameScene extends Phaser.Scene {
         tooltipDescription: "Remove this tower and receive a gold refund.",
         tooltipCost: null,
         tooltipResource: "gold",
+        showInfoButton: false,
+        cost: null,
       }];
-      if (options[0]) {
-        const upgradeDescriptionA = `${getTowerDescription(tower?.type)} ${getTowerTooltipSummary(tower?.type)} Upgrade: ${options[0].label}.`;
+      const nextOption = options[0] ?? null;
+      if (nextOption) {
+        const summary = typeof nextOption.summary === "string" && nextOption.summary.length > 0
+          ? ` ${nextOption.summary}`
+          : "";
+        const upgradeDescription = `${getTowerDescription(tower?.type)} ${getTowerTooltipSummary(tower?.type)} Upgrade to ${nextOption.label}.${summary}`;
         actionDefs.push({
           innerRow: 1,
           innerCol: 2,
-          actionId: `upgrade:${options[0].id}`,
-          label: `${options[0].label} (${options[0].cost}g)`,
-          enabled: this.gameState.gold >= options[0].cost,
-          tooltipTitle: options[0].label,
-          tooltipDescription: upgradeDescriptionA,
-          tooltipCost: options[0].cost,
+          actionId: `upgrade:${nextOption.id}`,
+          label: nextOption.label,
+          enabled: this.gameState.gold >= nextOption.cost,
+          iconKey: upgradeIconKey,
+          tooltipTitle: `Upgrade to ${nextOption.label}`,
+          tooltipDescription: upgradeDescription,
+          tooltipCost: nextOption.cost,
           tooltipResource: "gold",
-          tooltipWarning: this.gameState.gold >= options[0].cost ? "" : "Not enough gold",
+          tooltipWarning: this.gameState.gold >= nextOption.cost ? "" : "Not enough gold",
+          accentColor: getTowerUiAccentColor(tower?.type),
+          cost: nextOption.cost,
         });
-      }
-      if (options[1]) {
-        const upgradeDescriptionB = `${getTowerDescription(tower?.type)} ${getTowerTooltipSummary(tower?.type)} Upgrade: ${options[1].label}.`;
+      } else {
         actionDefs.push({
           innerRow: 1,
-          innerCol: 3,
-          actionId: `upgrade:${options[1].id}`,
-          label: `${options[1].label} (${options[1].cost}g)`,
-          enabled: this.gameState.gold >= options[1].cost,
-          tooltipTitle: options[1].label,
-          tooltipDescription: upgradeDescriptionB,
-          tooltipCost: options[1].cost,
+          innerCol: 2,
+          actionId: "upgradeMaxed",
+          label: "Max level",
+          enabled: false,
+          iconKey: upgradeIconKey,
+          tooltipTitle: "Max level",
+          tooltipDescription: `${getTowerDescription(tower?.type)} ${getTowerTooltipSummary(tower?.type)} This tower is fully upgraded.`,
+          tooltipCost: null,
           tooltipResource: "gold",
-          tooltipWarning: this.gameState.gold >= options[1].cost ? "" : "Not enough gold",
+          accentColor: getTowerUiAccentColor(tower?.type),
+          cost: null,
         });
       }
       actionDefs.push({
@@ -740,6 +876,8 @@ export class GameScene extends Phaser.Scene {
         tooltipDescription: "Close this tower menu.",
         tooltipCost: null,
         tooltipResource: "gold",
+        showInfoButton: false,
+        cost: null,
       });
       this.hud.setActionSlots(this.buildHudActionSlots(actionDefs));
       return;
@@ -809,12 +947,23 @@ export class GameScene extends Phaser.Scene {
     }
     this.redrawSelectionOutline();
     const pointer = this.input.activePointer;
+    const effectsParent = this.effectsWorldLayer ?? this.worldRoot;
+    this._placementValidityGfx = this.add.graphics();
+    this._placementValidityGfx.setDepth(17);
+    if (effectsParent) {
+      effectsParent.add(this._placementValidityGfx);
+    }
+    this._placementRangeGfx = this.add.graphics();
+    this._placementRangeGfx.setDepth(17);
+    if (effectsParent) {
+      effectsParent.add(this._placementRangeGfx);
+    }
     if (this.textures.exists("blueTower")) {
       this._towerGhost = this.add.image(pointer.worldX, pointer.worldY, "blueTower");
       this._towerGhost.setOrigin(0.5, 1);
       this._towerGhost.setDisplaySize(TILE_SIZE, TILE_SIZE * 2);
       this._towerGhost.setDepth(19);
-      this._towerGhost.setAlpha(0.6);
+      this._towerGhost.setAlpha(0.7);
     } else {
       this._towerGhost = this.add.rectangle(pointer.worldX, pointer.worldY, TILE_SIZE, TILE_SIZE * 2, 0x3d69d6, 0.7);
       this._towerGhost.setOrigin(0.5, 1);
@@ -831,6 +980,10 @@ export class GameScene extends Phaser.Scene {
     this._pendingPlacement = null;
     this._towerGhost?.destroy?.();
     this._towerGhost = null;
+    this._placementValidityGfx?.destroy?.();
+    this._placementValidityGfx = null;
+    this._placementRangeGfx?.destroy?.();
+    this._placementRangeGfx = null;
     this._placementReturnMode = null;
   }
 
@@ -891,9 +1044,15 @@ export class GameScene extends Phaser.Scene {
   refreshSelectionAndHudAfterUpgrade() {
     const tower = this.towerSystem.getTowerAtCell(this.selectedBuilding.cellX, this.selectedBuilding.cellY);
     if (tower) {
+      this.selectedBuilding.type = tower.type;
+      this.selectedBuilding.tier = tower.tier;
       this.selectedBuilding.label = getTowerDisplayName(tower.type);
+      this.selectedBuilding.iconKey = getTowerTextureKey(tower.type);
       this.selectedBuilding.damage = tower.damage;
+      this.selectedBuilding.cooldown = tower.cooldown;
       this.selectedBuilding.range = tower.range;
+      this.selectedBuilding.effects = tower.effects ?? [];
+      this.selectedBuilding.effectSummary = getTowerEffectShortSummary(tower.effects ?? []);
       if (this._selectedTowerType && this._selectedTowerType !== tower.type) {
         this.clearTowerGroupSelection();
         this.selectedBuilding.selectedCount = 1;
@@ -909,6 +1068,7 @@ export class GameScene extends Phaser.Scene {
       this.selectedBuilding,
       this.getWaveInfo(),
     );
+    this.updateHudActions();
     this.redrawSelectionOutline();
   }
 
@@ -917,21 +1077,55 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     const cell = this.pointerToCell(pointer);
+    const validityGfx = this._placementValidityGfx;
+    const rangeGfx = this._placementRangeGfx;
     if (!cell) {
       this._towerGhost.setVisible(false);
+      validityGfx?.clear();
+      rangeGfx?.clear();
       return;
     }
     this._towerGhost.setVisible(true);
     const world = cellToWorld(cell.x, cell.y);
     this._towerGhost.setPosition(world.x, world.y + TILE_SIZE / 2);
+
+    const valid = this.towerSystem.canPlaceTowerAtCell(cell.x, cell.y, this.gameState);
+    if (typeof this._towerGhost.setTint === "function") {
+      if (valid) {
+        this._towerGhost.clearTint();
+      } else {
+        this._towerGhost.setTint(0xff8a8a);
+      }
+    }
+    const tileColor = valid ? 0x7ad858 : 0xff5a1f;
+    if (validityGfx) {
+      validityGfx.clear();
+      validityGfx.fillStyle(tileColor, 0.35);
+      validityGfx.fillRect(world.x - TILE_SIZE / 2, world.y - TILE_SIZE / 2, TILE_SIZE, TILE_SIZE);
+      validityGfx.lineStyle(2, tileColor, 0.85);
+      validityGfx.strokeRect(world.x - TILE_SIZE / 2, world.y - TILE_SIZE / 2, TILE_SIZE, TILE_SIZE);
+    }
+    if (rangeGfx) {
+      rangeGfx.clear();
+      const baseRange = toWorldRange(towerCatalog.basic.rangeTiles);
+      const rangeColor = valid ? (cozyTheme.colors.panelBorder ?? 0xbda67a) : 0xff5a1f;
+      this._drawDashedRangeCircle(rangeGfx, world.x, world.y, baseRange, rangeColor, 0.55);
+    }
   }
 
   getWaveInfo() {
     const role = this.waveSystem?.spawner?.waveRole;
+    const progress = this.waveSystem?.getProgressInfo?.() ?? {};
+    const upcoming = this.waveSystem?.getWaveHudPreview?.() ?? null;
     return {
       role: typeof role === "string" && role.length > 0 ? role : "unknown",
       wave: Number(this.gameState?.wave) || 1,
-      enemiesAlive: this.enemySystem?.getActiveEnemies?.().length ?? 0,
+      enemiesAlive: Number(progress.enemiesAlive) || 0,
+      spawnTarget: Number(progress.spawnTarget) || 0,
+      totalSpawned: Number(progress.totalSpawned) || 0,
+      remainingToSpawn: Number(progress.remainingToSpawn) || 0,
+      progress: Number(progress.progress) || 0,
+      upcoming,
     };
   }
 
@@ -972,8 +1166,52 @@ export class GameScene extends Phaser.Scene {
     return pointer.middleButtonDown() || (buttons & 4) === 4;
   }
 
+  unbindInput() {
+    if (this._boundPointerDown) {
+      this.input.off("pointerdown", this._boundPointerDown);
+      this._boundPointerDown = null;
+    }
+    if (this._boundPointerMove) {
+      this.input.off("pointermove", this._boundPointerMove);
+      this._boundPointerMove = null;
+    }
+    if (this._boundPointerUp) {
+      this.input.off("pointerup", this._boundPointerUp);
+      this._boundPointerUp = null;
+    }
+    if (this._boundWheel) {
+      this.input.off("wheel", this._boundWheel);
+      this._boundWheel = null;
+    }
+    const kb = this.input.keyboard;
+    if (kb && this._boundKeyDebug) {
+      kb.off("keydown-G", this._boundKeyDebug);
+      this._boundKeyDebug = null;
+    }
+    if (kb && this._boundKeyPause) {
+      kb.off("keydown-P", this._boundKeyPause);
+      this._boundKeyPause = null;
+    }
+    if (kb && this._boundKeyRestart) {
+      kb.off("keydown-R", this._boundKeyRestart);
+      this._boundKeyRestart = null;
+    }
+    if (kb && this._boundKeyAdaptive) {
+      kb.off("keydown-O", this._boundKeyAdaptive);
+      this._boundKeyAdaptive = null;
+    }
+    if (kb && this._boundKeyEditor) {
+      kb.off("keydown-E", this._boundKeyEditor);
+      this._boundKeyEditor = null;
+    }
+    if (kb && this._onGameplayKeyDown) {
+      kb.off(Phaser.Input.Keyboard.Events.ANY_KEY_DOWN, this._onGameplayKeyDown);
+      this._onGameplayKeyDown = null;
+    }
+  }
+
   bindInput() {
-    this.input.on("pointerdown", (pointer) => {
+    this._boundPointerDown = (pointer) => {
       if (this._isPanPointer(pointer)) {
         const ev = /** @type {MouseEvent | undefined} */ (pointer.event);
         ev?.preventDefault();
@@ -1073,9 +1311,10 @@ export class GameScene extends Phaser.Scene {
         this.getWaveInfo(),
       );
       this.redrawSelectionOutline();
-    });
+    };
+    this.input.on("pointerdown", this._boundPointerDown);
 
-    this.input.on("pointermove", (pointer) => {
+    this._boundPointerMove = (pointer) => {
       if (this._cameraPanning && !this._isPanPointer(pointer)) {
         this._cameraPanning = false;
       }
@@ -1092,16 +1331,18 @@ export class GameScene extends Phaser.Scene {
       }
       this.updateTowerGhost(pointer);
       this.editor.handlePointerMove(pointer);
-    });
+    };
+    this.input.on("pointermove", this._boundPointerMove);
 
-    this.input.on("pointerup", (pointer) => {
+    this._boundPointerUp = (pointer) => {
       if (!this._isPanPointer(pointer)) {
         this._cameraPanning = false;
       }
       this.editor.handlePointerUp(pointer);
-    });
+    };
+    this.input.on("pointerup", this._boundPointerUp);
 
-    this.input.on("wheel", (pointer, _over, deltaX, deltaY) => {
+    this._boundWheel = (pointer, _over, deltaX, deltaY) => {
       const cam = this.cameras.main;
       const e = /** @type {UIEvent & { shiftKey?: boolean } | undefined} */ (pointer.event);
       if (e?.shiftKey) {
@@ -1124,29 +1365,36 @@ export class GameScene extends Phaser.Scene {
       cam.scrollX += before.x - after.x;
       cam.scrollY += before.y - after.y;
       this._clampCameraScroll();
-    });
+    };
+    this.input.on("wheel", this._boundWheel);
 
-    this.input.keyboard.on("keydown-G", () => {
+    this._boundKeyDebug = () => {
       this.debugOverlay.toggle();
-    });
+    };
+    this.input.keyboard.on("keydown-G", this._boundKeyDebug);
 
-    this.input.keyboard.on("keydown-P", () => {
+    this._boundKeyPause = () => {
       if (this.editor.enabled) {
         return;
       }
       this.togglePause();
-    });
+    };
+    this.input.keyboard.on("keydown-P", this._boundKeyPause);
 
-    this.input.keyboard.on("keydown-R", () => {
+    this._boundKeyRestart = () => {
       this.scene.restart();
-    });
-    this.input.keyboard.on("keydown-O", () => {
-      this._adaptiveEnabled = !this._adaptiveEnabled;
-    });
+    };
+    this.input.keyboard.on("keydown-R", this._boundKeyRestart);
 
-    this.input.keyboard.on("keydown-E", () => {
+    this._boundKeyAdaptive = () => {
+      this._adaptiveEnabled = !this._adaptiveEnabled;
+    };
+    this.input.keyboard.on("keydown-O", this._boundKeyAdaptive);
+
+    this._boundKeyEditor = () => {
       this.toggleMapEditorFromMenu();
-    });
+    };
+    this.input.keyboard.on("keydown-E", this._boundKeyEditor);
 
     this._onGameplayKeyDown = (/** @type {KeyboardEvent} */ ev) => {
       const hud = this.hud;
@@ -1256,6 +1504,7 @@ export class GameScene extends Phaser.Scene {
     this._pauseOverlayRoot = this.add.container(0, 0, [backdrop, panel, title, resumeBtn, settingsBtn, restartBtn, menuBtn]);
     this._pauseOverlayRoot.setDepth(180);
     this._pauseOverlayRoot.setVisible(false);
+    this._attachOverlayToUiCamera(this._pauseOverlayRoot);
   }
 
   createRunEndOverlay() {
@@ -1283,6 +1532,18 @@ export class GameScene extends Phaser.Scene {
     this._runEndOverlayRoot = this.add.container(0, 0, [backdrop, panel, this._runEndTitle, this._runEndStats, retryBtn, menuBtn]);
     this._runEndOverlayRoot.setDepth(185);
     this._runEndOverlayRoot.setVisible(false);
+    this._attachOverlayToUiCamera(this._runEndOverlayRoot);
+  }
+
+  /**
+   * Ensure modal overlays render only once through the UI camera.
+   * @param {Phaser.GameObjects.GameObject | Phaser.GameObjects.Container | null} overlayRoot
+   */
+  _attachOverlayToUiCamera(overlayRoot) {
+    if (!overlayRoot) {
+      return;
+    }
+    this.cameras.main?.ignore?.(overlayRoot);
   }
 
   openSettingsFromGame() {

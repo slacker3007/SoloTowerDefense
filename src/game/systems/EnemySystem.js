@@ -2,9 +2,11 @@ import { buildDefaultPathMask, computeRouteFromPathMask } from "../maps/enemyPat
 import { ensurePathMaskGrid } from "../maps/mapUtils";
 import { cellToWorld, worldToCell } from "../maps/tileRules";
 import { createUnitHpBar } from "../ui/UnitHpBar";
-import { balanceRules } from "../balance";
+import { balanceRules, getStatusColors, STATUS_PRIORITY } from "../balance";
 
 const ENEMY_HP_BAR_Y_OFFSET = 52;
+const STATUS_RING_OFFSET_Y = 12;
+const STATUS_RING_RADIUS = 6;
 
 export class EnemySystem {
   constructor(scene, options = {}) {
@@ -124,6 +126,8 @@ export class EnemySystem {
       statuses: [],
       ccWindowTimer: 0,
       ccSecondsWithinWindow: 0,
+      statusFx: null,
+      statusFxKey: null,
     };
     this._warnedNoPath = false;
 
@@ -159,6 +163,9 @@ export class EnemySystem {
         enemy.sprite.x = target.x;
         enemy.sprite.y = target.y;
         enemy.hpBar?.setWorldPosition(enemy.sprite.x, enemy.sprite.y - ENEMY_HP_BAR_Y_OFFSET);
+        if (enemy.statusFx) {
+          enemy.statusFx.setPosition(enemy.sprite.x, enemy.sprite.y - ENEMY_HP_BAR_Y_OFFSET - STATUS_RING_OFFSET_Y);
+        }
         const advanced = this._advanceWaypoint(enemy);
         if (!advanced) {
           enemy.escaped = true;
@@ -174,6 +181,9 @@ export class EnemySystem {
         enemy.sprite.setFlipX(nx < 0);
       }
       enemy.hpBar?.setWorldPosition(enemy.sprite.x, enemy.sprite.y - ENEMY_HP_BAR_Y_OFFSET);
+      if (enemy.statusFx) {
+        enemy.statusFx.setPosition(enemy.sprite.x, enemy.sprite.y - ENEMY_HP_BAR_Y_OFFSET - STATUS_RING_OFFSET_Y);
+      }
     }
   }
 
@@ -193,6 +203,7 @@ export class EnemySystem {
     if (enemy.hp <= 0) {
       enemy.alive = false;
       enemy.hpBar?.destroy();
+      this._destroyStatusFx(enemy);
       enemy.sprite.destroy();
       return true;
     }
@@ -222,6 +233,7 @@ export class EnemySystem {
     for (const enemy of escaped) {
       enemy.alive = false;
       enemy.hpBar?.destroy();
+      this._destroyStatusFx(enemy);
       enemy.sprite.destroy();
     }
     return escaped.length;
@@ -235,6 +247,7 @@ export class EnemySystem {
     if (!Array.isArray(enemy.statuses) || enemy.statuses.length === 0) {
       enemy.speed = enemy.baseSpeed;
       enemy.ccWindowTimer = Math.max(0, enemy.ccWindowTimer - deltaSeconds);
+      this._updateStatusFx(enemy);
       return;
     }
     let speedMultiplier = 1;
@@ -269,10 +282,86 @@ export class EnemySystem {
     }
     enemy.speed = immobilized ? 0 : enemy.baseSpeed * speedMultiplier;
     enemy.hpBar?.setRatio(enemy.hp / enemy.maxHp);
+    this._updateStatusFx(enemy);
     if (enemy.hp <= 0) {
       enemy.alive = false;
       enemy.hpBar?.destroy();
+      this._destroyStatusFx(enemy);
       enemy.sprite.destroy();
+    }
+  }
+
+  _resolveDominantStatus(enemy) {
+    if (!Array.isArray(enemy.statuses) || enemy.statuses.length === 0) {
+      return null;
+    }
+    const present = new Set();
+    for (const status of enemy.statuses) {
+      if (status?.type) {
+        present.add(status.type);
+      }
+    }
+    for (const type of STATUS_PRIORITY) {
+      if (present.has(type)) {
+        return type;
+      }
+    }
+    return null;
+  }
+
+  _updateStatusFx(enemy) {
+    if (!enemy?.sprite || enemy.escaped || !enemy.alive) {
+      this._destroyStatusFx(enemy);
+      return;
+    }
+    const dominant = this._resolveDominantStatus(enemy);
+    if (!dominant) {
+      this._destroyStatusFx(enemy);
+      return;
+    }
+    const colors = getStatusColors(dominant);
+    if (!colors) {
+      this._destroyStatusFx(enemy);
+      return;
+    }
+    if (typeof enemy.sprite.setTint === "function") {
+      enemy.sprite.setTint(colors.tint);
+    }
+    const ringX = enemy.sprite.x;
+    const ringY = enemy.sprite.y - ENEMY_HP_BAR_Y_OFFSET - STATUS_RING_OFFSET_Y;
+    if (!enemy.statusFx) {
+      const gfx = this.scene.add.graphics();
+      gfx.setDepth(35);
+      const fxParent = this.scene.effectsWorldLayer ?? this.scene.unitsWorldLayer ?? this.scene.worldRoot;
+      if (fxParent && typeof fxParent.add === "function") {
+        fxParent.add(gfx);
+      }
+      enemy.statusFx = gfx;
+      enemy.statusFxKey = null;
+    }
+    const gfx = enemy.statusFx;
+    if (enemy.statusFxKey !== dominant) {
+      gfx.clear();
+      gfx.fillStyle(colors.ring, 0.95);
+      gfx.fillCircle(0, 0, STATUS_RING_RADIUS);
+      gfx.lineStyle(2, 0xffffff, 0.9);
+      gfx.strokeCircle(0, 0, STATUS_RING_RADIUS);
+      enemy.statusFxKey = dominant;
+    }
+    gfx.setPosition(ringX, ringY);
+  }
+
+  _destroyStatusFx(enemy) {
+    if (!enemy) {
+      return;
+    }
+    if (enemy.sprite && typeof enemy.sprite.clearTint === "function") {
+      enemy.sprite.clearTint();
+    }
+    if (enemy.statusFx) {
+      enemy.statusFx.destroy();
+      enemy.statusFx = null;
+      enemy.statusFxKey = null;
     }
   }
 

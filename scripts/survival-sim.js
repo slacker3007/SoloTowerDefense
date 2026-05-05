@@ -89,8 +89,6 @@ function createTower(spec) {
   let cooldown = 1 / base.rate;
   let rangeTiles = base.rangeTiles;
   let tier = 0;
-  /** @type {"a"|"b"|null} */
-  let branch = null;
   const effects = [];
 
   for (const id of upgradeIds) {
@@ -102,16 +100,9 @@ function createTower(spec) {
     if (Array.isArray(u.effects)) {
       for (const e of u.effects) effects.push({ ...e });
     }
-    if (id === "t1") tier = 1;
-    if (id === "t2a") {
-      tier = 2;
-      branch = "a";
-    }
-    if (id === "t2b") {
-      tier = 2;
-      branch = "b";
-    }
-    if (id === "t3a" || id === "t3b") tier = 3;
+    if (id === "level1") tier = 1;
+    if (id === "level2") tier = 2;
+    if (id === "level3") tier = 3;
   }
 
   const range = rangeTiles * TILE_RANGE_TO_WORLD;
@@ -125,7 +116,6 @@ function createTower(spec) {
     effects,
     hitCount: 0,
     tier,
-    branch,
     upgrades: [...upgradeIds],
     utilityBudget: base.utilityBudget ?? 1,
     lifestealPool: 0,
@@ -578,14 +568,14 @@ export const SCENARIOS = [
   ...["archer", "fire", "ice", "lightning", "nature", "earth", "dark", "holy"].map((el, i) => ({
     id: `S${i + 2}`,
     label: `30× ${el} + T1`,
-    specs: Array.from({ length: 30 }, () => ({ type: el, upgradeIds: ["t1"] })),
+    specs: Array.from({ length: 30 }, () => ({ type: el, upgradeIds: ["level1"] })),
   })),
   {
     id: "S10",
     label: "Hybrid 25× dark+T1 + 25× lightning+T1 (curse × chain)",
     specs: [
-      ...Array.from({ length: 25 }, () => ({ type: "dark", upgradeIds: ["t1"] })),
-      ...Array.from({ length: 25 }, () => ({ type: "lightning", upgradeIds: ["t1"] })),
+      ...Array.from({ length: 25 }, () => ({ type: "dark", upgradeIds: ["level1"] })),
+      ...Array.from({ length: 25 }, () => ({ type: "lightning", upgradeIds: ["level1"] })),
     ],
   },
 ];

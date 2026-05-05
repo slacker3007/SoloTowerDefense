@@ -107,6 +107,65 @@ export class WaveSystem {
     }
   }
 
+  getProgressInfo() {
+    const spawner = this.spawner;
+    const enemiesAlive = this.enemySystem?.getActiveEnemies?.().length ?? 0;
+    if (!spawner) {
+      return {
+        spawnTarget: 0,
+        totalSpawned: 0,
+        enemiesAlive,
+        remainingToSpawn: 0,
+        progress: 0,
+      };
+    }
+    const spawnTarget = Math.max(0, Number(spawner.spawnTarget) || 0);
+    const totalSpawned = Math.max(0, Math.min(spawnTarget, Number(spawner.totalSpawned) || 0));
+    const remainingToSpawn = Math.max(0, spawnTarget - totalSpawned);
+    const completion = spawnTarget > 0 ? totalSpawned / spawnTarget : 0;
+    const clearPhase = spawnTarget > 0 && remainingToSpawn === 0
+      ? Math.min(1, enemiesAlive > 0 ? 0.92 : 1)
+      : completion;
+    return {
+      spawnTarget,
+      totalSpawned,
+      enemiesAlive,
+      remainingToSpawn,
+      progress: Math.max(0, Math.min(1, clearPhase)),
+    };
+  }
+
+  _getRoleIconKey(role) {
+    const safeRole = typeof role === "string" && role.length > 0 ? role : "normal";
+    return `enemyRole_${safeRole}`;
+  }
+
+  getWavePreview(waveIndex) {
+    const safeWave = Math.max(1, Number(waveIndex) || 1);
+    const step = getWaveStep(safeWave);
+    const role = typeof step?.role === "string" && step.role.length > 0 ? step.role : "normal";
+    const secondaryRole = typeof step?.secondaryRole === "string" && step.secondaryRole.length > 0
+      ? step.secondaryRole
+      : null;
+    return {
+      wave: safeWave,
+      role,
+      secondaryRole,
+      iconKey: this._getRoleIconKey(role),
+      secondaryIconKey: secondaryRole ? this._getRoleIconKey(secondaryRole) : null,
+      visual: this._getWaveVisual(safeWave),
+      breather: Boolean(step?.breather),
+    };
+  }
+
+  getWaveHudPreview() {
+    const currentWave = Math.max(1, Number(this.waveIndex) || 1);
+    return {
+      current: this.getWavePreview(currentWave),
+      next: this.getWavePreview(currentWave + 1),
+    };
+  }
+
   _buildEnemyTags(role, waveIndex) {
     const tags = [role];
     if (waveIndex >= 8 && (role === "tank" || role === "elite")) {

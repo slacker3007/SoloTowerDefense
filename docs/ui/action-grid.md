@@ -32,18 +32,7 @@ Reverse conversion:
 
 ## Reference Matrix (Inner 4x3)
 
-| innerRow \\ innerCol | 1 | 2 | 3 | 4 |
-| --- | --- | --- | --- | --- |
-| 1 | 1 (0) | 2 (1) | 3 (2) | 4 (3) |
-| 2 | 5 (4) | 6 (5) | 7 (6) | 8 (7) |
-| 3 | 9 (8) | 10 (9) | 11 (10) | 12 (11) |
-
-Each cell shows `1-based slot (0-based slot)`.
-
-Examples:
-
-- `(row 1, col 1) = Build` places Build into slot `1` (`0` in code).
-- `(row 3, col 4) = Back` places Back into slot `12` (`11` in code).
+The grid still has 12 addressable slots, but tower conversion now uses an icon-first 3x3 region in columns `1..3`.
 
 ## Action Placement Contract
 
@@ -57,6 +46,9 @@ Action definitions should use:
   label: "",          // use empty string for icon-only button
   enabled: true,
   iconKey: "buildIcon06", // optional
+  accentColor: 0x6aa9ff,  // optional visual ring/fill tint
+  cost: 100,              // optional icon badge value (gold)
+  showInfoButton: true,   // optional, defaults true
 }
 ```
 
@@ -75,31 +67,30 @@ Placement rules:
   - `(1,2)`: static type info (`Type: Basic`)
   - `(3,4)`: Icon_08 (`hammerIcon08`) -> `backFromCraft`
 - `towerMenu`
-  - `(1,1)`: Sell (`sellTower`)
-  - for non-basic towers:
-    - `(1,2)`: Upgrade slot A (`upgrade:t1` / `upgrade:t2a` / `upgrade:t3a`) with gold cost shown in label
-    - `(1,3)`: Upgrade slot B (`upgrade:t2b`) with gold cost shown in label
-  - for basic towers:
+  - basic tower (icon-first conversion):
     - `(1,1)`: Archer conversion icon (`upgrade:convert:archer`)
     - `(1,2)`: Lightning conversion icon (`upgrade:convert:lightning`)
     - `(1,3)`: Earth conversion icon (`upgrade:convert:earth`)
-    - `(1,4)`: Fire conversion icon (`upgrade:convert:fire`)
-    - `(2,1)`: Holy conversion icon (`upgrade:convert:holy`)
-    - `(2,2)`: Ice conversion icon (`upgrade:convert:ice`)
-    - `(2,3)`: Dark conversion icon (`upgrade:convert:dark`)
-    - `(2,4)`: Nature conversion icon (`upgrade:convert:nature`)
-    - `(3,1)`: empty (reserved)
-    - `(3,2)`: empty (reserved)
-    - `(3,3)`: Sell (`sellTower`)
+    - `(2,1)`: Fire conversion icon (`upgrade:convert:fire`)
+    - `(2,2)`: Basic/current marker (disabled)
+    - `(2,3)`: Holy conversion icon (`upgrade:convert:holy`)
+    - `(3,1)`: Ice conversion icon (`upgrade:convert:ice`)
+    - `(3,2)`: Dark conversion icon (`upgrade:convert:dark`)
+    - `(3,3)`: Nature conversion icon (`upgrade:convert:nature`)
+    - `(2,4)`: Sell (`sellTower`)
     - `(3,4)`: Back (`clearSelection`)
-  - for non-basic towers, `(3,4)`: Icon_08 (`hammerIcon08`) -> `clearSelection`
+  - for non-basic towers:
+    - `(1,2)`: Upgrade icon (`upgrade:level1|level2|level3`) with visible cost badge
+    - `(3,1)`: Sell (`sellTower`)
+    - `(3,4)`: Back (`clearSelection`)
 
 Upgrade menu rules:
 
 - Buttons are disabled when `gameState.gold < option.cost`.
-- Tier-2 branch choice is exclusive and determines whether tier-3 offers `t3a` or `t3b`.
 - Barracks places only a `basic` tower; element choice is done as a tower conversion upgrade.
 - Basic-tower conversion is a fixed grid (no conversion pagination).
+- Cost must remain visible on icon badges even when the action is disabled.
+- Info details are opened through per-slot info buttons, not hover.
 
 Additional craft action:
 
