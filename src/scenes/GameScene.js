@@ -37,6 +37,7 @@ import {
   getTowerEffectShortSummary,
   getTowerProjectileColor,
   getTowerUiAccentColor,
+  getMaxSplashRadiusTilesFromEffects,
   getTowerTextureKey,
   getTowerTooltipSummary,
   toWorldRange,
@@ -479,6 +480,10 @@ export class GameScene extends Phaser.Scene {
             rangeEdgeAlpha,
             rangeFillAlpha,
           );
+          const splashTiles = getMaxSplashRadiusTilesFromEffects(tower.effects ?? []);
+          if (splashTiles > 0) {
+            this._drawDashedRangeCircle(gfx, tower.x, tower.y, toWorldRange(splashTiles), rangeColor, 0.4);
+          }
         }
       }
       return;

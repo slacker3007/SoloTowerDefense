@@ -12,14 +12,32 @@ const ELEMENT_CONVERSIONS = [...BASIC_CONVERSION_ORDER];
 
 export const towerCatalog = {
   basic: { label: "Basic", damage: 9, rate: 1.0, rangeTiles: 3.4, utilityBudget: 1.0, projectileSpeed: 450 },
-  fire: { label: "Fire", damage: 18, rate: 0.8, rangeTiles: 3.5, utilityBudget: 0.8, projectileSpeed: 460 },
-  ice: { label: "Ice", damage: 8, rate: 0.7, rangeTiles: 3.5, utilityBudget: 0.75, projectileSpeed: 420 },
-  lightning: { label: "Lightning", damage: 12, rate: 1.2, rangeTiles: 3.0, utilityBudget: 0.82, projectileSpeed: 500 },
-  nature: { label: "Nature", damage: 6, rate: 1.0, rangeTiles: 3.5, utilityBudget: 0.75, projectileSpeed: 430 },
-  earth: { label: "Earth", damage: 30, rate: 0.4, rangeTiles: 2.8, utilityBudget: 0.78, projectileSpeed: 360 },
-  dark: { label: "Dark", damage: 10, rate: 0.6, rangeTiles: 3.2, utilityBudget: 0.78, projectileSpeed: 440 },
-  holy: { label: "Holy", damage: 14, rate: 0.9, rangeTiles: 3.5, utilityBudget: 0.84, projectileSpeed: 470 },
-  archer: { label: "Archer", damage: 11, rate: 1.3, rangeTiles: 3.8, utilityBudget: 1.0, projectileSpeed: 490 },
+  fire: { label: "Fire", damage: 7, rate: 0.52, rangeTiles: 3.5, utilityBudget: 0.72, projectileSpeed: 440 },
+  ice: { label: "Ice", damage: 5, rate: 0.62, rangeTiles: 3.5, utilityBudget: 0.72, projectileSpeed: 410 },
+  lightning: { label: "Lightning", damage: 9, rate: 1.05, rangeTiles: 3.1, utilityBudget: 0.8, projectileSpeed: 500 },
+  nature: { label: "Nature", damage: 5, rate: 0.72, rangeTiles: 3.5, utilityBudget: 0.76, projectileSpeed: 420 },
+  earth: { label: "Earth", damage: 40, rate: 0.3, rangeTiles: 2.85, utilityBudget: 0.76, projectileSpeed: 340 },
+  dark: { label: "Dark", damage: 4, rate: 0.52, rangeTiles: 3.2, utilityBudget: 0.74, projectileSpeed: 420 },
+  holy: { label: "Holy", damage: 7, rate: 0.55, rangeTiles: 3.5, utilityBudget: 0.82, projectileSpeed: 450 },
+  archer: { label: "Archer", damage: 12, rate: 1.35, rangeTiles: 3.85, utilityBudget: 1.0, projectileSpeed: 500 },
+};
+
+/** Tier-0 effects applied on elemental conversion (and should match tower identity). */
+export const towerBaseEffects = {
+  archer: [],
+  fire: [
+    { type: "splash", radiusTiles: 1.35, ratio: 0.58 },
+    { type: "burn", dpsFactor: 0.32, duration: 2.5 },
+  ],
+  ice: [
+    { type: "slow", ratio: 0.48, duration: 2.2 },
+    { type: "stunChance", chance: 0.12, duration: 0.85, asFreeze: true },
+  ],
+  lightning: [{ type: "chain", targets: 4 }],
+  nature: [{ type: "bonusGoldPerKill", amount: 2 }],
+  earth: [{ type: "bonusVsHeavy", ratio: 0.52 }],
+  dark: [{ type: "curse", ratio: 0.24, duration: 5 }],
+  holy: [{ type: "pulseAoE", interval: 2.0, damageRatio: 0.42 }],
 };
 
 export const towerUiMeta = {
@@ -27,28 +45,28 @@ export const towerUiMeta = {
     description: "Balanced starter tower with steady damage and reliable range.",
   },
   fire: {
-    description: "High burst damage with burn-focused upgrades.",
+    description: "Area damage and burn—punishes clusters, not single-target DPS.",
   },
   ice: {
-    description: "Control tower that slows enemies and sets up disables.",
+    description: "Strong slow and freeze—keeps enemies in range longer for all towers.",
   },
   lightning: {
-    description: "Fast attacks with chain and burst potential.",
+    description: "Chaining bolts with falloff—efficient burst across several targets.",
   },
   nature: {
-    description: "Damage-over-time specialist with poison and root utility.",
+    description: "Economy tower—bonus gold per kill; poison and roots from upgrades.",
   },
   earth: {
-    description: "Heavy-hitting shots with strong splash and crowd control.",
+    description: "Slow, heavy shots—extra damage vs tanks, elites, and armored foes.",
   },
   dark: {
-    description: "Debuff-oriented tower with curse and sustain effects.",
+    description: "Curse and weaken—amplifies damage everyone else deals.",
   },
   holy: {
-    description: "Supportive damage dealer with anti-dark and aura upgrades.",
+    description: "Periodic pulse damage in range—supportive wave chip and auras later.",
   },
   archer: {
-    description: "Long-range rapid fire with crit and volley paths.",
+    description: "Pure single-target DPS benchmark—fast, long-range, no utility cap.",
   },
 };
 
@@ -93,13 +111,14 @@ export const statusColors = {
   poison: { tint: 0x9bd66c, ring: 0x4ea93a },
   slow: { tint: 0x9adfff, ring: 0x3aa4d8 },
   stun: { tint: 0xfff39e, ring: 0xffd23a },
+  freeze: { tint: 0xa8e8ff, ring: 0x4db8e8 },
   root: { tint: 0x9ed18d, ring: 0x3a8a3a },
   curse: { tint: 0xc7a5ff, ring: 0x7d3ad3 },
   weakening: { tint: 0xb59bd9, ring: 0x6b4dab },
   vulnerability: { tint: 0xff9bb4, ring: 0xd84a7a },
 };
 
-export const STATUS_PRIORITY = ["stun", "root", "burn", "poison", "vulnerability", "slow", "curse", "weakening"];
+export const STATUS_PRIORITY = ["stun", "freeze", "root", "burn", "poison", "vulnerability", "slow", "curse", "weakening"];
 
 export function getTowerProjectileColor(towerType) {
   return towerProjectileColors[towerType] ?? towerProjectileColors.basic;
@@ -129,17 +148,17 @@ export const economy = {
 export const upgrades = {
   fire: {
     level1: {
-      damageMultiplier: 1.25,
-      effects: [{ type: "burn", dpsFactor: 0.4, duration: 3 }],
-      summary: "Adds burn DoT and boosts damage.",
+      damageMultiplier: 1.22,
+      effects: [{ type: "burn", dpsFactor: 0.48, duration: 3.2 }],
+      summary: "Stronger burn and damage (splash already built-in).",
     },
     level2: {
-      damageMultiplier: 1.2,
+      damageMultiplier: 1.18,
       effects: [
         { type: "burnStacking", maxStacks: 3, duration: 5 },
-        { type: "splash", radiusTiles: 1.5, ratio: 0.6 },
+        { type: "splash", radiusTiles: 1.65, ratio: 0.62 },
       ],
-      summary: "Stacking burns and splash damage.",
+      summary: "Wider splash, stacking burns.",
     },
     level3: {
       damageMultiplier: 1.2,
@@ -147,106 +166,108 @@ export const upgrades = {
         { type: "deathExplosionBurn" },
         { type: "critExplosion", chance: 0.2, multiplier: 2 },
       ],
-      summary: "Death explosions and critical bursts.",
+      summary: "Death firebursts and crit splashes.",
     },
   },
   ice: {
     level1: {
-      damageMultiplier: 1.1,
-      effects: [{ type: "slow", ratio: 0.3, duration: 1.5 }],
-      summary: "Slows enemies on hit.",
+      damageMultiplier: 1.12,
+      effects: [{ type: "auraSlow", ratio: 0.16, radiusTiles: 2.4 }],
+      summary: "Slowing aura—control without replacing your main slow.",
     },
     level2: {
-      damageMultiplier: 1.18,
+      damageMultiplier: 1.16,
       effects: [
-        { type: "stunChance", chance: 0.15, duration: 1.2 },
-        { type: "auraSlow", ratio: 0.15, radiusTiles: 2.5 },
+        { type: "stunChance", chance: 0.18, duration: 1.05, asFreeze: true },
+        { type: "auraSlow", ratio: 0.08, radiusTiles: 2.6 },
       ],
-      summary: "Adds stun chance and a slowing aura.",
+      summary: "Higher freeze chance and stronger aura.",
     },
     level3: {
-      damageMultiplier: 1.23,
+      damageMultiplier: 1.22,
       effects: [
         { type: "doubleDamageVsFrozen" },
         { type: "auraVulnerability", ratio: 0.25 },
       ],
-      summary: "Double damage vs frozen, vulnerability aura.",
+      summary: "Double damage vs frozen; vulnerability aura.",
     },
   },
   lightning: {
     level1: {
-      damageMultiplier: 1.15,
-      effects: [{ type: "chain", targets: 2 }],
-      summary: "Chains to a nearby enemy.",
+      damageMultiplier: 1.16,
+      summary: "Harder hits (chain is built-in).",
     },
     level2: {
-      damageMultiplier: 1.18,
-      rangeMultiplier: 1.2,
-      effects: [{ type: "chain", targets: 4 }],
-      summary: "Chains to four enemies and gains range.",
+      damageMultiplier: 1.14,
+      rangeMultiplier: 1.18,
+      effects: [{ type: "chain", targets: 5 }],
+      summary: "Fifth chain target and more range.",
     },
     level3: {
-      damageMultiplier: 1.18,
+      damageMultiplier: 1.16,
       effects: [{ type: "chainNoDecay" }, { type: "burstAllInRange" }],
-      summary: "Chains never decay and burst all enemies in range.",
+      summary: "Chains without falloff; periodic full-range burst.",
     },
   },
   nature: {
     level1: {
-      damageMultiplier: 1.15,
-      effects: [{ type: "poison", dpsFactor: 0.6, duration: 4 }],
-      summary: "Applies long poison DoT.",
-    },
-    level2: {
-      damageMultiplier: 1.22,
+      damageMultiplier: 1.12,
       effects: [
-        { type: "poisonSpreadOnDeath" },
-        { type: "rootChance", chance: 0.1, duration: 1.5 },
+        { type: "bonusGoldPerKill", amount: 1 },
+        { type: "poison", dpsFactor: 0.55, duration: 4 },
       ],
-      summary: "Poison spreads on death and roots enemies.",
-    },
-    level3: {
-      damageMultiplier: 1.21,
-      effects: [
-        { type: "poisonInfiniteStack" },
-        { type: "bonusDamageVsRooted", ratio: 0.5 },
-      ],
-      summary: "Poison stacks endlessly, +50% damage vs rooted.",
-    },
-  },
-  earth: {
-    level1: {
-      damageMultiplier: 1.1,
-      effects: [{ type: "splash", radiusTiles: 1.2, ratio: 0.75 }],
-      summary: "Heavy splash damage.",
-    },
-    level2: {
-      damageMultiplier: 1.36,
-      effects: [{ type: "knockback", distanceTiles: 0.3 }],
-      summary: "Higher damage and knockback.",
-    },
-    level3: {
-      damageMultiplier: 1.27,
-      effects: [
-        { type: "aoeStun", duration: 0.8 },
-        { type: "chainKnockbackSlow", ratio: 0.2, duration: 1.2 },
-      ],
-      summary: "AoE stun and chain knockback slow.",
-    },
-  },
-  dark: {
-    level1: {
-      damageMultiplier: 1.15,
-      effects: [{ type: "curse", ratio: 0.15, duration: 4 }],
-      summary: "Curses enemies to take more damage.",
+      summary: "+1 more gold per kill and poison DoT.",
     },
     level2: {
       damageMultiplier: 1.18,
       effects: [
-        { type: "drain", ratio: 0.2 },
-        { type: "weakening", ratio: 0.25, duration: 3 },
+        { type: "poisonSpreadOnDeath" },
+        { type: "rootChance", chance: 0.1, duration: 1.5 },
       ],
-      summary: "Drains lives and weakens enemy speed.",
+      summary: "Poison spreads on death; chance to root.",
+    },
+    level3: {
+      damageMultiplier: 1.2,
+      effects: [
+        { type: "poisonInfiniteStack" },
+        { type: "bonusDamageVsRooted", ratio: 0.5 },
+      ],
+      summary: "Infinite poison stacks; +50% vs rooted.",
+    },
+  },
+  earth: {
+    level1: {
+      damageMultiplier: 1.12,
+      effects: [{ type: "splash", radiusTiles: 0.95, ratio: 0.45 }],
+      summary: "Minor splash for packed lanes (tank-bust stays primary).",
+    },
+    level2: {
+      damageMultiplier: 1.32,
+      effects: [{ type: "knockback", distanceTiles: 0.35 }],
+      summary: "More per-hit damage and knockback.",
+    },
+    level3: {
+      damageMultiplier: 1.25,
+      effects: [
+        { type: "aoeStun", duration: 0.8 },
+        { type: "chainKnockbackSlow", ratio: 0.2, duration: 1.2 },
+      ],
+      summary: "Impact stun and chained slows.",
+    },
+  },
+  dark: {
+    level1: {
+      damageMultiplier: 1.18,
+      effects: [{ type: "weakening", ratio: 0.18, duration: 3.5 }],
+      summary: "Weaken movement—curse already built-in.",
+    },
+    level2: {
+      damageMultiplier: 1.16,
+      effects: [
+        { type: "drain", ratio: 0.2 },
+        { type: "weakening", ratio: 0.12, duration: 3 },
+      ],
+      summary: "Life drain and extra weaken.",
     },
     level3: {
       damageMultiplier: 1.18,
@@ -256,20 +277,20 @@ export const upgrades = {
   },
   holy: {
     level1: {
-      damageMultiplier: 1.2,
+      damageMultiplier: 1.15,
       effects: [{ type: "bonusVsDark", ratio: 0.5 }],
-      summary: "+50% damage vs dark enemies.",
+      summary: "+50% damage vs dark-tagged enemies.",
     },
     level2: {
-      damageMultiplier: 1.21,
+      damageMultiplier: 1.18,
       effects: [
-        { type: "towerAuraSpeed", ratio: 0.2, radiusTiles: 2.5 },
+        { type: "towerAuraSpeed", ratio: 0.15, radiusTiles: 2.5 },
         { type: "trueDamageEveryHits", every: 4 },
       ],
-      summary: "Speed aura and periodic true damage.",
+      summary: "Allied tower speed aura; periodic true damage on shots.",
     },
     level3: {
-      damageMultiplier: 1.21,
+      damageMultiplier: 1.18,
       effects: [
         { type: "towerAuraRange", ratio: 0.15 },
         { type: "smiteBeamTargets", targets: 3 },
@@ -440,7 +461,7 @@ export function getTowerEffectShortSummary(effects = []) {
     if (type === "burn") labels.push("Burn");
     else if (type === "poison") labels.push("Poison");
     else if (type === "slow") labels.push("Slow");
-    else if (type === "stunChance") labels.push("Stun chance");
+    else if (type === "stunChance") labels.push(effect.asFreeze ? "Freeze chance" : "Stun chance");
     else if (type === "rootChance") labels.push("Root chance");
     else if (type === "chain") labels.push("Chain");
     else if (type === "chainNoDecay") labels.push("Full chain");
@@ -453,6 +474,9 @@ export function getTowerEffectShortSummary(effects = []) {
     else if (type === "knockback") labels.push("Knockback");
     else if (type === "smiteBeamTargets") labels.push("Smite");
     else if (type === "volley" || type === "volleyPierce") labels.push("Volley");
+    else if (type === "bonusGoldPerKill") labels.push(`+${effect.amount ?? 0}g/kill`);
+    else if (type === "bonusVsHeavy") labels.push("Vs heavy");
+    else if (type === "pulseAoE") labels.push("Pulse");
   }
   const unique = [...new Set(labels)];
   if (unique.length === 0) {
@@ -462,6 +486,147 @@ export function getTowerEffectShortSummary(effects = []) {
     return unique.join(" | ");
   }
   return `${unique.slice(0, 3).join(" | ")} +${unique.length - 3}`;
+}
+
+/**
+ * Deep-clone tier-0 effect definitions for a new tower instance.
+ * @param {string} towerType
+ * @returns {object[]}
+ */
+export function getTowerBaseEffects(towerType) {
+  const list = towerBaseEffects[towerType];
+  if (!Array.isArray(list) || list.length === 0) {
+    return [];
+  }
+  return list.map((entry) => ({ ...entry }));
+}
+
+/**
+ * Largest splash radius among splash effects (tiles), or 0 if none.
+ * @param {object[]} effects
+ */
+export function getMaxSplashRadiusTilesFromEffects(effects = []) {
+  let maxR = 0;
+  for (const effect of effects) {
+    if (effect?.type === "splash" && Number.isFinite(effect.radiusTiles)) {
+      maxR = Math.max(maxR, effect.radiusTiles);
+    }
+  }
+  return maxR;
+}
+
+/**
+ * @param {object[]} effects
+ * @returns {{ maxTargets: number, noDecay: boolean }}
+ */
+export function getMergedChainInfoFromEffects(effects = []) {
+  let maxTargets = 0;
+  let noDecay = false;
+  for (const effect of effects) {
+    if (effect?.type === "chainNoDecay") {
+      noDecay = true;
+      maxTargets = Math.max(maxTargets, MAX_CHAIN_TARGETS);
+    } else if (effect?.type === "chain" && Number.isFinite(effect.targets)) {
+      maxTargets = Math.max(maxTargets, effect.targets);
+    }
+  }
+  return { maxTargets, noDecay };
+}
+
+/**
+ * HUD copy that leads with tower role, not raw DPS (except archer/baseline).
+ * @param {string} towerType
+ * @param {object[]} effects
+ * @param {number} damage
+ * @param {number} cooldownSeconds
+ */
+export function getTowerRoleHudModel(towerType, effects = [], damage = 0, cooldownSeconds = 1) {
+  const list = Array.isArray(effects) ? effects : [];
+  const { effectiveDps, isUtilityLimited } = getTowerEffectiveDps(towerType, damage, cooldownSeconds);
+  const dpsStr = effectiveDps >= 10 ? effectiveDps.toFixed(1) : effectiveDps.toFixed(2);
+
+  const slowFx = list.filter((e) => e?.type === "slow");
+  const maxSlow = slowFx.length ? Math.max(...slowFx.map((s) => (Number.isFinite(s.ratio) ? s.ratio : 0))) : 0;
+  const freezeFx = list.filter((e) => e?.type === "stunChance" && e.asFreeze);
+  const freezeChance = freezeFx.length ? Math.max(...freezeFx.map((f) => (Number.isFinite(f.chance) ? f.chance : 0))) : 0;
+
+  const splashR = getMaxSplashRadiusTilesFromEffects(list);
+  const chainInfo = getMergedChainInfoFromEffects(list);
+  const goldBonus = list
+    .filter((e) => e?.type === "bonusGoldPerKill")
+    .reduce((sum, e) => sum + (Number.isFinite(e.amount) ? e.amount : 0), 0);
+  const heavy = list.find((e) => e?.type === "bonusVsHeavy");
+  const curse = list.find((e) => e?.type === "curse");
+  const pulse = list.find((e) => e?.type === "pulseAoE");
+
+  let primaryLine = "";
+  let dpsLine = "";
+  let dpsProminent = true;
+  let showUtilityWarning = isUtilityLimited;
+
+  if (towerType === "basic") {
+    primaryLine = "Balanced starter";
+    dpsLine = `DPS: ${dpsStr}`;
+    dpsProminent = true;
+    showUtilityWarning = false;
+  } else if (towerType === "archer") {
+    primaryLine = "Pure single-target DPS (baseline)";
+    dpsLine = `DPS: ${dpsStr}`;
+    dpsProminent = true;
+    showUtilityWarning = false;
+  } else if (towerType === "fire") {
+    primaryLine =
+      splashR > 0 ? `🔥 Hits multiple enemies · splash ${splashR.toFixed(2)} tiles` : "🔥 Area damage / wave clear";
+    dpsLine = `Direct hit DPS: ${dpsStr}`;
+    dpsProminent = false;
+  } else if (towerType === "ice") {
+    const slowPct = Math.round(maxSlow * 100);
+    const frz = Math.round(freezeChance * 100);
+    primaryLine = frz > 0 ? `❄ Slow: ${slowPct}%  ·  Freeze: ${frz}%` : `❄ Slow: ${slowPct}%`;
+    dpsLine = `DPS: ${dpsStr}`;
+    dpsProminent = false;
+  } else if (towerType === "lightning") {
+    const cap = MAX_CHAIN_TARGETS;
+    const n = chainInfo.noDecay ? cap : Math.max(1, Math.min(chainInfo.maxTargets || 1, cap));
+    primaryLine = chainInfo.noDecay
+      ? `⚡ Chains to ${n} enemies (no falloff)`
+      : `⚡ Chains to ${n} enemies (damage falloff)`;
+    dpsLine = `DPS: ${dpsStr}`;
+    dpsProminent = false;
+  } else if (towerType === "nature") {
+    primaryLine = goldBonus > 0 ? `🌿 +${goldBonus}g per kill` : "🌿 Economy tower";
+    dpsLine = `DPS: ${dpsStr}`;
+    dpsProminent = false;
+  } else if (towerType === "earth") {
+    const pct = heavy && Number.isFinite(heavy.ratio) ? Math.round(heavy.ratio * 100) : 0;
+    primaryLine = pct > 0 ? `🪨 +${pct}% vs heavy enemies` : "🪨 Tank buster";
+    dpsLine = `DPS: ${dpsStr}`;
+    dpsProminent = false;
+  } else if (towerType === "dark") {
+    const pct = curse && Number.isFinite(curse.ratio) ? Math.round(curse.ratio * 100) : 0;
+    primaryLine = pct > 0 ? `🌑 Enemies take +${pct}% damage` : "🌑 Curse support";
+    dpsLine = `DPS: ${dpsStr}`;
+    dpsProminent = false;
+  } else if (towerType === "holy") {
+    const iv = pulse && Number.isFinite(pulse.interval) ? pulse.interval : 2;
+    const dr = pulse && Number.isFinite(pulse.damageRatio) ? Math.round(pulse.damageRatio * 100) : 42;
+    primaryLine = `✨ Pulse ${iv.toFixed(1)}s · ${dr}% tower damage in range`;
+    dpsLine = `Shot DPS: ${dpsStr}`;
+    dpsProminent = false;
+  } else {
+    dpsLine = `DPS: ${dpsStr}`;
+  }
+
+  if (towerType !== "archer" && towerType !== "basic") {
+    showUtilityWarning = isUtilityLimited;
+  }
+
+  return {
+    primaryLine,
+    dpsLine,
+    dpsProminent,
+    showUtilityWarning,
+  };
 }
 
 export function clampUtilityBudget(towerType, damage, cooldownSeconds) {

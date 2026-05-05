@@ -215,7 +215,8 @@ export class EnemySystem {
     if (!enemy || !enemy.alive || enemy.escaped || !status) {
       return;
     }
-    const isCc = status.type === "slow" || status.type === "stun" || status.type === "root";
+    const isCc =
+      status.type === "slow" || status.type === "stun" || status.type === "freeze" || status.type === "root";
     if (isCc) {
       const projected = enemy.ccSecondsWithinWindow + (status.duration ?? 0);
       if (projected > balanceRules.ccWindowSeconds * balanceRules.ccUptimeCap) {
@@ -261,7 +262,7 @@ export class EnemySystem {
       } else if (status.type === "slow") {
         speedMultiplier = Math.min(speedMultiplier, 1 - status.ratio);
         ccInFrame = true;
-      } else if (status.type === "stun" || status.type === "root") {
+      } else if (status.type === "stun" || status.type === "freeze" || status.type === "root") {
         immobilized = true;
         ccInFrame = true;
       } else if (status.type === "weakening") {

@@ -2,6 +2,7 @@ import { cellToWorld, isBuildable } from "../maps/tileRules";
 import { TILE_SIZE } from "../constants";
 import {
   economy,
+  getTowerBaseEffects,
   getTowerTextureKey,
   getUpgradeOptionsForTower,
   isValidConversionTarget,
@@ -232,7 +233,7 @@ export class TowerSystem {
       tower.range = toWorldRange(target.rangeTiles);
       tower.projectileSpeed = target.projectileSpeed;
       tower.utilityBudget = target.utilityBudget ?? 1;
-      tower.effects = [];
+      tower.effects = getTowerBaseEffects(targetType);
       tower.hitCount = 0;
       tower.lifestealPool = 0;
       const convertedTextureKey = getTowerTextureKey(targetType);

@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { getTowerEffectiveDps } from "../balance";
+import { getTowerRoleHudModel } from "../balance";
 import {
   KEYBIND_ACTION_IDS,
   KEYBIND_DESCRIPTIONS,
@@ -57,6 +57,7 @@ export class Hud {
     this.actionPanelOffsetY = 40;
     this._selectedBuilding = null;
     this._waveInfo = null;
+    this._towerDpsProminent = false;
     this._actionButtons = [];
     /** @type {Phaser.GameObjects.Zone[]} Full-cell hit targets for action grid slots (64×64 local space). */
     this._actionHitZones = [];
@@ -256,6 +257,12 @@ export class Hud {
       color: "#ffffff",
     });
     this.towerNameTierText.setOrigin(0, 0);
+    this.towerRolePrimaryText = scene.add.text(0, 0, "", {
+      fontFamily: "monospace",
+      fontSize: "14px",
+      color: "#e8f4ff",
+    });
+    this.towerRolePrimaryText.setOrigin(0, 0);
     this.towerDpsText = scene.add.text(0, 0, "", {
       fontFamily: "monospace",
       fontSize: "14px",
@@ -293,6 +300,7 @@ export class Hud {
       this.upcomingCurrentIconLabel,
       this.upcomingNextIconLabel,
       this.towerNameTierText,
+      this.towerRolePrimaryText,
       this.towerDpsText,
       this.towerRangeText,
       this.towerEffectText,
@@ -311,6 +319,7 @@ export class Hud {
     this.upcomingCurrentIconLabel.setOrigin(0, 0);
     this.upcomingNextIconLabel.setOrigin(0, 0);
     this.towerNameTierText.setOrigin(0, 0);
+    this.towerRolePrimaryText.setOrigin(0, 0);
     this.towerDpsText.setOrigin(0, 0);
     this.towerRangeText.setOrigin(0, 0);
     this.towerEffectText.setOrigin(0, 0);
@@ -501,6 +510,7 @@ export class Hud {
       this.towerCardIconBg,
       this.towerCardIcon,
       this.towerNameTierText,
+      this.towerRolePrimaryText,
       this.towerDpsText,
       this.towerRangeText,
       this.towerRangeTrack,
@@ -544,6 +554,7 @@ export class Hud {
       this.towerCardIconBg,
       this.towerCardIcon,
       this.towerNameTierText,
+      this.towerRolePrimaryText,
       this.towerDpsText,
       this.towerRangeText,
       this.towerRangeTrack,
@@ -937,7 +948,14 @@ export class Hud {
       this.upcomingCurrentIconLabel.setStyle({ fontSize: `${contextSubSize}px` });
       this.upcomingNextIconLabel.setStyle({ fontSize: `${contextSubSize}px` });
       this.towerNameTierText.setStyle({ fontSize: `${contextTitleSize}px` });
-      this.towerDpsText.setStyle({ fontSize: `${contextInfoSize}px` });
+      this.towerRolePrimaryText.setStyle({ fontSize: `${contextInfoSize}px` });
+      const dpsTowerSize = this._towerDpsProminent
+        ? this.clamp(Math.round(contextInfoSize * 1.14), 14, 22)
+        : contextInfoSize;
+      this.towerDpsText.setStyle({
+        fontSize: `${dpsTowerSize}px`,
+        fontStyle: this._towerDpsProminent ? "bold" : "normal",
+      });
       this.towerRangeText.setStyle({ fontSize: `${contextInfoSize}px` });
       this.towerEffectText.setStyle({ fontSize: `${contextSubSize}px` });
 
@@ -1074,7 +1092,8 @@ export class Hud {
       );
       const towerContentX = this.towerCardIconBg.x + this.towerCardIconBg.width + Math.max(10, Math.round(contextPad * 0.45));
       this.towerNameTierText.setPosition(towerContentX, this.towerCardIconBg.y);
-      this.towerDpsText.setPosition(towerContentX, this.towerNameTierText.y + this.towerNameTierText.height + 4);
+      this.towerRolePrimaryText.setPosition(towerContentX, this.towerNameTierText.y + this.towerNameTierText.height + 2);
+      this.towerDpsText.setPosition(towerContentX, this.towerRolePrimaryText.y + this.towerRolePrimaryText.height + 3);
       this.towerRangeText.setPosition(towerContentX, this.towerDpsText.y + this.towerDpsText.height + 3);
       this.towerRangeTrack.setPosition(towerContentX, this.towerRangeText.y + this.towerRangeText.height + 4);
       this.towerRangeTrack.setSize(Math.max(60, contextPanelW - (towerContentX - this.contextPanelFrame.x) - contextPad), 10);
@@ -1256,6 +1275,7 @@ export class Hud {
     this.towerCardIconBg.setVisible(showTowerPanel);
     this.towerCardIcon.setVisible(showTowerPanel && this.towerCardIcon.visible);
     this.towerNameTierText.setVisible(showTowerPanel);
+    this.towerRolePrimaryText.setVisible(showTowerPanel);
     this.towerDpsText.setVisible(showTowerPanel);
     this.towerRangeText.setVisible(showTowerPanel);
     this.towerRangeTrack.setVisible(showTowerPanel);
@@ -1366,6 +1386,7 @@ export class Hud {
   updateSelectionText() {
     const selected = this._selectedBuilding;
     if (!selected || selected.kind !== "tower") {
+      this._towerDpsProminent = false;
       this._contextMode = "wave";
       const waveNumber = Number.isFinite(this._waveInfo?.wave) ? this._waveInfo.wave : 1;
       const enemiesAlive = Number.isFinite(this._waveInfo?.enemiesAlive) ? this._waveInfo.enemiesAlive : 0;
@@ -1391,13 +1412,14 @@ export class Hud {
     this.towerNameTierText.setText(`${selected.label} · Tier ${tierValue}`);
     const damage = Number.isFinite(selected.damage) ? selected.damage : 0;
     const cooldown = Number.isFinite(selected.cooldown) && selected.cooldown > 0 ? selected.cooldown : 1;
-    const { effectiveDps, isUtilityLimited } = getTowerEffectiveDps(selected.type, damage, cooldown);
+    const roleModel = getTowerRoleHudModel(selected.type, selected.effects ?? [], damage, cooldown);
+    this._towerDpsProminent = Boolean(roleModel.dpsProminent);
     const range = Number.isFinite(selected.range) ? selected.range : 0;
-    const dpsLabel = effectiveDps >= 10 ? effectiveDps.toFixed(1) : effectiveDps.toFixed(2);
-    this.towerDpsText.setText(
-      isUtilityLimited ? `DPS: ${dpsLabel}  \u26A0 Utility-limited` : `DPS: ${dpsLabel}`,
-    );
-    this.towerDpsText.setColor(isUtilityLimited ? "#ffb86b" : "#d6e7ff");
+    this.towerRolePrimaryText.setText(roleModel.primaryLine || "");
+    this.towerRolePrimaryText.setVisible(Boolean(roleModel.primaryLine));
+    const dpsWarn = roleModel.showUtilityWarning;
+    this.towerDpsText.setText(dpsWarn ? `${roleModel.dpsLine}  \u26A0 Utility-limited` : roleModel.dpsLine);
+    this.towerDpsText.setColor(dpsWarn ? "#ffb86b" : roleModel.dpsProminent ? "#fff4c2" : "#d6e7ff");
     this.towerRangeText.setText(`Range: ${Math.round(range)}`);
     this.setTowerRangeVisual(range);
     this.towerEffectText.setText(`Effect: ${selected.effectSummary || "No special effects"}`);

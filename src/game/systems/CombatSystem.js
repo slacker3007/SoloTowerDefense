@@ -9,8 +9,48 @@ export class CombatSystem {
   }
 
   update(deltaSeconds, gameState) {
+    this.updateTowerPulses(deltaSeconds, gameState);
     this.handleTowerAttacks(gameState);
     this.updateProjectiles(deltaSeconds, gameState);
+  }
+
+  /**
+   * Holy pulse and similar periodic room damage.
+   */
+  updateTowerPulses(deltaSeconds, gameState) {
+    for (const tower of this.towerSystem.towers) {
+      const pulseCfg = (tower.effects ?? []).find((e) => e?.type === "pulseAoE");
+      if (!pulseCfg) {
+        continue;
+      }
+      const interval = Math.max(0.35, Number(pulseCfg.interval) || 2);
+      tower.pulseAccumulator = (tower.pulseAccumulator ?? 0) + deltaSeconds;
+      if (tower.pulseAccumulator < interval) {
+        continue;
+      }
+      tower.pulseAccumulator -= interval;
+      const ratio = Number.isFinite(pulseCfg.damageRatio) ? pulseCfg.damageRatio : 0.42;
+      const color = getTowerProjectileColor(tower.type);
+      for (const enemy of this.enemySystem.getActiveEnemies()) {
+        const distance = Math.hypot(enemy.sprite.x - tower.x, enemy.sprite.y - tower.y);
+        if (distance > tower.range * this.getTowerRangeMultiplier(tower)) {
+          continue;
+        }
+        const raw = tower.damage * ratio;
+        const dmg = this.resolveDamage(tower, enemy, raw);
+        const killed = this.enemySystem.damageEnemy(enemy, dmg);
+        if (killed) {
+          gameState.gold += enemy.rewardGold;
+          for (const effect of tower.effects ?? []) {
+            if (effect.type === "bonusGoldPerKill") {
+              gameState.gold += Number.isFinite(effect.amount) ? effect.amount : 0;
+            }
+          }
+          this.handleOnKillEffects(tower, enemy);
+        }
+      }
+      this.spawnPulseRingFx(tower.x, tower.y, tower.range * this.getTowerRangeMultiplier(tower), color);
+    }
   }
 
   handleTowerAttacks(gameState) {
@@ -76,6 +116,11 @@ export class CombatSystem {
         this.applyTowerEffects(projectile.tower, projectile.target, resolvedDamage, gameState);
         if (killed) {
           gameState.gold += projectile.target.rewardGold;
+          for (const effect of projectile.tower.effects ?? []) {
+            if (effect.type === "bonusGoldPerKill") {
+              gameState.gold += Number.isFinite(effect.amount) ? effect.amount : 0;
+            }
+          }
           this.handleOnKillEffects(projectile.tower, projectile.target);
         }
         projectile.sprite.destroy();
@@ -98,11 +143,21 @@ export class CombatSystem {
     let damage = baseDamage;
     const effects = tower.effects ?? [];
     const hpRatio = enemy.hp / Math.max(1, enemy.maxHp);
+    const tags = enemy.tags ?? [];
     for (const effect of effects) {
-      if (effect.type === "bonusVsDark" && enemy.tags.includes("dark")) {
+      if (effect.type === "bonusVsDark" && tags.includes("dark")) {
         damage *= 1 + effect.ratio;
       }
-      if (effect.type === "doubleDamageVsFrozen" && enemy.statuses.some((status) => status.type === "stun")) {
+      if (
+        effect.type === "bonusVsHeavy" &&
+        (tags.includes("tank") || tags.includes("elite") || tags.includes("armor"))
+      ) {
+        damage *= 1 + (effect.ratio ?? 0);
+      }
+      if (
+        effect.type === "doubleDamageVsFrozen" &&
+        enemy.statuses.some((status) => status.type === "stun" || status.type === "freeze")
+      ) {
         damage *= 2;
       }
       if (effect.type === "bonusDamageVsRooted" && enemy.statuses.some((status) => status.type === "root")) {
@@ -163,15 +218,42 @@ export class CombatSystem {
 
   applyTowerEffects(tower, enemy, resolvedDamage, gameState) {
     const effects = tower.effects ?? [];
+    const splashes = [];
+    const chains = [];
     for (const effect of effects) {
+      if (effect.type === "splash") {
+        splashes.push(effect);
+        continue;
+      }
+      if (effect.type === "chain" || effect.type === "chainNoDecay") {
+        chains.push(effect);
+        continue;
+      }
       if (effect.type === "burn" && !enemy.tags.includes("burnImmune")) {
-        this.enemySystem.applyStatus(enemy, { type: "burn", duration: effect.duration, dps: (tower.damage * effect.dpsFactor) / effect.duration });
+        this.enemySystem.applyStatus(enemy, {
+          type: "burn",
+          duration: effect.duration,
+          dps: (tower.damage * effect.dpsFactor) / effect.duration,
+        });
+      } else if (effect.type === "burnStacking" && !enemy.tags.includes("burnImmune")) {
+        const d = effect.duration ?? 5;
+        const mult = effect.maxStacks ?? 3;
+        this.enemySystem.applyStatus(enemy, {
+          type: "burn",
+          duration: d,
+          dps: (tower.damage * 0.34 * mult) / d,
+        });
       } else if (effect.type === "poison" && !enemy.tags.includes("poisonImmune")) {
-        this.enemySystem.applyStatus(enemy, { type: "poison", duration: effect.duration, dps: (tower.damage * effect.dpsFactor) / effect.duration });
+        this.enemySystem.applyStatus(enemy, {
+          type: "poison",
+          duration: effect.duration,
+          dps: (tower.damage * effect.dpsFactor) / effect.duration,
+        });
       } else if (effect.type === "slow" && !enemy.tags.includes("slowResist")) {
         this.enemySystem.applyStatus(enemy, { type: "slow", duration: effect.duration, ratio: effect.ratio });
-      } else if (effect.type === "stunChance" && Math.random() < effect.chance) {
-        this.enemySystem.applyStatus(enemy, { type: "stun", duration: effect.duration });
+      } else if (effect.type === "stunChance" && Math.random() < (effect.chance ?? 0)) {
+        const statusType = effect.asFreeze ? "freeze" : "stun";
+        this.enemySystem.applyStatus(enemy, { type: statusType, duration: effect.duration });
       } else if (effect.type === "rootChance" && Math.random() < effect.chance) {
         this.enemySystem.applyStatus(enemy, { type: "root", duration: effect.duration });
       } else if (effect.type === "curse") {
@@ -203,14 +285,8 @@ export class CombatSystem {
       if (effect.type === "chainKnockbackSlow") {
         this.applySplashStatus(enemy, "slow", 1.2, { duration: effect.duration, ratio: effect.ratio });
       }
-      if (effect.type === "splash") {
-        this.applySplashDamage(tower, enemy, resolvedDamage, effect.ratio, effect.radiusTiles ?? 1.2);
-      }
-      if (effect.type === "chain") {
-        this.applyChainDamage(tower, enemy, resolvedDamage, effect.targets ?? 2, true);
-      }
-      if (effect.type === "chainNoDecay") {
-        this.applyChainDamage(tower, enemy, resolvedDamage, 999, false);
+      if (effect.type === "aoeStun") {
+        this.applySplashStatus(enemy, "stun", 1.05, { duration: effect.duration ?? 0.8 });
       }
       if (effect.type === "burstAllInRange" && tower.hitCount % 5 === 0) {
         this.applyRangeBurst(tower, resolvedDamage * 0.8);
@@ -221,6 +297,30 @@ export class CombatSystem {
       if (effect.type === "smiteBeamTargets") {
         this.applySmiteBeam(tower, enemy, resolvedDamage, effect.targets ?? 3);
       }
+      if (effect.type === "critExplosion" && Math.random() < (effect.chance ?? 0)) {
+        this.applySplashDamage(tower, enemy, resolvedDamage * (effect.multiplier ?? 2), 0.42, 1.15);
+      }
+    }
+
+    if (splashes.length > 0) {
+      const radiusTiles = Math.max(...splashes.map((s) => s.radiusTiles ?? 1.2));
+      const ratio = Math.max(...splashes.map((s) => s.ratio ?? 0.5));
+      this.applySplashDamage(tower, enemy, resolvedDamage, ratio, radiusTiles);
+      this.spawnSplashRingFx(enemy.sprite.x, enemy.sprite.y, radiusTiles, getTowerProjectileColor(tower.type));
+    }
+    if (chains.length > 0) {
+      const noDecay = chains.some((c) => c.type === "chainNoDecay");
+      let maxTargets = 0;
+      for (const c of chains) {
+        if (c.type === "chain") {
+          maxTargets = Math.max(maxTargets, c.targets ?? 2);
+        }
+        if (c.type === "chainNoDecay") {
+          maxTargets = Math.max(maxTargets, balanceRules.maxChainTargets);
+        }
+      }
+      const chained = this.applyChainDamage(tower, enemy, resolvedDamage, noDecay ? 999 : maxTargets, !noDecay);
+      this.spawnChainFx(tower.x, tower.y, enemy, chained, getTowerProjectileColor(tower.type));
     }
   }
 
@@ -260,12 +360,88 @@ export class CombatSystem {
       .filter((enemy) => enemy !== target && Math.hypot(enemy.sprite.x - target.sprite.x, enemy.sprite.y - target.sprite.y) <= tower.range)
       .slice(0, safeTargets);
     let ratio = 0.75;
+    const hit = [];
     for (const enemy of enemies) {
       this.enemySystem.damageEnemy(enemy, baseDamage * (decay ? ratio : 1));
+      hit.push(enemy);
       if (decay) {
         ratio *= 0.85;
       }
     }
+    return hit;
+  }
+
+  spawnSplashRingFx(worldX, worldY, radiusTiles, color) {
+    const parent = this.scene.effectsWorldLayer ?? this.scene.worldRoot;
+    if (!parent) {
+      return;
+    }
+    const gfx = this.scene.add.graphics();
+    parent.add(gfx);
+    const innerR = 10;
+    const targetR = toWorldRange(radiusTiles);
+    gfx.lineStyle(3, color, 0.88);
+    gfx.strokeCircle(0, 0, innerR);
+    gfx.setPosition(worldX, worldY);
+    const scale = targetR / innerR;
+    this.scene.tweens.add({
+      targets: gfx,
+      scaleX: scale,
+      scaleY: scale,
+      alpha: 0,
+      duration: 200,
+      ease: "Sine.easeOut",
+      onComplete: () => gfx.destroy(),
+    });
+  }
+
+  spawnPulseRingFx(worldX, worldY, radiusWorld, color) {
+    const parent = this.scene.effectsWorldLayer ?? this.scene.worldRoot;
+    if (!parent) {
+      return;
+    }
+    const gfx = this.scene.add.graphics();
+    parent.add(gfx);
+    const innerR = Math.max(20, radiusWorld * 0.15);
+    gfx.lineStyle(2, color, 0.72);
+    gfx.strokeCircle(0, 0, innerR);
+    gfx.setPosition(worldX, worldY);
+    const scale = radiusWorld / innerR;
+    this.scene.tweens.add({
+      targets: gfx,
+      scaleX: scale,
+      scaleY: scale,
+      alpha: 0,
+      duration: 300,
+      ease: "Sine.easeOut",
+      onComplete: () => gfx.destroy(),
+    });
+  }
+
+  spawnChainFx(fromX, fromY, primaryEnemy, chainedEnemies, color) {
+    const parent = this.scene.effectsWorldLayer ?? this.scene.worldRoot;
+    if (!parent || !primaryEnemy?.sprite) {
+      return;
+    }
+    const gfx = this.scene.add.graphics();
+    parent.add(gfx);
+    gfx.lineStyle(2.5, color, 0.92);
+    gfx.beginPath();
+    gfx.moveTo(fromX, fromY);
+    gfx.lineTo(primaryEnemy.sprite.x, primaryEnemy.sprite.y);
+    for (const e of chainedEnemies) {
+      if (e?.sprite) {
+        gfx.lineTo(e.sprite.x, e.sprite.y);
+      }
+    }
+    gfx.strokePath();
+    this.scene.tweens.add({
+      targets: gfx,
+      alpha: 0,
+      duration: 140,
+      ease: "Sine.easeOut",
+      onComplete: () => gfx.destroy(),
+    });
   }
 
   applyRangeBurst(tower, amount) {
