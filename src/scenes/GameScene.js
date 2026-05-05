@@ -40,6 +40,7 @@ import { MapEditor } from "../game/editor/MapEditor";
 import { EditorPanel } from "../game/editor/EditorPanel";
 import { GRID_KEYBIND_ACTION_IDS, KeybindStore } from "../game/input/KeybindStore.js";
 import { ensureMapOverrideGrids, ensureMapTilesets, ensurePathMaskGrid } from "../game/maps/mapUtils";
+import { cozyTheme, createCozyButton, createCozyPanel } from "../game/ui/CozyTheme";
 
 /**
  * @param {unknown} ov
@@ -101,6 +102,12 @@ export class GameScene extends Phaser.Scene {
     this._selectedTowerType = null;
     this._selectedTowerCells = [];
     this._selectionOutlineGfx = null;
+    this._runEnded = false;
+    this._pauseOverlayOpen = false;
+    this._pauseOverlayRoot = null;
+    this._runEndOverlayRoot = null;
+    this._settingsReturnToPause = false;
+    this._placementReturnMode = null;
   }
 
   create() {
@@ -166,6 +173,8 @@ export class GameScene extends Phaser.Scene {
       maxLives: STARTING_LIVES,
       keybindStore: this.keybindStore,
       onMapEditorFromMenu: () => this.toggleMapEditorFromMenu(),
+      onOpenSettings: () => this.openSettingsFromGame(),
+      onMainMenu: () => this.backToMainMenu(),
       onKeybindsChanged: () => {},
       onCycleGameSpeed: () => this.cycleGameSpeed(),
     });
@@ -188,6 +197,8 @@ export class GameScene extends Phaser.Scene {
     this.uiCamera.ignore(this.worldRoot);
 
     this.bindInput();
+    this.createPauseOverlay();
+    this.createRunEndOverlay();
     ensureUnitHpOverlay(this);
     this.syncHudForEditorMode();
     this.updateHudActions();
@@ -216,6 +227,10 @@ export class GameScene extends Phaser.Scene {
     this.editor.destroy();
     this.hud?.dispose();
     this.hud = null;
+    this._pauseOverlayRoot?.destroy(true);
+    this._pauseOverlayRoot = null;
+    this._runEndOverlayRoot?.destroy(true);
+    this._runEndOverlayRoot = null;
     destroyUnitHpOverlay(this);
   }
 
@@ -741,34 +756,14 @@ export class GameScene extends Phaser.Scene {
       if (this.gameState.gold < this.towerSystem.towerCost) {
         return;
       }
-      this.startTowerPlacement();
+      this.startTowerPlacement({ preserveSelection: true, returnMode: "barracksCraftMenu" });
       return;
     }
     if (action.startsWith("upgrade:") && this.selectedBuilding?.kind === "tower") {
       const optionId = action.slice("upgrade:".length);
-      const upgraded = this.towerSystem.tryUpgradeTowerAtCell(this.selectedBuilding.cellX, this.selectedBuilding.cellY, this.gameState, optionId);
+      const upgraded = this.tryUpgradeTowerSelection(optionId);
       if (upgraded) {
-        const tower = this.towerSystem.getTowerAtCell(this.selectedBuilding.cellX, this.selectedBuilding.cellY);
-        if (tower) {
-          this.selectedBuilding.label = getTowerDisplayName(tower.type);
-          this.selectedBuilding.damage = tower.damage;
-          this.selectedBuilding.range = tower.range;
-          if (this._selectedTowerType && this._selectedTowerType !== tower.type) {
-            this.clearTowerGroupSelection();
-            this.selectedBuilding.selectedCount = 1;
-          } else {
-            this.refreshTowerGroupSelection();
-          }
-        }
-        this.debugOverlay.redraw();
-        this.hud.render(
-          this.gameState,
-          this.towerSystem.towers.length,
-          STARTING_LIVES,
-          this.selectedBuilding,
-          this.getWaveInfo(),
-        );
-        this.redrawSelectionOutline();
+        this.refreshSelectionAndHudAfterUpgrade();
       }
       return;
     }
@@ -804,11 +799,14 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  startTowerPlacement() {
+  startTowerPlacement({ preserveSelection = false, returnMode = null } = {}) {
     this._pendingPlacement = { type: "tower", towerType: "basic" };
+    this._placementReturnMode = returnMode;
     this._hudActionMode = "empty";
-    this.selectedBuilding = null;
-    this.clearTowerGroupSelection();
+    if (!preserveSelection) {
+      this.selectedBuilding = null;
+      this.clearTowerGroupSelection();
+    }
     this.redrawSelectionOutline();
     const pointer = this.input.activePointer;
     if (this.textures.exists("blueTower")) {
@@ -833,6 +831,85 @@ export class GameScene extends Phaser.Scene {
     this._pendingPlacement = null;
     this._towerGhost?.destroy?.();
     this._towerGhost = null;
+    this._placementReturnMode = null;
+  }
+
+  /**
+   * @param {string} optionId
+   * @returns {boolean}
+   */
+  tryUpgradeTowerSelection(optionId) {
+    if (this.selectedBuilding?.kind !== "tower") {
+      return false;
+    }
+    const isGroupSelection = this._selectedTowerCells.length > 1;
+    if (!isGroupSelection) {
+      return this.towerSystem.tryUpgradeTowerAtCell(
+        this.selectedBuilding.cellX,
+        this.selectedBuilding.cellY,
+        this.gameState,
+        optionId,
+      );
+    }
+    const shuffledCells = [...this._selectedTowerCells];
+    for (let i = shuffledCells.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const tmp = shuffledCells[i];
+      shuffledCells[i] = shuffledCells[j];
+      shuffledCells[j] = tmp;
+    }
+    let upgradedAny = false;
+    let firstUpgradedCell = null;
+    for (const cell of shuffledCells) {
+      if (!cell || !Number.isFinite(cell.x) || !Number.isFinite(cell.y)) {
+        continue;
+      }
+      const tower = this.getTowerAtCell(cell.x, cell.y);
+      if (!tower) {
+        continue;
+      }
+      const option = this.towerSystem.getUpgradeOptions(tower).find((entry) => entry.id === optionId);
+      if (!option || this.gameState.gold < option.cost) {
+        continue;
+      }
+      const upgraded = this.towerSystem.tryUpgradeTowerAtCell(cell.x, cell.y, this.gameState, optionId);
+      if (!upgraded) {
+        continue;
+      }
+      if (!firstUpgradedCell) {
+        firstUpgradedCell = cell;
+      }
+      upgradedAny = true;
+    }
+    if (upgradedAny && firstUpgradedCell) {
+      this.selectedBuilding.cellX = firstUpgradedCell.x;
+      this.selectedBuilding.cellY = firstUpgradedCell.y;
+    }
+    return upgradedAny;
+  }
+
+  refreshSelectionAndHudAfterUpgrade() {
+    const tower = this.towerSystem.getTowerAtCell(this.selectedBuilding.cellX, this.selectedBuilding.cellY);
+    if (tower) {
+      this.selectedBuilding.label = getTowerDisplayName(tower.type);
+      this.selectedBuilding.damage = tower.damage;
+      this.selectedBuilding.range = tower.range;
+      if (this._selectedTowerType && this._selectedTowerType !== tower.type) {
+        this.clearTowerGroupSelection();
+        this.selectedBuilding.selectedCount = 1;
+      } else {
+        this.refreshTowerGroupSelection();
+      }
+    }
+    this.debugOverlay.redraw();
+    this.hud.render(
+      this.gameState,
+      this.towerSystem.towers.length,
+      STARTING_LIVES,
+      this.selectedBuilding,
+      this.getWaveInfo(),
+    );
+    this.redrawSelectionOutline();
   }
 
   updateTowerGhost(pointer) {
@@ -853,6 +930,8 @@ export class GameScene extends Phaser.Scene {
     const role = this.waveSystem?.spawner?.waveRole;
     return {
       role: typeof role === "string" && role.length > 0 ? role : "unknown",
+      wave: Number(this.gameState?.wave) || 1,
+      enemiesAlive: this.enemySystem?.getActiveEnemies?.().length ?? 0,
     };
   }
 
@@ -928,8 +1007,9 @@ export class GameScene extends Phaser.Scene {
         if (!placed) {
           return;
         }
+        const returnMode = this._placementReturnMode;
         this.clearTowerPlacement();
-        this.setHudActionMode("empty");
+        this.setHudActionMode(returnMode ?? "empty");
         this.debugOverlay.redraw();
         this.hud.render(
           this.gameState,
@@ -1092,6 +1172,11 @@ export class GameScene extends Phaser.Scene {
         return;
       }
       if (ev.keyCode === store.getCode("backOrClose") || ev.key === "Escape") {
+        if (this._pauseOverlayOpen) {
+          this.togglePause();
+          ev.preventDefault();
+          return;
+        }
         this.handleGameplayBackOrClose();
         ev.preventDefault();
         return;
@@ -1137,6 +1222,8 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     this.gameState.paused = !this.gameState.paused;
+    this._pauseOverlayOpen = this.gameState.paused;
+    this._pauseOverlayRoot?.setVisible(this._pauseOverlayOpen);
     this.hud.render(
       this.gameState,
       this.towerSystem.towers.length,
@@ -1144,6 +1231,113 @@ export class GameScene extends Phaser.Scene {
       this.selectedBuilding,
       this.getWaveInfo(),
     );
+  }
+
+  createPauseOverlay() {
+    this._pauseOverlayRoot?.destroy(true);
+    this._pauseOverlayRoot = null;
+    const width = this.scale.width;
+    const height = this.scale.height;
+    const backdrop = this.add.rectangle(0, 0, width, height, cozyTheme.colors.overlay, 0.65).setOrigin(0, 0);
+    const panel = createCozyPanel(this, width * 0.5, height * 0.5, 460, 360);
+    const title = this.add.text(width * 0.5, height * 0.5 - 120, "Paused", {
+      fontFamily: "Georgia, serif",
+      fontSize: "48px",
+      color: cozyTheme.colors.textPrimary,
+    }).setOrigin(0.5, 0.5);
+    const resumeBtn = createCozyButton(this, "Resume", () => this.togglePause(), { width: 220, fontSize: 24 });
+    const settingsBtn = createCozyButton(this, "Settings", () => this.openSettingsFromGame(), { width: 220, fontSize: 22 });
+    const restartBtn = createCozyButton(this, "Restart", () => this.scene.restart(), { width: 220, fontSize: 22 });
+    const menuBtn = createCozyButton(this, "Main Menu", () => this.backToMainMenu(), { width: 220, fontSize: 22 });
+    resumeBtn.setPosition(width * 0.5, height * 0.5 - 35);
+    settingsBtn.setPosition(width * 0.5, height * 0.5 + 20);
+    restartBtn.setPosition(width * 0.5, height * 0.5 + 75);
+    menuBtn.setPosition(width * 0.5, height * 0.5 + 130);
+    this._pauseOverlayRoot = this.add.container(0, 0, [backdrop, panel, title, resumeBtn, settingsBtn, restartBtn, menuBtn]);
+    this._pauseOverlayRoot.setDepth(180);
+    this._pauseOverlayRoot.setVisible(false);
+  }
+
+  createRunEndOverlay() {
+    this._runEndOverlayRoot?.destroy(true);
+    this._runEndOverlayRoot = null;
+    const width = this.scale.width;
+    const height = this.scale.height;
+    const backdrop = this.add.rectangle(0, 0, width, height, cozyTheme.colors.overlay, 0.72).setOrigin(0, 0);
+    const panel = createCozyPanel(this, width * 0.5, height * 0.5, 620, 420);
+    this._runEndTitle = this.add.text(width * 0.5, height * 0.5 - 140, "Run Complete", {
+      fontFamily: "Georgia, serif",
+      fontSize: "46px",
+      color: cozyTheme.colors.textPrimary,
+    }).setOrigin(0.5, 0.5);
+    this._runEndStats = this.add.text(width * 0.5, height * 0.5 - 40, "", {
+      fontFamily: "monospace",
+      fontSize: "20px",
+      color: cozyTheme.colors.textMuted,
+      align: "center",
+    }).setOrigin(0.5, 0.5);
+    const retryBtn = createCozyButton(this, "Retry", () => this.scene.restart(), { width: 220, fontSize: 24 });
+    const menuBtn = createCozyButton(this, "Back to Menu", () => this.backToMainMenu(), { width: 220, fontSize: 24 });
+    retryBtn.setPosition(width * 0.5 - 120, height * 0.5 + 120);
+    menuBtn.setPosition(width * 0.5 + 120, height * 0.5 + 120);
+    this._runEndOverlayRoot = this.add.container(0, 0, [backdrop, panel, this._runEndTitle, this._runEndStats, retryBtn, menuBtn]);
+    this._runEndOverlayRoot.setDepth(185);
+    this._runEndOverlayRoot.setVisible(false);
+  }
+
+  openSettingsFromGame() {
+    if (this.scene.isActive("settings")) {
+      this.scene.bringToTop("settings");
+      return;
+    }
+    this.registry.set("settingsReturnScene", "game");
+    this._settingsReturnToPause = this._pauseOverlayOpen;
+    if (this.hud?.isMenuDropdownOpen?.()) {
+      this.hud.closeMenuDropdown();
+    }
+    if (this.hud?.isKeybindPanelOpen?.()) {
+      this.hud.closeKeybindPanel();
+    }
+    this.scene.pause();
+    this.scene.launch("settings");
+    this.scene.bringToTop("settings");
+  }
+
+  onReturnFromSettings() {
+    this.gameState.paused = this._settingsReturnToPause;
+    this._pauseOverlayOpen = this._settingsReturnToPause;
+    this._pauseOverlayRoot?.setVisible(this._pauseOverlayOpen);
+    this._settingsReturnToPause = false;
+    this.hud?.render(
+      this.gameState,
+      this.towerSystem.towers.length,
+      STARTING_LIVES,
+      this.selectedBuilding,
+      this.getWaveInfo(),
+    );
+  }
+
+  backToMainMenu() {
+    this.scene.start("main-menu");
+  }
+
+  endRun(reason = "defeat") {
+    if (this._runEnded) {
+      return;
+    }
+    this._runEnded = true;
+    this.gameState.paused = true;
+    this._pauseOverlayOpen = false;
+    this._pauseOverlayRoot?.setVisible(false);
+    const title = reason === "victory" ? "Victory" : "Defeat";
+    this._runEndTitle?.setText(title);
+    const statsLines = [
+      `Waves Survived: ${Math.max(0, Number(this.gameState.wave) || 0)}`,
+      `Towers Built: ${this.towerSystem?.towers?.length ?? 0}`,
+      `Gold Remaining: ${Math.max(0, Number(this.gameState.gold) || 0)}`,
+    ];
+    this._runEndStats?.setText(statsLines.join("\n"));
+    this._runEndOverlayRoot?.setVisible(true);
   }
 
   cycleGameSpeed() {
@@ -1187,13 +1381,18 @@ export class GameScene extends Phaser.Scene {
     if (this.editor.enabled) {
       return;
     }
+    if (this._pauseOverlayOpen) {
+      this.togglePause();
+      return;
+    }
     if (this._hudActionMode === "barracksCraftMenu") {
       this.handleHudAction("backFromCraft");
       return;
     }
     if (this._pendingPlacement?.type === "tower") {
+      const returnMode = this._placementReturnMode;
       this.clearTowerPlacement();
-      this.updateHudActions();
+      this.setHudActionMode(returnMode ?? "empty");
       this.hud.render(
         this.gameState,
         this.towerSystem.towers.length,
@@ -1461,6 +1660,9 @@ export class GameScene extends Phaser.Scene {
   update(_time, delta) {
     syncUnitHpBars(this);
     this.redrawSelectionOutline();
+    if (this._runEnded) {
+      return;
+    }
     if (this.gameState.paused) {
       return;
     }
@@ -1479,6 +1681,10 @@ export class GameScene extends Phaser.Scene {
     if (escaped > 0) {
       this.gameState.lives = Math.max(0, this.gameState.lives - escaped);
       this._performance.leaksInWave += escaped;
+      if (this.gameState.lives <= 0) {
+        this.endRun("defeat");
+        return;
+      }
     }
 
     if (this.gameState.wave !== this.waveSystem.waveIndex) {

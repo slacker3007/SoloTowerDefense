@@ -6,6 +6,7 @@ import {
   isModifierOnlyEvent,
   keyCodeFromBrowserEvent,
 } from "../input/KeybindStore.js";
+import { cozyTheme } from "./CozyTheme";
 
 export class Hud {
   /**
@@ -14,6 +15,8 @@ export class Hud {
    *   maxLives?: number,
    *   keybindStore?: import("../input/KeybindStore.js").KeybindStore | null,
    *   onMapEditorFromMenu?: () => void,
+   *   onOpenSettings?: () => void,
+   *   onMainMenu?: () => void,
    *   onKeybindsChanged?: () => void,
    *   onCycleGameSpeed?: () => void,
    * }} [options]
@@ -24,6 +27,8 @@ export class Hud {
     /** @type {import("../input/KeybindStore.js").KeybindStore | null} */
     this.keybindStore = options.keybindStore ?? null;
     this.onMapEditorFromMenu = typeof options.onMapEditorFromMenu === "function" ? options.onMapEditorFromMenu : () => {};
+    this.onOpenSettings = typeof options.onOpenSettings === "function" ? options.onOpenSettings : () => {};
+    this.onMainMenu = typeof options.onMainMenu === "function" ? options.onMainMenu : () => {};
     this.onKeybindsChanged = typeof options.onKeybindsChanged === "function" ? options.onKeybindsChanged : () => {};
     this.onCycleGameSpeed = typeof options.onCycleGameSpeed === "function" ? options.onCycleGameSpeed : () => {};
 
@@ -33,6 +38,7 @@ export class Hud {
     this._rebindingActionId = null;
     /** @type {((ev: KeyboardEvent) => void) | null} */
     this._rebindKeyHandler = null;
+    this._keybindFeedback = "";
 
     this.topBarHeight = 48;
     this.bottomBarHeight = 220;
@@ -62,10 +68,10 @@ export class Hud {
     this.root.setDepth(this.depth);
     this.root.setScrollFactor(0);
 
-    this.topBackground = scene.add.rectangle(0, 0, scene.scale.width, this.topBarHeight, 0x000000, 0.72);
+    this.topBackground = scene.add.rectangle(0, 0, scene.scale.width, this.topBarHeight, 0x251d22, 0.92);
     this.topBackground.setOrigin(0, 0);
 
-    this.bottomBackground = scene.add.rectangle(0, 0, scene.scale.width, this.bottomBarHeight, 0x000000, 0.82);
+    this.bottomBackground = scene.add.rectangle(0, 0, scene.scale.width, this.bottomBarHeight, 0x231b21, 0.94);
     this.bottomBackground.setOrigin(0, 0);
 
     this.menuButton = this.createButton("Menu", true, () => this.toggleMenuDropdown());
@@ -80,23 +86,33 @@ export class Hud {
     });
     this.menuBackdrop.setVisible(false);
 
-    this.menuDropdownBg = scene.add.rectangle(0, 0, 320, 132, 0x1e2a3d, 0.98);
+    this.menuDropdownBg = scene.add.rectangle(0, 0, 320, 220, 0x2f2630, 0.98);
     this.menuDropdownBg.setOrigin(0, 0);
-    this.menuDropdownBg.setStrokeStyle(1, 0x7ca8d6, 0.85);
+    this.menuDropdownBg.setStrokeStyle(2, 0xbda67a, 1);
 
     this.menuBtnMapEditor = this.createButton("Map editor", true, () => {
       this.closeMenuDropdown();
       this.onMapEditorFromMenu();
     });
-    this.menuBtnKeybindings = this.createButton("Keybindings", true, () => {
+    this.menuBtnSettings = this.createButton("Settings", true, () => {
       this.closeMenuDropdown();
-      this.openKeybindPanel();
+      this.onOpenSettings();
+    });
+    this.menuBtnMainMenu = this.createButton("Main menu", true, () => {
+      this.closeMenuDropdown();
+      this.onMainMenu();
     });
 
-    this.menuDropdownRoot = scene.add.container(0, 0, [this.menuDropdownBg, this.menuBtnMapEditor, this.menuBtnKeybindings]);
+    this.menuDropdownRoot = scene.add.container(0, 0, [
+      this.menuDropdownBg,
+      this.menuBtnMapEditor,
+      this.menuBtnSettings,
+      this.menuBtnMainMenu,
+    ]);
     this.menuDropdownRoot.setVisible(false);
-    this.menuBtnMapEditor.setPosition(14, 22);
-    this.menuBtnKeybindings.setPosition(14, 76);
+    this.menuBtnMapEditor.setPosition(14, 30);
+    this.menuBtnSettings.setPosition(14, 94);
+    this.menuBtnMainMenu.setPosition(14, 158);
 
     this.keybindBackdrop = scene.add.rectangle(0, 0, 800, 600, 0x000000, 0.55);
     this.keybindBackdrop.setOrigin(0, 0);
@@ -124,9 +140,17 @@ export class Hud {
     this.keybindBackBtn = this.createButton("Back", true, () => this.closeKeybindPanel());
     this.keybindResetBtn = this.createButton("Reset defaults", true, () => {
       this.keybindStore?.resetToDefaults();
+      this._keybindFeedback = "Reset to defaults.";
       this.refreshKeybindRows();
       this.onKeybindsChanged();
     });
+    this.keybindFeedbackText = scene.add.text(0, 0, "", {
+      fontFamily: "monospace",
+      fontSize: "15px",
+      color: cozyTheme.colors.textMuted,
+      align: "center",
+    });
+    this.keybindFeedbackText.setOrigin(0.5, 0);
 
     this.keybindPanelInner = scene.add.container(0, 0, [
       this.keybindPanelBg,
@@ -134,6 +158,7 @@ export class Hud {
       ...this._keybindRowButtons.map((r) => r.button),
       this.keybindBackBtn,
       this.keybindResetBtn,
+      this.keybindFeedbackText,
     ]);
 
     this.keybindOverlayRoot = scene.add.container(0, 0, [this.keybindBackdrop, this.keybindPanelInner]);
@@ -214,6 +239,18 @@ export class Hud {
       color: "#c8d0ff",
     });
     this.waveRoleText.setOrigin(0, 0);
+    this.waveCountText = scene.add.text(0, 0, "Wave: 1", {
+      fontFamily: "monospace",
+      fontSize: "14px",
+      color: "#c8d0ff",
+    });
+    this.waveCountText.setOrigin(0, 0);
+    this.waveEnemiesText = scene.add.text(0, 0, "Enemies: 0", {
+      fontFamily: "monospace",
+      fontSize: "14px",
+      color: "#c8d0ff",
+    });
+    this.waveEnemiesText.setOrigin(0, 0);
 
     this._actionGridBackground = this.createActionSlotBackground();
 
@@ -287,6 +324,8 @@ export class Hud {
       this.waveInfoFrame,
       this.waveInfoTitleText,
       this.waveRoleText,
+      this.waveCountText,
+      this.waveEnemiesText,
       this._actionGridBackground,
       this.menuBackdrop,
       this.menuDropdownRoot,
@@ -300,6 +339,8 @@ export class Hud {
       this.waveInfoFrame,
       this.waveInfoTitleText,
       this.waveRoleText,
+      this.waveCountText,
+      this.waveEnemiesText,
       this.selectedTitleText,
       this.selectedHpText,
       this.selectedCellText,
@@ -334,6 +375,7 @@ export class Hud {
       return;
     }
     this.closeMenuDropdown();
+    this._keybindFeedback = "";
     this._keybindPanelOpen = true;
     this.refreshKeybindRows();
     this.applyMenuOverlayVisibility();
@@ -380,6 +422,7 @@ export class Hud {
       const keyLabel = formatKeyLabel(codes[id]);
       button.setText(`${desc}   [${keyLabel}]   Click to rebind`);
     }
+    this.keybindFeedbackText.setText(this._keybindFeedback);
   }
 
   /**
@@ -405,9 +448,12 @@ export class Hud {
       ev.preventDefault();
       const result = this.keybindStore.setBinding(actionId, code);
       if (!result.ok) {
+        this._keybindFeedback = result.reason === "Key already used" ? "This key is already assigned." : result.reason;
+        this.refreshKeybindRows();
         return;
       }
       this.endRebind();
+      this._keybindFeedback = "Keybinding saved.";
       this.refreshKeybindRows();
       this.onKeybindsChanged();
     };
@@ -578,8 +624,8 @@ export class Hud {
     const button = this.scene.add.text(0, 0, label, {
       fontFamily: "monospace",
       fontSize: "14px",
-      color: "#ffffff",
-      backgroundColor: interactive ? "#2f4f7f" : "#333333",
+      color: cozyTheme.colors.textPrimary,
+      backgroundColor: interactive ? "#4f3f38" : "#3a3130",
       padding: { x: 10, y: 6 },
     });
     button.setOrigin(0, 0.5);
@@ -590,8 +636,8 @@ export class Hud {
         button.on("pointerdown", () => onClick());
       }
       if (useHoverBackground) {
-        button.on("pointerover", () => button.setStyle({ backgroundColor: "#3a669f" }));
-        button.on("pointerout", () => button.setStyle({ backgroundColor: "#2f4f7f" }));
+        button.on("pointerover", () => button.setStyle({ backgroundColor: "#6a5648" }));
+        button.on("pointerout", () => button.setStyle({ backgroundColor: "#4f3f38" }));
       }
     }
 
@@ -688,9 +734,13 @@ export class Hud {
       const menuItemPadY = this.clamp(Math.round(this.topBarHeight * 0.22), 8, 14);
       this.menuDropdownBg.setSize(menuWidth, menuHeight);
       this.menuBtnMapEditor.setStyle({ fontSize: `${menuItemFontSize}px`, padding: { x: menuItemPadX, y: menuItemPadY } });
-      this.menuBtnKeybindings.setStyle({ fontSize: `${menuItemFontSize}px`, padding: { x: menuItemPadX, y: menuItemPadY } });
-      this.menuBtnMapEditor.setPosition(14, Math.round(menuHeight * 0.28));
-      this.menuBtnKeybindings.setPosition(14, Math.round(menuHeight * 0.72));
+      this.menuBtnSettings.setStyle({ fontSize: `${menuItemFontSize}px`, padding: { x: menuItemPadX, y: menuItemPadY } });
+      this.menuBtnMainMenu.setStyle({ fontSize: `${menuItemFontSize}px`, padding: { x: menuItemPadX, y: menuItemPadY } });
+      const itemGap = Math.max(38, Math.round(menuHeight * 0.28));
+      const itemStartY = Math.max(24, Math.round(menuHeight * 0.18));
+      this.menuBtnMapEditor.setPosition(14, itemStartY);
+      this.menuBtnSettings.setPosition(14, itemStartY + itemGap);
+      this.menuBtnMainMenu.setPosition(14, itemStartY + itemGap * 2);
 
       this.keybindBackdrop.setPosition(0, 0);
       this.keybindBackdrop.setSize(rootWidth, rootHeight);
@@ -718,6 +768,7 @@ export class Hud {
       this.keybindResetBtn.setStyle({ fontSize: `${footerSize}px`, padding: { x: 16, y: 10 } });
       this.keybindBackBtn.setPosition(-this.keybindPanelBg.width * 0.5 + 16, footerY);
       this.keybindResetBtn.setPosition(this.keybindPanelBg.width * 0.5 - this.keybindResetBtn.width - 16, footerY);
+      this.keybindFeedbackText.setPosition(0, footerY - 42);
 
       const rightPadding = 12;
       const statGap = 20;
@@ -745,10 +796,20 @@ export class Hud {
       const waveInfoValueSize = this.clamp(Math.round(infoPanelH * 0.17), 12, 20);
       this.waveInfoTitleText.setStyle({ fontSize: `${waveInfoTitleSize}px` });
       this.waveRoleText.setStyle({ fontSize: `${waveInfoValueSize}px` });
+      this.waveCountText.setStyle({ fontSize: `${waveInfoValueSize}px` });
+      this.waveEnemiesText.setStyle({ fontSize: `${waveInfoValueSize}px` });
       this.waveInfoTitleText.setPosition(this.waveInfoFrame.x + waveInfoPad, this.waveInfoFrame.y + waveInfoPad);
       this.waveRoleText.setPosition(
         this.waveInfoFrame.x + waveInfoPad,
         this.waveInfoTitleText.y + this.waveInfoTitleText.height + Math.max(4, Math.round(waveInfoPad * 0.5)),
+      );
+      this.waveCountText.setPosition(
+        this.waveInfoFrame.x + waveInfoPad,
+        this.waveRoleText.y + this.waveRoleText.height + Math.max(2, Math.round(waveInfoPad * 0.4)),
+      );
+      this.waveEnemiesText.setPosition(
+        this.waveInfoFrame.x + waveInfoPad,
+        this.waveCountText.y + this.waveCountText.height + Math.max(2, Math.round(waveInfoPad * 0.4)),
       );
 
       let selectionGap = compactBottom ? 10 : 18;
@@ -869,6 +930,8 @@ export class Hud {
     this.waveInfoFrame.setVisible(showWavePanel);
     this.waveInfoTitleText.setVisible(showWavePanel);
     this.waveRoleText.setVisible(showWavePanel);
+    this.waveCountText.setVisible(showWavePanel);
+    this.waveEnemiesText.setVisible(showWavePanel);
     if (!this._bottomVisible) {
       this.hideActionTooltip();
     }
@@ -975,6 +1038,8 @@ export class Hud {
       this.waveInfoFrame.setVisible(true);
       this.waveInfoTitleText.setVisible(true);
       this.waveRoleText.setVisible(true);
+      this.waveCountText.setVisible(true);
+      this.waveEnemiesText.setVisible(true);
       const rawRole = typeof this._waveInfo?.role === "string" ? this._waveInfo.role : "unknown";
       const formattedRole = rawRole
         .split("_")
@@ -984,11 +1049,17 @@ export class Hud {
         .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
         .join(" ");
       this.waveRoleText.setText(`Role: ${formattedRole || "Unknown"}`);
+      const waveNumber = Number.isFinite(this._waveInfo?.wave) ? this._waveInfo.wave : 1;
+      const enemiesAlive = Number.isFinite(this._waveInfo?.enemiesAlive) ? this._waveInfo.enemiesAlive : 0;
+      this.waveCountText.setText(`Wave: ${waveNumber}`);
+      this.waveEnemiesText.setText(`Enemies: ${enemiesAlive}`);
       return;
     }
     this.waveInfoFrame.setVisible(false);
     this.waveInfoTitleText.setVisible(false);
     this.waveRoleText.setVisible(false);
+    this.waveCountText.setVisible(false);
+    this.waveEnemiesText.setVisible(false);
     const selectedCount = Number(selected.selectedCount);
     const hasGroupSelection = selected.kind === "tower" && Number.isFinite(selectedCount) && selectedCount > 1;
     const selectedSuffix = hasGroupSelection ? ` x${Math.floor(selectedCount)}` : "";
@@ -998,7 +1069,7 @@ export class Hud {
     } else {
       this.selectedHpText.setText("HP: N/A");
     }
-    this.selectedCellText.setText(`Cell: ${selected.cellX},${selected.cellY}`);
+    this.selectedCellText.setText(`Position: ${selected.cellX},${selected.cellY}`);
     if (selected.kind === "tower") {
       const damageValue = Number.isFinite(selected.damage) ? Math.round(selected.damage * 10) / 10 : null;
       const rangeValue = Number.isFinite(selected.range) ? Math.round(selected.range) : null;
