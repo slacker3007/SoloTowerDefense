@@ -111,6 +111,8 @@ export class GameScene extends Phaser.Scene {
     this._selectedTowerType = null;
     this._selectedTowerCells = [];
     this._selectionOutlineGfx = null;
+    this._selectionPulse = null;
+    this._lastSelectionPulseKey = null;
     this._runEnded = false;
     this._pauseOverlayOpen = false;
     this._pauseOverlayRoot = null;
@@ -130,6 +132,8 @@ export class GameScene extends Phaser.Scene {
     this._hudActionMode = "empty";
     this._towerConversionPage = 0;
     this._towerDoubleClick = { signature: null, at: 0 };
+    this._selectionPulse = null;
+    this._lastSelectionPulseKey = null;
     this._cameraPanning = false;
     this._performance = { clearedWaves: 0, leaksInWave: 0, livesAtWaveStart: STARTING_LIVES, waveTimer: 0 };
 
@@ -418,20 +422,41 @@ export class GameScene extends Phaser.Scene {
     gfx.clear();
     const selected = this.selectedBuilding;
     if (!selected) {
+      this._selectionPulse = null;
+      this._lastSelectionPulseKey = null;
       return;
+    }
+    const now = this.time?.now ?? 0;
+    const selectionPulseKey = this._getSelectionPulseKey(selected);
+    if (selectionPulseKey && selectionPulseKey !== this._lastSelectionPulseKey) {
+      this._selectionPulse = { startedAt: now, durationMs: 320 };
+      this._lastSelectionPulseKey = selectionPulseKey;
+    }
+    const pulseState = this._selectionPulse;
+    let rangePulse = 0;
+    if (pulseState) {
+      const rawProgress = pulseState.durationMs > 0 ? (now - pulseState.startedAt) / pulseState.durationMs : 1;
+      const progress = Phaser.Math.Clamp(rawProgress, 0, 1);
+      rangePulse = Math.sin(progress * Math.PI);
+      if (progress >= 1) {
+        this._selectionPulse = null;
+      }
     }
     if (selected.kind === "tower") {
       const cells =
         this._selectedTowerType && this._selectedTowerCells.length > 0
           ? this._selectedTowerCells
           : [{ x: selected.cellX, y: selected.cellY }];
-      const time = this.time?.now ?? 0;
+      const time = now;
       const pulse = 0.7 + 0.3 * Math.sin(time / 220);
       const glowColor = cozyTheme.colors.panelBorder ?? 0xbda67a;
       const glowAlpha = 0.32;
       const innerOutlineAlpha = 0.45 * pulse + 0.35;
       const ringRadiusX = TILE_SIZE * 0.55;
       const ringRadiusY = TILE_SIZE * 0.22;
+      const rangeRadiusScale = 1 + 0.04 * rangePulse;
+      const rangeEdgeAlpha = 0.84 + 0.12 * rangePulse;
+      const rangeFillAlpha = 0.12 + 0.05 * rangePulse;
       for (const cell of cells) {
         if (!cell || !Number.isFinite(cell.x) || !Number.isFinite(cell.y)) {
           continue;
@@ -445,7 +470,15 @@ export class GameScene extends Phaser.Scene {
         const tower = this.getTowerAtCell(cell.x, cell.y);
         if (tower) {
           const rangeColor = getTowerProjectileColor(tower.type);
-          this._drawDashedRangeCircle(gfx, tower.x, tower.y, tower.range, rangeColor, 0.65);
+          this._drawSolidRangeCircle(
+            gfx,
+            tower.x,
+            tower.y,
+            tower.range * rangeRadiusScale,
+            rangeColor,
+            rangeEdgeAlpha,
+            rangeFillAlpha,
+          );
         }
       }
       return;
@@ -486,6 +519,49 @@ export class GameScene extends Phaser.Scene {
       gfx.arc(cx, cy, radius, startAngle, startAngle + dashSpan, false);
       gfx.strokePath();
     }
+  }
+
+  /**
+   * @param {Phaser.GameObjects.Graphics} gfx
+   * @param {number} cx
+   * @param {number} cy
+   * @param {number} radius
+   * @param {number} color
+   * @param {number} edgeAlpha
+   * @param {number} fillAlpha
+   */
+  _drawSolidRangeCircle(gfx, cx, cy, radius, color, edgeAlpha, fillAlpha) {
+    if (!gfx || !(radius > 0)) {
+      return;
+    }
+    gfx.fillStyle(color, Phaser.Math.Clamp(fillAlpha, 0, 1));
+    gfx.fillCircle(cx, cy, radius);
+    gfx.lineStyle(2, color, Phaser.Math.Clamp(edgeAlpha, 0, 1));
+    gfx.strokeCircle(cx, cy, radius);
+  }
+
+  /**
+   * @param {Record<string, unknown>} selected
+   * @returns {string | null}
+   */
+  _getSelectionPulseKey(selected) {
+    if (!selected || typeof selected !== "object") {
+      return null;
+    }
+    if (selected.kind === "tower") {
+      if (this._selectedTowerType && this._selectedTowerCells.length > 0) {
+        const signature = this._selectedTowerCells
+          .map((cell) => `${cell.x},${cell.y}`)
+          .sort()
+          .join("|");
+        return `tower-group:${this._selectedTowerType}:${signature}`;
+      }
+      return `tower-single:${selected.cellX},${selected.cellY}:${selected.type}`;
+    }
+    if (selected.kind === "barracks") {
+      return `barracks:${selected.cellX},${selected.cellY}:${selected.label ?? ""}`;
+    }
+    return null;
   }
 
   /**

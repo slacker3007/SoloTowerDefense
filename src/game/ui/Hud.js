@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { getTowerEffectiveDps } from "../balance";
 import {
   KEYBIND_ACTION_IDS,
   KEYBIND_DESCRIPTIONS,
@@ -1390,9 +1391,13 @@ export class Hud {
     this.towerNameTierText.setText(`${selected.label} · Tier ${tierValue}`);
     const damage = Number.isFinite(selected.damage) ? selected.damage : 0;
     const cooldown = Number.isFinite(selected.cooldown) && selected.cooldown > 0 ? selected.cooldown : 1;
-    const dps = damage / cooldown;
+    const { effectiveDps, isUtilityLimited } = getTowerEffectiveDps(selected.type, damage, cooldown);
     const range = Number.isFinite(selected.range) ? selected.range : 0;
-    this.towerDpsText.setText(`DPS: ${dps.toFixed(dps >= 10 ? 1 : 2)}`);
+    const dpsLabel = effectiveDps >= 10 ? effectiveDps.toFixed(1) : effectiveDps.toFixed(2);
+    this.towerDpsText.setText(
+      isUtilityLimited ? `DPS: ${dpsLabel}  \u26A0 Utility-limited` : `DPS: ${dpsLabel}`,
+    );
+    this.towerDpsText.setColor(isUtilityLimited ? "#ffb86b" : "#d6e7ff");
     this.towerRangeText.setText(`Range: ${Math.round(range)}`);
     this.setTowerRangeVisual(range);
     this.towerEffectText.setText(`Effect: ${selected.effectSummary || "No special effects"}`);

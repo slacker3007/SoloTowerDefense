@@ -416,7 +416,14 @@ export function getTowerTooltipSummary(towerType) {
   const damage = Number.isFinite(tower.damage) ? tower.damage : towerCatalog.basic.damage;
   const rate = Number.isFinite(tower.rate) ? tower.rate : towerCatalog.basic.rate;
   const rangeTiles = Number.isFinite(tower.rangeTiles) ? tower.rangeTiles : towerCatalog.basic.rangeTiles;
-  return `Damage ${damage} | Rate ${rate.toFixed(1)}/s | Range ${rangeTiles.toFixed(1)} tiles`;
+  const cooldown = rate > 0 ? 1 / rate : 1;
+  const { effectiveDps, isUtilityLimited } = getTowerEffectiveDps(towerType, damage, cooldown);
+  const dpsLabel = effectiveDps >= 10 ? effectiveDps.toFixed(1) : effectiveDps.toFixed(2);
+  const baseLine = `Damage ${damage} | Rate ${rate.toFixed(1)}/s | Range ${rangeTiles.toFixed(1)} tiles | Effective DPS ${dpsLabel}`;
+  if (isUtilityLimited) {
+    return `${baseLine}\nUtility-limited (cap from balance budget)`;
+  }
+  return baseLine;
 }
 
 export function getTowerTextureKey(towerType) {
@@ -468,6 +475,16 @@ export function clampUtilityBudget(towerType, damage, cooldownSeconds) {
   const desiredDps = Math.min(maxDps, Math.max(minDps, tower.damage * tower.rate)) * tower.utilityBudget;
   const boundedDamage = desiredDps * Math.max(cooldownSeconds, 0.01);
   return Math.min(damage, boundedDamage);
+}
+
+export function getTowerEffectiveDps(towerType, damage, cooldownSeconds) {
+  const safeDamage = Number.isFinite(damage) ? damage : 0;
+  const cd = Math.max(Number.isFinite(cooldownSeconds) ? cooldownSeconds : 0.5, 0.01);
+  const rawDps = safeDamage / cd;
+  const cappedDamage = clampUtilityBudget(towerType, safeDamage, cd);
+  const effectiveDps = cappedDamage / cd;
+  const isUtilityLimited = rawDps - effectiveDps > 0.05;
+  return { rawDps, effectiveDps, isUtilityLimited };
 }
 
 export function getWaveBaseHp(waveIndex) {
