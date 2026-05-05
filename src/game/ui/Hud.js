@@ -989,7 +989,10 @@ export class Hud {
     this.waveInfoFrame.setVisible(false);
     this.waveInfoTitleText.setVisible(false);
     this.waveRoleText.setVisible(false);
-    this.selectedTitleText.setText(`Selected: ${selected.label}`);
+    const selectedCount = Number(selected.selectedCount);
+    const hasGroupSelection = selected.kind === "tower" && Number.isFinite(selectedCount) && selectedCount > 1;
+    const selectedSuffix = hasGroupSelection ? ` x${Math.floor(selectedCount)}` : "";
+    this.selectedTitleText.setText(`Selected: ${selected.label}${selectedSuffix}`);
     if (typeof selected.hpCurrent === "number" && typeof selected.hpMax === "number") {
       this.selectedHpText.setText(`HP: ${selected.hpCurrent}/${selected.hpMax}`);
     } else {

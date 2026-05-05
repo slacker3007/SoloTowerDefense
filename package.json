@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "balance:sim": "node scripts/balance-sim.js"
+    "balance:sim": "node scripts/balance-sim.js",
+    "survival:sim": "node scripts/survival-sim.js"
   },
   "dependencies": {
     "phaser": "^3.90.0"

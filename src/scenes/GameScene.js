@@ -61,6 +61,7 @@ const BLUE_BARRACKS_FIRE_POINTS = [
   { x: 72, y: 30, scale: 1.2 },
   { x: 0, y: 42, scale: 1.35 },
 ];
+const TOWER_DOUBLE_CLICK_MS = 300;
 
 /**
  * @typedef {Object} HudActionPlacement
@@ -96,6 +97,10 @@ export class GameScene extends Phaser.Scene {
     this._performance = { clearedWaves: 0, leaksInWave: 0, livesAtWaveStart: STARTING_LIVES, waveTimer: 0 };
     this._adaptiveEnabled = balanceRules.adaptive.enabled;
     this._blueBarracksFireFx = null;
+    this._towerDoubleClick = { signature: null, at: 0 };
+    this._selectedTowerType = null;
+    this._selectedTowerCells = [];
+    this._selectionOutlineGfx = null;
   }
 
   create() {
@@ -127,6 +132,9 @@ export class GameScene extends Phaser.Scene {
     this.worldRoot.add(this.unitsWorldLayer);
     this.worldRoot.add(this.towersWorldLayer);
     this.worldRoot.add(this.effectsWorldLayer);
+    this._selectionOutlineGfx = this.add.graphics();
+    this._selectionOutlineGfx.setDepth(60);
+    this.effectsWorldLayer.add(this._selectionOutlineGfx);
     /** @type {{ container: Phaser.GameObjects.Container, setRatio: (r: number) => void, setValues: (current: number, max: number) => void, destroy: () => void } | null} */
     this._homeHpBar = null;
     this.redrawTerrain();
@@ -201,6 +209,8 @@ export class GameScene extends Phaser.Scene {
     this._homeHpBar?.destroy();
     this._homeHpBar = null;
     this._destroyBlueBarracksFireEffect();
+    this._selectionOutlineGfx?.destroy?.();
+    this._selectionOutlineGfx = null;
     this.blueBarracksHpRoot?.destroy(true);
     this.editorPanel?.destroy();
     this.editor.destroy();
@@ -255,6 +265,7 @@ export class GameScene extends Phaser.Scene {
         cellY,
         damage: tower.damage,
         range: tower.range,
+        selectedCount: 1,
       };
       return true;
     }
@@ -283,6 +294,100 @@ export class GameScene extends Phaser.Scene {
 
     this.selectedBuilding = null;
     return false;
+  }
+
+  clearTowerGroupSelection() {
+    this._selectedTowerType = null;
+    this._selectedTowerCells = [];
+  }
+
+  /**
+   * @param {string} towerType
+   * @param {number} anchorCellX
+   * @param {number} anchorCellY
+   * @param {Record<string, unknown> | null} [anchorTower]
+   * @returns {boolean}
+   */
+  selectTowerGroupByType(towerType, anchorCellX, anchorCellY, anchorTower = null) {
+    if (typeof towerType !== "string" || towerType.length === 0) {
+      this.clearTowerGroupSelection();
+      return false;
+    }
+    const tower = anchorTower ?? this.getTowerAtCell(anchorCellX, anchorCellY);
+    if (!tower || tower.type !== towerType) {
+      this.clearTowerGroupSelection();
+      return false;
+    }
+    const entries = this.towerSystem.getTowerEntriesByType(towerType);
+    this._selectedTowerType = towerType;
+    this._selectedTowerCells = entries.map((entry) => ({ x: entry.cellX, y: entry.cellY }));
+    this.selectedBuilding = {
+      kind: "tower",
+      label: getTowerDisplayName(towerType),
+      cellX: anchorCellX,
+      cellY: anchorCellY,
+      damage: tower.damage,
+      range: tower.range,
+      selectedCount: Math.max(1, entries.length),
+    };
+    return true;
+  }
+
+  refreshTowerGroupSelection() {
+    if (this._selectedTowerType == null || this.selectedBuilding?.kind !== "tower") {
+      return;
+    }
+    const anchorTower = this.getTowerAtCell(this.selectedBuilding.cellX, this.selectedBuilding.cellY);
+    if (!anchorTower || anchorTower.type !== this._selectedTowerType) {
+      this.clearTowerGroupSelection();
+      this.selectedBuilding.selectedCount = 1;
+      return;
+    }
+    const entries = this.towerSystem.getTowerEntriesByType(this._selectedTowerType);
+    this._selectedTowerCells = entries.map((entry) => ({ x: entry.cellX, y: entry.cellY }));
+    this.selectedBuilding.label = getTowerDisplayName(anchorTower.type);
+    this.selectedBuilding.damage = anchorTower.damage;
+    this.selectedBuilding.range = anchorTower.range;
+    this.selectedBuilding.selectedCount = Math.max(1, entries.length);
+  }
+
+  redrawSelectionOutline() {
+    const gfx = this._selectionOutlineGfx;
+    if (!gfx) {
+      return;
+    }
+    gfx.clear();
+    const selected = this.selectedBuilding;
+    if (!selected) {
+      return;
+    }
+    const shadowColor = 0x000000;
+    const towerShadowAlpha = 0.26;
+    const barracksShadowAlpha = 0.22;
+    if (selected.kind === "tower") {
+      const cells =
+        this._selectedTowerType && this._selectedTowerCells.length > 0
+          ? this._selectedTowerCells
+          : [{ x: selected.cellX, y: selected.cellY }];
+      const shadowRadiusX = TILE_SIZE * 0.42;
+      const shadowRadiusY = TILE_SIZE * 0.2;
+      for (const cell of cells) {
+        if (!cell || !Number.isFinite(cell.x) || !Number.isFinite(cell.y)) {
+          continue;
+        }
+        const world = cellToWorld(cell.x, cell.y);
+        gfx.fillStyle(shadowColor, towerShadowAlpha);
+        gfx.fillEllipse(world.x, world.y + TILE_SIZE * 0.22, shadowRadiusX * 2, shadowRadiusY * 2);
+      }
+      return;
+    }
+    if (selected.kind === "barracks") {
+      const world = cellToWorld(selected.cellX, selected.cellY);
+      const shadowW = BARRACKS_CLICK_WIDTH * 0.9;
+      const shadowH = BARRACKS_CLICK_HEIGHT * 0.28;
+      gfx.fillStyle(shadowColor, barracksShadowAlpha);
+      gfx.fillEllipse(world.x, world.y + TILE_SIZE * 0.26, shadowW, shadowH);
+    }
   }
 
   /**
@@ -648,6 +753,12 @@ export class GameScene extends Phaser.Scene {
           this.selectedBuilding.label = getTowerDisplayName(tower.type);
           this.selectedBuilding.damage = tower.damage;
           this.selectedBuilding.range = tower.range;
+          if (this._selectedTowerType && this._selectedTowerType !== tower.type) {
+            this.clearTowerGroupSelection();
+            this.selectedBuilding.selectedCount = 1;
+          } else {
+            this.refreshTowerGroupSelection();
+          }
         }
         this.debugOverlay.redraw();
         this.hud.render(
@@ -657,6 +768,7 @@ export class GameScene extends Phaser.Scene {
           this.selectedBuilding,
           this.getWaveInfo(),
         );
+        this.redrawSelectionOutline();
       }
       return;
     }
@@ -666,8 +778,10 @@ export class GameScene extends Phaser.Scene {
     }
     if (action === "clearSelection") {
       this.selectedBuilding = null;
+      this.clearTowerGroupSelection();
       this.setHudActionMode("empty");
       this.hud.render(this.gameState, this.towerSystem.towers.length, STARTING_LIVES, this.selectedBuilding, this.getWaveInfo());
+      this.redrawSelectionOutline();
       return;
     }
     if (action === "sellTower" && this.selectedBuilding?.kind === "tower") {
@@ -675,6 +789,7 @@ export class GameScene extends Phaser.Scene {
       if (refund > 0) {
         this.gameState.gold += refund;
         this.selectedBuilding = null;
+        this.clearTowerGroupSelection();
         this.setHudActionMode("empty");
         this.debugOverlay.redraw();
         this.hud.render(
@@ -684,6 +799,7 @@ export class GameScene extends Phaser.Scene {
           this.selectedBuilding,
           this.getWaveInfo(),
         );
+        this.redrawSelectionOutline();
       }
     }
   }
@@ -692,6 +808,8 @@ export class GameScene extends Phaser.Scene {
     this._pendingPlacement = { type: "tower", towerType: "basic" };
     this._hudActionMode = "empty";
     this.selectedBuilding = null;
+    this.clearTowerGroupSelection();
+    this.redrawSelectionOutline();
     const pointer = this.input.activePointer;
     if (this.textures.exists("blueTower")) {
       this._towerGhost = this.add.image(pointer.worldX, pointer.worldY, "blueTower");
@@ -823,7 +941,26 @@ export class GameScene extends Phaser.Scene {
         return;
       }
       const cell = this.pointerToCell(pointer);
-      const selectedTower = cell ? this.selectBuildingAtCell(cell.x, cell.y) : false;
+      const clickedTower = cell ? this.getTowerAtCell(cell.x, cell.y) : null;
+      let selectedTower = false;
+      if (cell && clickedTower) {
+        const now = this.time.now;
+        const signature = `${cell.x},${cell.y},${clickedTower.type}`;
+        const isDoubleClick =
+          this._towerDoubleClick.signature === signature && now - this._towerDoubleClick.at <= TOWER_DOUBLE_CLICK_MS;
+        this._towerDoubleClick.signature = signature;
+        this._towerDoubleClick.at = now;
+        if (isDoubleClick) {
+          selectedTower = this.selectTowerGroupByType(clickedTower.type, cell.x, cell.y, clickedTower);
+        } else {
+          this.clearTowerGroupSelection();
+          selectedTower = this.selectBuildingAtCell(cell.x, cell.y);
+        }
+      } else {
+        this._towerDoubleClick.signature = null;
+        this._towerDoubleClick.at = 0;
+        this.clearTowerGroupSelection();
+      }
       const selectedBarracks = selectedTower ? false : this.selectBarracksAtWorld(pointer.worldX, pointer.worldY);
       const selected = selectedTower || selectedBarracks;
       if (selected) {
@@ -841,10 +978,12 @@ export class GameScene extends Phaser.Scene {
           this.selectedBuilding,
           this.getWaveInfo(),
         );
+        this.redrawSelectionOutline();
         return;
       }
 
       this.selectedBuilding = null;
+      this.clearTowerGroupSelection();
       this.setHudActionMode("empty");
       this.hud.render(
         this.gameState,
@@ -853,6 +992,7 @@ export class GameScene extends Phaser.Scene {
         this.selectedBuilding,
         this.getWaveInfo(),
       );
+      this.redrawSelectionOutline();
     });
 
     this.input.on("pointermove", (pointer) => {
@@ -962,6 +1102,7 @@ export class GameScene extends Phaser.Scene {
       if (ev.keyCode === store.getCode("selectBlueBarracks")) {
         const h = this.map.points.homeBarracks;
         if (h && Number.isFinite(h.x) && Number.isFinite(h.y)) {
+          this.clearTowerGroupSelection();
           this.selectBuildingAtCell(h.x, h.y);
           if (this.selectedBuilding?.kind === "barracks" && this.selectedBuilding?.label === "Blue Barracks") {
             this.setHudActionMode("barracksMain");
@@ -1319,6 +1460,7 @@ export class GameScene extends Phaser.Scene {
 
   update(_time, delta) {
     syncUnitHpBars(this);
+    this.redrawSelectionOutline();
     if (this.gameState.paused) {
       return;
     }
@@ -1352,6 +1494,7 @@ export class GameScene extends Phaser.Scene {
     this._homeHpBar?.setRatio(this.gameState.lives / STARTING_LIVES);
     this._homeHpBar?.setValues(this.gameState.lives, STARTING_LIVES);
     this._updateBlueBarracksFireEffect();
+    this.refreshTowerGroupSelection();
     this.updateHudActions();
     if (this.selectedBuilding?.kind === "barracks" && this.selectedBuilding?.label === "Blue Barracks") {
       this.selectedBuilding.hpCurrent = this.gameState.lives;

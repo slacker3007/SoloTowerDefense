@@ -143,6 +143,41 @@ export class TowerSystem {
     );
   }
 
+  /**
+   * @param {*} tower
+   * @returns {{ cellX: number, cellY: number } | null}
+   */
+  getCellForTower(tower) {
+    if (!tower || !Number.isFinite(tower.x) || !Number.isFinite(tower.y)) {
+      return null;
+    }
+    const cellX = Math.floor(tower.x / TILE_SIZE);
+    const cellY = Math.floor(tower.y / TILE_SIZE);
+    return { cellX, cellY };
+  }
+
+  /**
+   * @param {string} type
+   * @returns {{ tower: *, cellX: number, cellY: number }[]}
+   */
+  getTowerEntriesByType(type) {
+    if (typeof type !== "string" || type.length === 0) {
+      return [];
+    }
+    const entries = [];
+    for (const tower of this.towers) {
+      if (tower?.type !== type) {
+        continue;
+      }
+      const cell = this.getCellForTower(tower);
+      if (!cell) {
+        continue;
+      }
+      entries.push({ tower, cellX: cell.cellX, cellY: cell.cellY });
+    }
+    return entries;
+  }
+
   removeTowerAtCell(cellX, cellY) {
     const tower = this.getTowerAtCell(cellX, cellY);
     if (!tower) {
