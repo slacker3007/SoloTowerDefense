@@ -11,52 +11,55 @@ export class SettingsScene extends Phaser.Scene {
   create() {
     this.keybindStore = new KeybindStore();
     const { width, height } = this.scale;
+    const contentWidth = Math.min(width - 24, 800);
+    const centerX = width * 0.5;
     this.add.rectangle(0, 0, width, height, cozyTheme.colors.bgDark, 1).setOrigin(0, 0);
-    const panel = createCozyPanel(this, width * 0.5, height * 0.5, Math.min(1120, width * 0.9), Math.min(820, height * 0.9));
+    this.add.rectangle(width * 0.5, height * 0.5, contentWidth, height * 0.9, cozyTheme.colors.overlaySoft, 0.28).setOrigin(0.5, 0.5);
+    const panel = createCozyPanel(this, centerX, height * 0.5, Math.min(780, contentWidth - 16), Math.min(980, height * 0.92));
 
     this.add.text(panel.x, panel.y - panel.height * 0.43, "Settings", {
-      fontFamily: "Georgia, serif",
-      fontSize: "60px",
+      fontFamily: cozyTheme.typography.titleFamily,
+      fontSize: `${Math.max(34, Math.min(52, Math.round(contentWidth * 0.065)))}px`,
       color: cozyTheme.colors.textPrimary,
     }).setOrigin(0.5, 0.5);
 
-    this.tabControls = this.add.text(panel.x - 360, panel.y - panel.height * 0.33, "Controls", {
-      fontFamily: "Georgia, serif",
+    this.tabControls = this.add.text(panel.x - panel.width * 0.43, panel.y - panel.height * 0.35, "Controls", {
+      fontFamily: cozyTheme.typography.titleFamily,
       fontSize: "30px",
-      color: cozyTheme.colors.textPrimary,
+      color: cozyTheme.colors.textOnDark,
       backgroundColor: "#6a5648",
-      padding: { x: 14, y: 10 },
+      padding: { x: cozyTheme.spacing.md, y: cozyTheme.spacing.sm },
     }).setOrigin(0, 0.5);
-    this.tabAudio = this.add.text(this.tabControls.x + 240, this.tabControls.y, "Audio (Soon)", {
-      fontFamily: "Georgia, serif",
+    this.tabAudio = this.add.text(this.tabControls.x + 200, this.tabControls.y, "Audio (Soon)", {
+      fontFamily: cozyTheme.typography.titleFamily,
       fontSize: "26px",
       color: cozyTheme.colors.textMuted,
     }).setOrigin(0, 0.5);
-    this.tabDisplay = this.add.text(this.tabAudio.x + 260, this.tabControls.y, "Display (Soon)", {
-      fontFamily: "Georgia, serif",
+    this.tabDisplay = this.add.text(this.tabAudio.x + 220, this.tabControls.y, "Display (Soon)", {
+      fontFamily: cozyTheme.typography.titleFamily,
       fontSize: "26px",
       color: cozyTheme.colors.textMuted,
     }).setOrigin(0, 0.5);
 
     this.feedbackText = this.add.text(panel.x, panel.y + panel.height * 0.33, "", {
-      fontFamily: "monospace",
+      fontFamily: cozyTheme.typography.bodyFamily,
       fontSize: "24px",
       color: cozyTheme.colors.textMuted,
       align: "center",
     }).setOrigin(0.5, 0.5);
 
     this.rowButtons = [];
-    const startY = panel.y - panel.height * 0.21;
-    const stepY = 44;
+    const startY = panel.y - panel.height * 0.25;
+    const stepY = 48;
     KEYBIND_ACTION_IDS.forEach((actionId, index) => {
       const label = KEYBIND_DESCRIPTIONS[actionId] ?? actionId;
-      const rowText = this.add.text(panel.x - 390, startY + index * stepY, "", {
-        fontFamily: "monospace",
+      const rowText = this.add.text(panel.x - panel.width * 0.42, startY + index * stepY, "", {
+        fontFamily: cozyTheme.typography.bodyFamily,
         fontSize: "24px",
-        color: cozyTheme.colors.textPrimary,
+        color: cozyTheme.colors.textSecondary,
       }).setOrigin(0, 0.5);
-      const rowBtn = createCozyButton(this, "Rebind", () => this.beginRebind(actionId), { fontSize: 24, width: 170 });
-      rowBtn.setPosition(panel.x + 360, startY + index * stepY);
+      const rowBtn = createCozyButton(this, "Rebind", () => this.beginRebind(actionId), { fontSize: 22, width: 160, variant: "muted" });
+      rowBtn.setPosition(panel.x + panel.width * 0.33, startY + index * stepY);
       this.rowButtons.push({ actionId, label, rowText, rowBtn });
     });
 
@@ -66,8 +69,8 @@ export class SettingsScene extends Phaser.Scene {
       this.setFeedback("Controls reset to defaults.", false);
       this.refreshRows();
     }, { fontSize: 26, width: 300 });
-    backBtn.setPosition(panel.x - 190, panel.y + panel.height * 0.55);
-    resetBtn.setPosition(panel.x + 160, panel.y + panel.height * 0.55);
+    backBtn.setPosition(panel.x - 130, panel.y + panel.height * 0.42);
+    resetBtn.setPosition(panel.x + 150, panel.y + panel.height * 0.42);
 
     this._globalKeydown = (ev) => {
       if (ev.key === "Escape" && !this._rebindingActionId) {

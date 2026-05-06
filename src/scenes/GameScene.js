@@ -219,10 +219,13 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.removeBounds();
 
     this.cameras.main.ignore(this.hud.getUiObjects());
-    this.uiCamera = this.cameras.add(0, 0, GAME_WIDTH, GAME_HEIGHT, false, "ui");
+    this.uiCamera = this.cameras.add(0, 0, this.scale.width, this.scale.height, false, "ui");
     this.uiCamera.setScroll(0, 0);
     this.uiCamera.setZoom(1);
     this.uiCamera.ignore(this.worldRoot);
+    this._boundResize = (size) => this.handleResize(size);
+    this.scale.on(Phaser.Scale.Events.RESIZE, this._boundResize);
+    this.handleResize({ width: this.scale.width, height: this.scale.height });
 
     this.unbindInput();
     this.bindInput();
@@ -245,6 +248,10 @@ export class GameScene extends Phaser.Scene {
     if (this.uiCamera) {
       this.cameras.remove(this.uiCamera, true);
       this.uiCamera = null;
+    }
+    if (this._boundResize) {
+      this.scale.off(Phaser.Scale.Events.RESIZE, this._boundResize);
+      this._boundResize = null;
     }
     this.clearTowerPlacement();
     this.builderSystem?.destroy?.();
@@ -1242,6 +1249,19 @@ export class GameScene extends Phaser.Scene {
     const minSY = Math.min(0, this._mapPixelH - visH) - topVisible;
     const maxSY = Math.max(0, this._mapPixelH - visH) - topVisible;
     cam.setScroll(Phaser.Math.Clamp(cam.scrollX, minSX, maxSX), Phaser.Math.Clamp(cam.scrollY, minSY, maxSY));
+  }
+
+  handleResize(size) {
+    const width = Math.max(1, Number(size?.width) || this.scale.width || GAME_WIDTH);
+    const height = Math.max(1, Number(size?.height) || this.scale.height || GAME_HEIGHT);
+    this.cameras.main.setViewport(0, 0, width, height);
+    this.uiCamera?.setViewport?.(0, 0, width, height);
+    const portrait = height >= width;
+    if (portrait && this.cameras.main.zoom > 0.8) {
+      this.cameras.main.setZoom(0.8);
+    }
+    this.hud?.layout?.(width, height);
+    this._clampCameraScroll();
   }
 
   /**
