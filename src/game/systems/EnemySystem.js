@@ -19,6 +19,7 @@ export class EnemySystem {
     /** @type {{ x: number, y: number }[] | null} */
     this._manualPathCells = null;
     this.enemies = [];
+    this.pendingTriggeredSpawns = [];
     this._warnedNoPath = false;
     this._warnedBfs = false;
     if (this.map) {
@@ -128,6 +129,14 @@ export class EnemySystem {
       ccSecondsWithinWindow: 0,
       statusFx: null,
       statusFxKey: null,
+      archetype: definition.archetype ?? "grunt",
+      shieldHp: Math.max(0, Number(definition.shieldHp) || 0),
+      maxShieldHp: Math.max(0, Number(definition.shieldHp) || 0),
+      regenPerSecond: Math.max(0, Number(definition.regenPerSecond) || 0),
+      splitOnDeath: definition.splitOnDeath ?? null,
+      spawnOnThresholds: Array.isArray(definition.spawnOnThresholds) ? definition.spawnOnThresholds.map((entry) => ({ ...entry })) : [],
+      triggeredThresholds: new Set(),
+      goldBonusOnKill: Math.max(0, Number(definition.bonusGoldOnKill) || 0),
     };
     this._warnedNoPath = false;
 
@@ -198,17 +207,44 @@ export class EnemySystem {
         damageMultiplier += status.ratio ?? 0;
       }
     }
-    enemy.hp -= amount * damageMultiplier;
+    const incoming = amount * damageMultiplier;
+    let hpDamage = incoming;
+    if (enemy.shieldHp > 0) {
+      const absorbed = Math.min(enemy.shieldHp, hpDamage);
+      enemy.shieldHp -= absorbed;
+      hpDamage -= absorbed;
+    }
+    enemy.hp -= hpDamage;
+    this._triggerHpThresholdSpawns(enemy);
     enemy.hpBar?.setRatio(enemy.hp / enemy.maxHp);
     if (enemy.hp <= 0) {
       enemy.alive = false;
       enemy.hpBar?.destroy();
       this._destroyStatusFx(enemy);
       enemy.sprite.destroy();
+      this._triggerSplitSpawns(enemy);
       return true;
     }
 
     return false;
+  }
+
+  consumeTriggeredSpawns() {
+    if (!Array.isArray(this.pendingTriggeredSpawns) || this.pendingTriggeredSpawns.length === 0) {
+      return [];
+    }
+    const entries = this.pendingTriggeredSpawns.map((entry) => ({ ...entry }));
+    this.pendingTriggeredSpawns = [];
+    return entries;
+  }
+
+  getKillGold(enemy) {
+    if (!enemy) {
+      return 0;
+    }
+    const progress = this._getEnemyPathProgress(enemy);
+    const earlyKillBonus = progress <= 0.45 ? (enemy.goldBonusOnKill ?? 0) : 0;
+    return Math.max(0, (enemy.rewardGold ?? 0) + earlyKillBonus);
   }
 
   applyStatus(enemy, status) {
@@ -251,6 +287,9 @@ export class EnemySystem {
       this._updateStatusFx(enemy);
       return;
     }
+    if (enemy.regenPerSecond > 0) {
+      enemy.hp = Math.min(enemy.maxHp, enemy.hp + enemy.regenPerSecond * deltaSeconds);
+    }
     let speedMultiplier = 1;
     let immobilized = false;
     let ccInFrame = false;
@@ -258,7 +297,8 @@ export class EnemySystem {
     for (const status of enemy.statuses) {
       status.remaining -= deltaSeconds;
       if (status.type === "burn" || status.type === "poison") {
-        enemy.hp -= status.dps * deltaSeconds;
+        const resistMultiplier = status.type === "burn" && enemy.tags.includes("fireResist") ? 0.35 : 1;
+        enemy.hp -= status.dps * deltaSeconds * resistMultiplier;
       } else if (status.type === "slow") {
         speedMultiplier = Math.min(speedMultiplier, 1 - status.ratio);
         ccInFrame = true;
@@ -289,7 +329,53 @@ export class EnemySystem {
       enemy.hpBar?.destroy();
       this._destroyStatusFx(enemy);
       enemy.sprite.destroy();
+      this._triggerSplitSpawns(enemy);
     }
+  }
+
+  _getEnemyPathProgress(enemy) {
+    if (!enemy || !Array.isArray(enemy.pathCells) || enemy.pathCells.length < 2) {
+      return 1;
+    }
+    const maxIndex = enemy.pathCells.length - 1;
+    const idx = Math.max(0, Math.min(maxIndex, Number(enemy.waypointIndex) || 0));
+    return idx / maxIndex;
+  }
+
+  _enqueueTriggeredSpawn(type, count) {
+    if (typeof type !== "string" || type.length === 0 || !Number.isFinite(count) || count <= 0) {
+      return;
+    }
+    this.pendingTriggeredSpawns.push({ type, count });
+  }
+
+  _triggerHpThresholdSpawns(enemy) {
+    if (!enemy || !Array.isArray(enemy.spawnOnThresholds) || enemy.spawnOnThresholds.length === 0 || enemy.maxHp <= 0) {
+      return;
+    }
+    const hpRatio = enemy.hp / enemy.maxHp;
+    for (const entry of enemy.spawnOnThresholds) {
+      const threshold = Number(entry?.threshold);
+      if (!Number.isFinite(threshold)) {
+        continue;
+      }
+      const key = `${threshold}:${entry.type}:${entry.count}`;
+      if (enemy.triggeredThresholds.has(key)) {
+        continue;
+      }
+      if (hpRatio <= threshold) {
+        enemy.triggeredThresholds.add(key);
+        this._enqueueTriggeredSpawn(entry.type, Number(entry.count) || 0);
+      }
+    }
+  }
+
+  _triggerSplitSpawns(enemy) {
+    const split = enemy?.splitOnDeath;
+    if (!split || typeof split.childType !== "string") {
+      return;
+    }
+    this._enqueueTriggeredSpawn(split.childType, Number(split.count) || 0);
   }
 
   _resolveDominantStatus(enemy) {

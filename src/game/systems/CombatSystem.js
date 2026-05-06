@@ -40,7 +40,7 @@ export class CombatSystem {
         const dmg = this.resolveDamage(tower, enemy, raw);
         const killed = this.enemySystem.damageEnemy(enemy, dmg);
         if (killed) {
-          gameState.gold += enemy.rewardGold;
+          gameState.gold += this.enemySystem.getKillGold(enemy);
           for (const effect of tower.effects ?? []) {
             if (effect.type === "bonusGoldPerKill") {
               gameState.gold += Number.isFinite(effect.amount) ? effect.amount : 0;
@@ -115,7 +115,7 @@ export class CombatSystem {
         const killed = this.enemySystem.damageEnemy(projectile.target, resolvedDamage);
         this.applyTowerEffects(projectile.tower, projectile.target, resolvedDamage, gameState);
         if (killed) {
-          gameState.gold += projectile.target.rewardGold;
+          gameState.gold += this.enemySystem.getKillGold(projectile.target);
           for (const effect of projectile.tower.effects ?? []) {
             if (effect.type === "bonusGoldPerKill") {
               gameState.gold += Number.isFinite(effect.amount) ? effect.amount : 0;

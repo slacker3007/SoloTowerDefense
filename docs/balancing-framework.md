@@ -31,16 +31,18 @@ This project now uses a centralized balancing model in `src/game/balance.js`.
   - t3: `x3.5`
 - Breather waves grant `+50%` per-kill gold.
 
-## Enemy and Wave Scaling
+## Enemy and Wave Progression
 
 - Base functions:
   - `HP = 50 * (1.16^(wave-1))`
-  - `Count = 6 + wave * 1.8`
   - `Speed = 1.0 + wave * 0.02` (scaled to world speed in `WaveSystem`)
-- Role modifiers:
-  - Normal, Fast, Tank, Swarm, Elite
-- `waveProgram` drives role sequencing for waves 1-15 and beyond.
-- Wave entries can provide tuning metadata (`expectedTowerCount`, `expectedDpsBand`) for debug/sim targets.
+- `scriptedWaveProgram` now drives waves 1-20 with authored packs (`type + count`) and phase goals:
+  - Waves 1-5: foundation (teach)
+  - Waves 6-10: role-intro (test counters)
+  - Waves 11-15: synergy (combine counters)
+  - Waves 16-20: punishment (break specialization)
+- Enemy archetypes are explicit (`grunt`, `runner`, `brute`, `swarm`, `linkedPack`, `hoarder`, `shieldedMage`, `regenerator`, `splitter`, `fireResistSwarm`, `slowImmuneRunner`, `siegeGolem`).
+- Role modifiers still exist as baseline stat identity, but wave composition is now authored per-wave.
 
 ## Dynamic Adjustment
 
@@ -56,6 +58,20 @@ This behavior is intentionally bounded and optional (`balanceRules.adaptive.enab
 - Utility-DPS guardrail keeps non-archer towers near the 70-85% baseline budget.
 - Per-enemy CC remains capped in a 12s rolling window.
 - Anti-loop limits clamp chain and volley fan-out to finite caps.
+- Late-wave resistance mechanics include fire resistance, slow immunity, shields, regeneration, split-on-death, and boss threshold spawns.
+
+## Wave 20 Boss Model
+
+- Wave 20 includes:
+  - `1x siegeGolem` (high HP / slow / armored boss)
+  - `6x runner`
+  - `6x swarm`
+- Siege Golem spawns `2x swarm` at 75%, 50%, and 25% HP thresholds.
+- Intended tower pressure:
+  - Earth for boss DPS
+  - Fire/Holy for add clear
+  - Ice for crowd control
+  - Dark for teamwide damage amplification
 
 ## Simulation and Sanity
 

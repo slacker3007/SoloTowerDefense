@@ -8,12 +8,11 @@ import {
   balanceRules,
   clampUtilityBudget,
   economy,
-  enemyRoleModifiers,
+  getEnemyArchetype,
   getGoldPerKill,
-  getWaveBaseCount,
   getWaveBaseHp,
   getWaveBaseSpeed,
-  getWaveStep,
+  getScriptedWave,
   towerCatalog,
   upgrades,
 } from "../src/game/balance.js";
@@ -40,45 +39,49 @@ function mulberry32(seed) {
   };
 }
 
-function buildEnemyTags(role, waveIndex) {
-  const tags = [role];
-  if (waveIndex >= 8 && (role === "tank" || role === "elite")) {
-    tags.push("armor");
+function buildSpawner(waveIndex, director = { hpScale: 1, speedScale: 1, countOffset: 0 }) {
+  const scriptedWave = getScriptedWave(waveIndex);
+  const spawnQueue = [];
+  for (const pack of scriptedWave?.packs ?? []) {
+    const count = Math.max(0, Number(pack?.count) || 0);
+    for (let i = 0; i < count; i += 1) {
+      spawnQueue.push(buildEnemyDefinitionFromPack(waveIndex, pack, director));
+    }
   }
-  if (waveIndex >= 12 && role === "fast") {
-    tags.push("slowResist");
-  }
-  if (waveIndex >= 10 && role === "elite") {
-    tags.push("burnImmune");
-  }
-  return tags;
+  return {
+    interval: Math.max(0.3, Number(scriptedWave?.interval) || (1.25 - waveIndex * 0.02)),
+    timer: 0,
+    maxAlive: Math.max(4, Number(scriptedWave?.maxAlive) || Math.floor(5 + waveIndex * 0.7)),
+    enemyDefinition: spawnQueue[0] ?? buildEnemyDefinitionFromPack(waveIndex, { type: "grunt" }, director),
+    waveRole: scriptedWave?.role ?? "normal",
+    breather: false,
+    totalSpawned: 0,
+    spawnTarget: spawnQueue.length,
+    spawnQueue,
+  };
 }
 
-function buildSpawner(waveIndex, director = { hpScale: 1, speedScale: 1, countOffset: 0 }) {
-  const step = getWaveStep(waveIndex);
-  const role = enemyRoleModifiers[step.role] ?? enemyRoleModifiers.normal;
-  const secondaryRole = enemyRoleModifiers[step.secondaryRole] ?? null;
-  const hpFactor = secondaryRole ? (role.hp + secondaryRole.hp) * 0.5 : role.hp;
-  const speedFactor = secondaryRole ? (role.speed + secondaryRole.speed) * 0.5 : role.speed;
-  const countFactor = secondaryRole ? (role.count + secondaryRole.count) * 0.5 : role.count;
-  const hp = getWaveBaseHp(waveIndex) * hpFactor * director.hpScale;
-  const speed = 60 * getWaveBaseSpeed(waveIndex) * speedFactor * director.speedScale;
-  const spawnCount = Math.max(2, Math.floor(getWaveBaseCount(waveIndex) * countFactor + director.countOffset));
+function buildEnemyDefinitionFromPack(waveIndex, pack, director) {
+  const archetype = getEnemyArchetype(pack.type ?? "grunt");
+  const hp = getWaveBaseHp(waveIndex) * (archetype.hpMultiplier ?? 1) * (pack.hpMultiplier ?? 1) * director.hpScale;
+  const speed =
+    60 * getWaveBaseSpeed(waveIndex) * (archetype.speedMultiplier ?? 1) * (pack.speedMultiplier ?? 1) * director.speedScale;
+  const rewardGold = Math.max(
+    1,
+    Math.round(getGoldPerKill(waveIndex, false) * (archetype.rewardMultiplier ?? 1) * (pack.rewardMultiplier ?? 1)),
+  );
   return {
-    interval: Math.max(0.35, 1.35 - waveIndex * 0.03),
-    timer: 0,
-    maxAlive: Math.max(4, Math.floor(5 + waveIndex * 0.7)),
-    enemyDefinition: {
-      hp,
-      speed,
-      role: step.role,
-      tags: buildEnemyTags(step.role, waveIndex),
-      rewardGold: getGoldPerKill(waveIndex, step.breather),
-    },
-    waveRole: step.role,
-    breather: Boolean(step.breather),
-    totalSpawned: 0,
-    spawnTarget: spawnCount,
+    hp,
+    speed,
+    role: archetype.role ?? "normal",
+    archetype: pack.type ?? "grunt",
+    tags: [...new Set([archetype.role ?? "normal", ...(archetype.tags ?? []), ...(pack.tags ?? [])])],
+    rewardGold,
+    bonusGoldOnKill: archetype.bonusGoldOnKill ?? 0,
+    shieldHp: Number.isFinite(archetype.shieldHpMultiplier) ? hp * archetype.shieldHpMultiplier : 0,
+    regenPerSecond: Number.isFinite(archetype.regenPerSecondMultiplier) ? hp * archetype.regenPerSecondMultiplier : 0,
+    splitOnDeath: archetype.splitOnDeath ?? null,
+    spawnOnThresholds: Array.isArray(archetype.spawnOnThresholds) ? archetype.spawnOnThresholds.map((entry) => ({ ...entry })) : [],
   };
 }
 
@@ -154,7 +157,7 @@ function getActiveEnemies(enemies) {
   return enemies.filter((e) => e.alive && !e.escaped);
 }
 
-function damageEnemy(enemy, amount) {
+function damageEnemy(enemy, amount, pendingTriggeredSpawns) {
   if (!enemy?.alive || enemy.escaped) return false;
   let damageMultiplier = enemy.tags.includes("armor") ? 0.85 : 1;
   for (const status of enemy.statuses ?? []) {
@@ -162,12 +165,51 @@ function damageEnemy(enemy, amount) {
       damageMultiplier += status.ratio ?? 0;
     }
   }
-  enemy.hp -= amount * damageMultiplier;
+  let hpDamage = amount * damageMultiplier;
+  if (enemy.shieldHp > 0) {
+    const absorbed = Math.min(enemy.shieldHp, hpDamage);
+    enemy.shieldHp -= absorbed;
+    hpDamage -= absorbed;
+  }
+  enemy.hp -= hpDamage;
+  maybeTriggerThresholdSpawns(enemy, pendingTriggeredSpawns);
   if (enemy.hp <= 0) {
     enemy.alive = false;
+    maybeTriggerSplit(enemy, pendingTriggeredSpawns);
     return true;
   }
   return false;
+}
+
+function maybeTriggerThresholdSpawns(enemy, pendingTriggeredSpawns) {
+  if (!enemy || !Array.isArray(enemy.spawnOnThresholds) || enemy.spawnOnThresholds.length === 0 || enemy.maxHp <= 0) {
+    return;
+  }
+  const hpRatio = enemy.hp / enemy.maxHp;
+  for (const entry of enemy.spawnOnThresholds) {
+    const threshold = Number(entry?.threshold);
+    if (!Number.isFinite(threshold)) {
+      continue;
+    }
+    const key = `${threshold}:${entry.type}:${entry.count}`;
+    if (enemy.triggeredThresholds?.has(key)) {
+      continue;
+    }
+    if (hpRatio <= threshold) {
+      enemy.triggeredThresholds?.add(key);
+      pendingTriggeredSpawns.push({ type: entry.type, count: Number(entry.count) || 0 });
+    }
+  }
+}
+
+function maybeTriggerSplit(enemy, pendingTriggeredSpawns) {
+  if (!enemy?.splitOnDeath?.childType) {
+    return;
+  }
+  pendingTriggeredSpawns.push({
+    type: enemy.splitOnDeath.childType,
+    count: Number(enemy.splitOnDeath.count) || 0,
+  });
 }
 
 function applyStatus(enemy, status) {
@@ -191,6 +233,9 @@ function tickStatuses(enemy, deltaSeconds) {
     enemy.ccWindowTimer = Math.max(0, enemy.ccWindowTimer - deltaSeconds);
     return;
   }
+  if (enemy.regenPerSecond > 0) {
+    enemy.hp = Math.min(enemy.maxHp, enemy.hp + enemy.regenPerSecond * deltaSeconds);
+  }
   let speedMultiplier = 1;
   let immobilized = false;
   let ccInFrame = false;
@@ -198,7 +243,8 @@ function tickStatuses(enemy, deltaSeconds) {
   for (const status of enemy.statuses) {
     status.remaining -= deltaSeconds;
     if (status.type === "burn" || status.type === "poison") {
-      enemy.hp -= status.dps * deltaSeconds;
+      const resistMultiplier = status.type === "burn" && enemy.tags.includes("fireResist") ? 0.35 : 1;
+      enemy.hp -= status.dps * deltaSeconds * resistMultiplier;
     } else if (status.type === "slow") {
       if (!enemy.tags.includes("slowResist")) {
         speedMultiplier = Math.min(speedMultiplier, 1 - status.ratio);
@@ -288,6 +334,7 @@ export function simulateSurvival(towerSpecs, seed) {
   let totalLeaks = 0;
   let gameOverWave = null;
   let steps = 0;
+  const pendingTriggeredSpawns = [];
 
   const gameState = { lives };
   const speedMulGlobal = getTowerSpeedMultiplierGlobal(towers);
@@ -321,7 +368,7 @@ export function simulateSurvival(towerSpecs, seed) {
           spawner = buildSpawner(waveIndex);
         } else if (spawner.totalSpawned < spawner.spawnTarget) {
           spawner.timer = 0;
-          const def = spawner.enemyDefinition;
+          const def = spawner.spawnQueue?.[spawner.totalSpawned] ?? spawner.enemyDefinition;
           enemies.push({
             id: nextEnemyId++,
             progress: 0,
@@ -332,11 +379,19 @@ export function simulateSurvival(towerSpecs, seed) {
             tags: [...def.tags],
             rewardGold: def.rewardGold,
             role: def.role,
+            archetype: def.archetype ?? "grunt",
             alive: true,
             escaped: false,
             statuses: [],
             ccWindowTimer: 0,
             ccSecondsWithinWindow: 0,
+            shieldHp: Math.max(0, Number(def.shieldHp) || 0),
+            maxShieldHp: Math.max(0, Number(def.shieldHp) || 0),
+            regenPerSecond: Math.max(0, Number(def.regenPerSecond) || 0),
+            splitOnDeath: def.splitOnDeath ?? null,
+            spawnOnThresholds: Array.isArray(def.spawnOnThresholds) ? def.spawnOnThresholds.map((entry) => ({ ...entry })) : [],
+            triggeredThresholds: new Set(),
+            goldBonusOnKill: Math.max(0, Number(def.bonusGoldOnKill) || 0),
           });
           spawner.totalSpawned += 1;
         }
@@ -359,9 +414,19 @@ export function simulateSurvival(towerSpecs, seed) {
       tower.cooldownRemaining = tower.cooldown / speedMulGlobal;
 
       const hitDamage = resolveDamage(tower, target, tower.damage, rng);
-      const killed = damageEnemy(target, hitDamage);
+      const killed = damageEnemy(target, hitDamage, pendingTriggeredSpawns);
+    if (pendingTriggeredSpawns.length > 0) {
+      for (const trigger of pendingTriggeredSpawns.splice(0, pendingTriggeredSpawns.length)) {
+        const count = Math.max(0, Number(trigger.count) || 0);
+        for (let i = 0; i < count; i += 1) {
+          spawner.spawnQueue.push(buildEnemyDefinitionFromPack(waveIndex, { type: trigger.type }, { hpScale: 1, speedScale: 1, countOffset: 0 }));
+        }
+      }
+      spawner.spawnTarget = spawner.spawnQueue.length;
+    }
 
-      applyTowerCombatEffects(tower, target, hitDamage, killed, towers, enemies, rng, gameState);
+
+      applyTowerCombatEffects(tower, target, hitDamage, killed, towers, enemies, rng, gameState, pendingTriggeredSpawns);
 
       lives = gameState.lives;
     }
@@ -396,7 +461,7 @@ export function simulateSurvival(towerSpecs, seed) {
   };
 }
 
-function applyTowerCombatEffects(tower, primary, resolvedDamage, killed, towers, enemies, rng, gameState) {
+function applyTowerCombatEffects(tower, primary, resolvedDamage, killed, towers, enemies, rng, gameState, pendingTriggeredSpawns) {
   const effects = tower.effects ?? [];
   const effRange = effectiveTowerRange(tower, towers);
 
@@ -449,19 +514,19 @@ function applyTowerCombatEffects(tower, primary, resolvedDamage, killed, towers,
       const radiusWorld = (effect.radiusTiles ?? 1.2) * TILE_RANGE_TO_WORLD;
       const others = enemiesWithinRadiusOfTarget(getActiveEnemies(enemies), primary, radiusWorld);
       for (const e of others) {
-        damageEnemy(e, resolvedDamage * (effect.ratio ?? 0.5));
+        damageEnemy(e, resolvedDamage * (effect.ratio ?? 0.5), pendingTriggeredSpawns);
       }
     }
     if (effect.type === "chain") {
-      applyChainDamage(tower, primary, resolvedDamage, effect.targets ?? 2, true, enemies, effRange);
+      applyChainDamage(tower, primary, resolvedDamage, effect.targets ?? 2, true, enemies, effRange, pendingTriggeredSpawns);
     }
     if (effect.type === "chainNoDecay") {
-      applyChainDamage(tower, primary, resolvedDamage, 999, false, enemies, effRange);
+      applyChainDamage(tower, primary, resolvedDamage, 999, false, enemies, effRange, pendingTriggeredSpawns);
     }
     if (effect.type === "burstAllInRange" && tower.hitCount % 5 === 0) {
       for (const e of getActiveEnemies(enemies)) {
         if (Math.abs(e.progress - 0) <= effRange) {
-          damageEnemy(e, resolvedDamage * 0.8);
+          damageEnemy(e, resolvedDamage * 0.8, pendingTriggeredSpawns);
         }
       }
     }
@@ -469,17 +534,17 @@ function applyTowerCombatEffects(tower, primary, resolvedDamage, killed, towers,
       const cap = Math.min(effect.arrows ?? 3, balanceRules.maxVolleyArrows);
       const inRange = getActiveEnemies(enemies).filter((e) => Math.abs(e.progress - 0) <= effRange).slice(0, cap);
       for (const e of inRange) {
-        damageEnemy(e, resolvedDamage * 0.35);
+        damageEnemy(e, resolvedDamage * 0.35, pendingTriggeredSpawns);
       }
       if (!inRange.includes(primary)) {
-        damageEnemy(primary, resolvedDamage * 0.35);
+        damageEnemy(primary, resolvedDamage * 0.35, pendingTriggeredSpawns);
       }
     }
     if (effect.type === "smiteBeamTargets") {
       const cap = Math.max(1, Math.min(effect.targets ?? 3, balanceRules.maxChainTargets));
       const inRange = getActiveEnemies(enemies).filter((e) => Math.abs(e.progress - 0) <= effRange).slice(0, cap);
       for (const e of inRange) {
-        damageEnemy(e, e === primary ? resolvedDamage * 0.25 : resolvedDamage * 0.5);
+        damageEnemy(e, e === primary ? resolvedDamage * 0.25 : resolvedDamage * 0.5, pendingTriggeredSpawns);
       }
     }
   }
@@ -539,7 +604,7 @@ function splashCurse(origin, enemies, radiusTiles, payload) {
   }
 }
 
-function applyChainDamage(_tower, primary, baseDamage, chainTargets, decay, enemies, effRange) {
+function applyChainDamage(_tower, primary, baseDamage, chainTargets, decay, enemies, effRange, pendingTriggeredSpawns) {
   const safeTargets = Math.min(chainTargets, balanceRules.maxChainTargets);
   const candidates = getActiveEnemies(enemies)
     .filter((e) => e !== primary && Math.abs(e.progress - primary.progress) <= effRange)
@@ -547,7 +612,7 @@ function applyChainDamage(_tower, primary, baseDamage, chainTargets, decay, enem
     .slice(0, safeTargets);
   let ratio = 0.75;
   for (const e of candidates) {
-    damageEnemy(e, baseDamage * (decay ? ratio : 1));
+    damageEnemy(e, baseDamage * (decay ? ratio : 1), pendingTriggeredSpawns);
     if (decay) ratio *= 0.85;
   }
 }

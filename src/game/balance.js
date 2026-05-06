@@ -335,6 +335,218 @@ export const enemyRoleModifiers = {
   elite: { hp: 3.95, speed: 0.8, count: 1.0 },
 };
 
+export const enemyArchetypes = {
+  grunt: { role: "normal", hpMultiplier: 1.0, speedMultiplier: 1.0, rewardMultiplier: 1.0, tags: [] },
+  runner: { role: "fast", hpMultiplier: 0.7, speedMultiplier: 1.65, rewardMultiplier: 1.0, tags: [] },
+  brute: { role: "tank", hpMultiplier: 2.4, speedMultiplier: 0.58, rewardMultiplier: 1.3, tags: ["armor", "tank"] },
+  swarm: { role: "swarm", hpMultiplier: 0.42, speedMultiplier: 1.06, rewardMultiplier: 0.85, tags: [] },
+  linkedPack: { role: "fast", hpMultiplier: 0.85, speedMultiplier: 1.35, rewardMultiplier: 1.1, tags: ["linkedPack"] },
+  hoarder: { role: "normal", hpMultiplier: 1.05, speedMultiplier: 1.12, rewardMultiplier: 1.0, tags: ["hoarder"], bonusGoldOnKill: 6 },
+  shieldedMage: {
+    role: "elite",
+    hpMultiplier: 1.05,
+    speedMultiplier: 0.9,
+    rewardMultiplier: 1.2,
+    tags: ["shielded"],
+    shieldHpMultiplier: 0.55,
+  },
+  regenerator: {
+    role: "tank",
+    hpMultiplier: 1.85,
+    speedMultiplier: 0.75,
+    rewardMultiplier: 1.2,
+    tags: ["regenerator"],
+    regenPerSecondMultiplier: 0.03,
+  },
+  splitter: {
+    role: "normal",
+    hpMultiplier: 1.1,
+    speedMultiplier: 1.0,
+    rewardMultiplier: 1.05,
+    tags: ["splitter"],
+    splitOnDeath: { childType: "swarm", count: 2 },
+  },
+  fireResistSwarm: {
+    role: "swarm",
+    hpMultiplier: 0.48,
+    speedMultiplier: 1.08,
+    rewardMultiplier: 0.9,
+    tags: ["fireResist"],
+  },
+  slowImmuneRunner: {
+    role: "fast",
+    hpMultiplier: 0.8,
+    speedMultiplier: 1.75,
+    rewardMultiplier: 1.1,
+    tags: ["slowResist", "slowImmune"],
+  },
+  siegeGolem: {
+    role: "elite",
+    hpMultiplier: 7.5,
+    speedMultiplier: 0.45,
+    rewardMultiplier: 3.0,
+    tags: ["boss", "armor", "tank"],
+    spawnOnThresholds: [
+      { threshold: 0.75, type: "swarm", count: 2 },
+      { threshold: 0.5, type: "swarm", count: 2 },
+      { threshold: 0.25, type: "swarm", count: 2 },
+    ],
+  },
+};
+
+export const scriptedWaveProgram = [
+  { phase: "foundation", role: "normal", packs: [{ type: "grunt", count: 8 }] },
+  { phase: "foundation", role: "normal", packs: [{ type: "grunt", count: 12, speedMultiplier: 1.08 }] },
+  {
+    phase: "foundation",
+    role: "fast",
+    packs: [
+      { type: "grunt", count: 8 },
+      { type: "runner", count: 4 },
+    ],
+  },
+  { phase: "foundation", role: "swarm", packs: [{ type: "grunt", count: 16 }] },
+  {
+    phase: "foundation",
+    role: "swarm",
+    packs: [
+      { type: "grunt", count: 12 },
+      { type: "swarm", count: 8 },
+    ],
+  },
+  {
+    phase: "roleIntro",
+    role: "tank",
+    packs: [
+      { type: "brute", count: 4 },
+      { type: "grunt", count: 6 },
+    ],
+  },
+  {
+    phase: "roleIntro",
+    role: "fast",
+    packs: [
+      { type: "runner", count: 10 },
+      { type: "grunt", count: 6 },
+    ],
+  },
+  {
+    phase: "roleIntro",
+    role: "fast",
+    packs: [
+      { type: "linkedPack", count: 8 },
+      { type: "runner", count: 4 },
+    ],
+  },
+  {
+    phase: "roleIntro",
+    role: "mixed",
+    packs: [
+      { type: "brute", count: 2 },
+      { type: "swarm", count: 10 },
+      { type: "runner", count: 4 },
+    ],
+  },
+  {
+    phase: "roleIntro",
+    role: "economy",
+    packs: [
+      { type: "hoarder", count: 6 },
+      { type: "grunt", count: 8 },
+    ],
+  },
+  {
+    phase: "synergy",
+    role: "elite",
+    packs: [
+      { type: "shieldedMage", count: 6 },
+      { type: "grunt", count: 6 },
+    ],
+  },
+  {
+    phase: "synergy",
+    role: "tank",
+    packs: [
+      { type: "regenerator", count: 4 },
+      { type: "swarm", count: 8 },
+    ],
+  },
+  {
+    phase: "synergy",
+    role: "mixed",
+    packs: [
+      { type: "splitter", count: 6 },
+      { type: "runner", count: 6 },
+    ],
+  },
+  {
+    phase: "synergy",
+    role: "mixed",
+    packs: [
+      { type: "brute", count: 2 },
+      { type: "swarm", count: 6 },
+      { type: "shieldedMage", count: 4 },
+      { type: "runner", count: 4 },
+    ],
+  },
+  {
+    phase: "synergy",
+    role: "mixed",
+    packs: [
+      { type: "brute", count: 3 },
+      { type: "shieldedMage", count: 3 },
+      { type: "swarm", count: 6 },
+      { type: "runner", count: 4 },
+    ],
+  },
+  {
+    phase: "punishment",
+    role: "swarm",
+    packs: [
+      { type: "fireResistSwarm", count: 6 },
+      { type: "brute", count: 4 },
+    ],
+  },
+  {
+    phase: "punishment",
+    role: "fast",
+    packs: [
+      { type: "slowImmuneRunner", count: 6 },
+      { type: "shieldedMage", count: 6 },
+    ],
+  },
+  {
+    phase: "punishment",
+    role: "economy",
+    interval: 0.62,
+    packs: [
+      { type: "hoarder", count: 8 },
+      { type: "splitter", count: 6 },
+    ],
+  },
+  {
+    phase: "punishment",
+    role: "mixed",
+    packs: [
+      { type: "brute", count: 2 },
+      { type: "runner", count: 6 },
+      { type: "swarm", count: 6 },
+      { type: "shieldedMage", count: 4 },
+      { type: "regenerator", count: 2 },
+    ],
+  },
+  {
+    phase: "punishment",
+    role: "boss",
+    maxAlive: 18,
+    packs: [
+      { type: "siegeGolem", count: 1 },
+      { type: "runner", count: 6 },
+      { type: "swarm", count: 6 },
+    ],
+  },
+];
+
 export const waveProgram = [
   { role: "normal", breather: false, expectedTowerCount: 2, expectedDpsBand: [20, 28] },
   { role: "normal", breather: false, expectedTowerCount: 2, expectedDpsBand: [24, 34] },
@@ -671,6 +883,14 @@ export function getGoldPerKill(waveIndex, isBreatherWave = false) {
 
 export function getWaveStep(waveIndex) {
   return waveProgram[Math.min(waveProgram.length - 1, Math.max(0, waveIndex - 1))] ?? waveProgram[0];
+}
+
+export function getScriptedWave(waveIndex) {
+  return scriptedWaveProgram[Math.max(0, Math.min(scriptedWaveProgram.length - 1, waveIndex - 1))] ?? null;
+}
+
+export function getEnemyArchetype(type) {
+  return enemyArchetypes[type] ?? enemyArchetypes.grunt;
 }
 
 export function getAdaptiveAdjustment(metrics) {
