@@ -3,11 +3,9 @@ import {
   economy,
   enemyRoleModifiers,
   getGoldPerKill,
-  getTowerTierCost,
   getWaveBaseCount,
   getWaveBaseHp,
   getWaveBaseSpeed,
-  getUpgradeOptionsForTower,
   getWaveStep,
   towerCatalog,
   upgrades,
@@ -15,103 +13,11 @@ import {
 
 const WAVE_LIMIT = 15;
 const WORLD_SPEED_SCALE = 60;
-const STANDARD_TARGETS = [
-  [{ type: "basic" }, { type: "basic" }],
-  [{ type: "archer" }, { type: "basic" }],
-  [{ type: "archer" }, { type: "fire" }, { type: "basic" }],
-  [{ type: "archer", upgrades: ["level1"] }, { type: "fire" }, { type: "lightning" }],
-  [{ type: "archer", upgrades: ["level1"] }, { type: "fire", upgrades: ["level1"] }, { type: "lightning" }, { type: "earth" }],
-  [
-    { type: "archer", upgrades: ["level1"] },
-    { type: "fire", upgrades: ["level1"] },
-    { type: "lightning", upgrades: ["level1"] },
-    { type: "earth" },
-  ],
-  [
-    { type: "archer", upgrades: ["level1", "level2"] },
-    { type: "fire", upgrades: ["level1"] },
-    { type: "lightning", upgrades: ["level1"] },
-    { type: "earth" },
-    { type: "ice" },
-  ],
-  [
-    { type: "archer", upgrades: ["level1", "level2"] },
-    { type: "fire", upgrades: ["level1", "level2"] },
-    { type: "lightning", upgrades: ["level1"] },
-    { type: "earth" },
-    { type: "ice" },
-  ],
-  [
-    { type: "archer", upgrades: ["level1", "level2"] },
-    { type: "fire", upgrades: ["level1", "level2"] },
-    { type: "lightning", upgrades: ["level1", "level2"] },
-    { type: "earth", upgrades: ["level1"] },
-    { type: "ice" },
-    { type: "nature" },
-  ],
-  [
-    { type: "archer", upgrades: ["level1", "level2"] },
-    { type: "fire", upgrades: ["level1", "level2"] },
-    { type: "lightning", upgrades: ["level1", "level2"] },
-    { type: "earth", upgrades: ["level1"] },
-    { type: "ice", upgrades: ["level1"] },
-    { type: "nature" },
-  ],
-  [
-    { type: "archer", upgrades: ["level1", "level2", "level3"] },
-    { type: "fire", upgrades: ["level1", "level2"] },
-    { type: "lightning", upgrades: ["level1", "level2"] },
-    { type: "earth", upgrades: ["level1"] },
-    { type: "ice", upgrades: ["level1"] },
-    { type: "nature" },
-    { type: "holy" },
-  ],
-  [
-    { type: "archer", upgrades: ["level1", "level2", "level3"] },
-    { type: "fire", upgrades: ["level1", "level2", "level3"] },
-    { type: "lightning", upgrades: ["level1", "level2"] },
-    { type: "earth", upgrades: ["level1"] },
-    { type: "ice", upgrades: ["level1"] },
-    { type: "nature" },
-    { type: "holy" },
-  ],
-  [
-    { type: "archer", upgrades: ["level1", "level2", "level3"] },
-    { type: "fire", upgrades: ["level1", "level2", "level3"] },
-    { type: "lightning", upgrades: ["level1", "level2", "level3"] },
-    { type: "earth", upgrades: ["level1", "level2"] },
-    { type: "ice", upgrades: ["level1"] },
-    { type: "nature", upgrades: ["level1"] },
-    { type: "holy" },
-    { type: "dark" },
-  ],
-  [
-    { type: "archer", upgrades: ["level1", "level2", "level3"] },
-    { type: "fire", upgrades: ["level1", "level2", "level3"] },
-    { type: "lightning", upgrades: ["level1", "level2", "level3"] },
-    { type: "earth", upgrades: ["level1", "level2"] },
-    { type: "ice", upgrades: ["level1"] },
-    { type: "nature", upgrades: ["level1"] },
-    { type: "holy" },
-    { type: "dark" },
-    { type: "archer" },
-  ],
-  [
-    { type: "archer", upgrades: ["level1", "level2", "level3"] },
-    { type: "fire", upgrades: ["level1", "level2", "level3"] },
-    { type: "lightning", upgrades: ["level1", "level2", "level3"] },
-    { type: "earth", upgrades: ["level1", "level2", "level3"] },
-    { type: "ice", upgrades: ["level1", "level2"] },
-    { type: "nature", upgrades: ["level1"] },
-    { type: "holy" },
-    { type: "dark" },
-    { type: "archer", upgrades: ["level1"] },
-  ],
-];
-
-function getStandardTargets(wave) {
-  return STANDARD_TARGETS[Math.min(STANDARD_TARGETS.length - 1, Math.max(0, wave - 1))];
-}
+const ELEMENT_TYPES = ["archer", "fire", "ice", "lightning", "nature", "earth", "dark", "holy"];
+const FULL_UPGRADE_IDS = ["level1", "level2", "level3"];
+const TIER1_UPGRADE_IDS = ["level1"];
+const TIER2_UPGRADE_IDS = ["level1", "level2"];
+const BASIC_DPS = towerCatalog.basic.damage * towerCatalog.basic.rate;
 
 function makeBasicTower() {
   return { type: "basic", upgrades: [], damage: towerCatalog.basic.damage, cooldown: 1 / towerCatalog.basic.rate, effects: [] };
@@ -144,11 +50,82 @@ function applyUpgrade(tower, upgradeId) {
   return true;
 }
 
-function getUpgradeCost(upgradeId) {
-  if (upgradeId === "level1") return getTowerTierCost(1);
-  if (upgradeId === "level2") return getTowerTierCost(2);
-  if (upgradeId === "level3") return getTowerTierCost(3);
-  return economy.baseTowerCost;
+function createFullUpgradeTower(towerType) {
+  return createTowerAtTier(towerType, 3);
+}
+
+function createTowerAtTier(towerType, tier) {
+  const tower = makeBasicTower();
+  convertTower(tower, towerType);
+  const upgradeIds = tier >= 3 ? FULL_UPGRADE_IDS : tier === 2 ? TIER2_UPGRADE_IDS : TIER1_UPGRADE_IDS;
+  for (const upgradeId of upgradeIds) {
+    applyUpgrade(tower, upgradeId);
+  }
+  return tower;
+}
+
+function createRoster(towerType, count, tier) {
+  return Array.from({ length: count }, () => createTowerAtTier(towerType, tier));
+}
+
+function createCandidateBestBuildScenarios() {
+  const scenarios = [];
+  for (const element of ELEMENT_TYPES) {
+    scenarios.push({
+      id: `best-candidate-single-${element}-t3`,
+      label: `Best candidate: 20x ${element} T3`,
+      phaseId: "phase4_best_build",
+      phaseLabel: "Phase #4 - Best build search (max wave-clear)",
+      towers: createRoster(element, 20, 3),
+    });
+  }
+  for (let i = 0; i < ELEMENT_TYPES.length; i += 1) {
+    for (let j = i + 1; j < ELEMENT_TYPES.length; j += 1) {
+      const a = ELEMENT_TYPES[i];
+      const b = ELEMENT_TYPES[j];
+      scenarios.push({
+        id: `best-candidate-duo-${a}-${b}`,
+        label: `Best candidate: 10x ${a} T3 + 10x ${b} T3`,
+        phaseId: "phase4_best_build",
+        phaseLabel: "Phase #4 - Best build search (max wave-clear)",
+        towers: [...createRoster(a, 10, 3), ...createRoster(b, 10, 3)],
+      });
+    }
+  }
+  scenarios.push({
+    id: "best-candidate-mixed-8plus12archer",
+    label: "Best candidate: 1x each element T3 + 12x archer T3",
+    phaseId: "phase4_best_build",
+    phaseLabel: "Phase #4 - Best build search (max wave-clear)",
+    towers: [...ELEMENT_TYPES.map((towerType) => createTowerAtTier(towerType, 3)), ...createRoster("archer", 12, 3)],
+  });
+  return scenarios;
+}
+
+function createPhaseScenarios() {
+  const phase1 = {
+    id: "phase1_unlimited_basic",
+    label: "Unlimited basic towers, no upgrades",
+    phaseId: "phase1_unlimited_basic",
+    phaseLabel: "Phase #1 - Unlimited basic, no upgrades",
+    dynamicMode: "unlimitedBasic",
+    towers: [],
+  };
+  const phase2 = ELEMENT_TYPES.map((towerType) => ({
+    id: `phase2-${towerType}-t1`,
+    label: `20x ${towerType} Tier1`,
+    phaseId: "phase2_t1_single_element",
+    phaseLabel: "Phase #2 - 20 towers, Tier 1, single-element",
+    towers: createRoster(towerType, 20, 1),
+  }));
+  const phase3 = ELEMENT_TYPES.map((towerType) => ({
+    id: `phase3-${towerType}-t3`,
+    label: `20x ${towerType} Tier3`,
+    phaseId: "phase3_t1_t2_t3_single_element",
+    phaseLabel: "Phase #3 - 20 towers, Tier 1->2->3, single-element",
+    towers: createRoster(towerType, 20, 3),
+  }));
+  return [phase1, ...phase2, ...phase3];
 }
 
 function effectDpsMultiplier(effect) {
@@ -242,67 +219,13 @@ function buildEnemyTags(role, wave) {
   return tags;
 }
 
-function canUpgradeFrom(tower, upgradeId) {
-  return getUpgradeOptionsForTower({
-    type: tower.type,
-    tier: tower.upgrades.includes("level3") || tower.upgrades.includes("level3") ? 3 : tower.upgrades.some((id) => id.startsWith("t2")) ? 2 : tower.upgrades.includes("level1") ? 1 : 0,
-    branch: tower.upgrades.includes("level2") ? "a" : tower.upgrades.includes("level2") ? "b" : null,
-  }).some((option) => option.id === upgradeId);
-}
-
-function prepareForWave(buildState, wave) {
-  const targetRoster = getStandardTargets(wave);
-  const actions = [];
-  for (let index = 0; index < targetRoster.length; index += 1) {
-    const target = targetRoster[index];
-    while (!buildState.towers[index] && buildState.gold >= economy.baseTowerCost) {
-      buildState.gold -= economy.baseTowerCost;
-      buildState.towers.push(makeBasicTower());
-      actions.push(`build basic (-${economy.baseTowerCost})`);
-    }
-    const tower = buildState.towers[index];
-    if (!tower) {
-      buildState.missed.push({ wave, action: `build ${target.type}`, neededGold: economy.baseTowerCost - buildState.gold });
-      break;
-    }
-    if (tower.type === "basic" && target.type !== "basic") {
-      if (buildState.gold >= economy.conversionCost) {
-        buildState.gold -= economy.conversionCost;
-        convertTower(tower, target.type);
-        actions.push(`convert ${target.type} (-${economy.conversionCost})`);
-      } else {
-        buildState.missed.push({ wave, action: `convert ${target.type}`, neededGold: economy.conversionCost - buildState.gold });
-        continue;
-      }
-    }
-    for (const upgradeId of target.upgrades ?? []) {
-      if (tower.upgrades.includes(upgradeId)) {
-        continue;
-      }
-      const cost = getUpgradeCost(upgradeId);
-      if (!canUpgradeFrom(tower, upgradeId)) {
-        buildState.missed.push({ wave, action: `${tower.type} ${upgradeId}`, neededGold: 0, invalid: true });
-        continue;
-      }
-      if (buildState.gold >= cost && applyUpgrade(tower, upgradeId)) {
-        buildState.gold -= cost;
-        actions.push(`${tower.type} ${upgradeId} (-${cost})`);
-      } else {
-        buildState.missed.push({ wave, action: `${tower.type} ${upgradeId}`, neededGold: cost - buildState.gold });
-        break;
-      }
-    }
-  }
-  return actions;
-}
-
-function summarizeBuildState(buildState) {
-  const teamDps = buildState.towers.reduce((sum, tower) => sum + estimateTowerDps(tower), 0);
-  const roster = buildState.towers
+function summarizeTowers(towers) {
+  const teamDps = towers.reduce((sum, tower) => sum + estimateTowerDps(tower), 0);
+  const roster = towers
     .map((tower) => `${tower.type}${tower.upgrades.length > 0 ? `:${tower.upgrades.join("/")}` : ""}`)
     .join(",");
   return {
-    towerCount: buildState.towers.length,
+    towerCount: towers.length,
     teamDps,
     roster,
   };
@@ -315,31 +238,57 @@ function classifyPressure(row, previousRow) {
   return "ok";
 }
 
-function run() {
+function cloneTower(tower) {
+  return {
+    type: tower.type,
+    upgrades: [...tower.upgrades],
+    damage: tower.damage,
+    cooldown: tower.cooldown,
+    effects: [...tower.effects],
+  };
+}
+
+function getDynamicSummaryForWave(scenario, waveData, wave) {
+  if (scenario.dynamicMode !== "unlimitedBasic") {
+    return summarizeTowers(scenario.towers.map((tower) => cloneTower(tower)));
+  }
+  // Unlimited basic baseline: scale basic count each wave so there is no cap pressure.
+  const targetCount = Math.max(20, (waveData.expectedTowerCount ?? 2) * 12, wave * 3);
+  const teamDps = targetCount * BASIC_DPS;
+  const roster = `basic x${targetCount}`;
+  return {
+    towerCount: targetCount,
+    teamDps,
+    roster,
+  };
+}
+
+function runScenario(scenario) {
   const rows = [];
   const sanity = [];
-  const buildState = {
-    gold: economy.startingGold,
-    towers: [],
-    missed: [],
-  };
+  let gold = economy.startingGold;
+  let firstCombatFailureWave = null;
   for (let wave = 1; wave <= WAVE_LIMIT; wave += 1) {
-    const startGold = buildState.gold;
-    const actions = prepareForWave(buildState, wave);
+    const startGold = gold;
     const waveData = buildWave(wave);
-    const buildSummary = summarizeBuildState(buildState);
+    const buildSummary = getDynamicSummaryForWave(scenario, waveData, wave);
     const timeToKill = waveData.effectiveTotalHp / Math.max(1, buildSummary.teamDps);
     const clearTime = Math.max(timeToKill, waveData.spawnDuration);
     const waveGold = waveData.count * waveData.rewardPerKill;
+    const maxTtk = waveData.role === "elite" || waveData.role === "tank" ? 180 : 75;
+    const canClearWave = timeToKill <= maxTtk;
+    if (!canClearWave && firstCombatFailureWave == null) {
+      firstCombatFailureWave = wave;
+    }
     const pressureRatio = waveData.expectedDpsBand
       ? buildSummary.teamDps / ((waveData.expectedDpsBand[0] + waveData.expectedDpsBand[1]) * 0.5)
       : 1;
-    buildState.gold += waveGold;
+    gold += waveGold;
     const row = {
       ...waveData,
       startGold,
-      endGold: buildState.gold,
-      actions,
+      endGold: gold,
+      actions: [],
       roster: buildSummary.roster,
       towerCount: buildSummary.towerCount,
       teamDps: Math.round(buildSummary.teamDps),
@@ -347,17 +296,17 @@ function run() {
       clearTime: Number(clearTime.toFixed(1)),
       pressureRatio: Number(pressureRatio.toFixed(2)),
       waveGold,
+      canClearWave,
     };
     row.flag = classifyPressure(row, rows[rows.length - 1]);
     rows.push(row);
-    const maxTtk = waveData.role === "elite" || waveData.role === "tank" ? 180 : 75;
     sanity.push({
       wave,
       spawnCountPositive: waveData.count > 0,
       hpPositive: waveData.hp > 0,
       speedPositive: waveData.speed > 0,
       sensibleTtk: timeToKill > 6 && timeToKill < maxTtk,
-      economyNonNegative: startGold >= 0 && buildState.gold >= 0,
+      economyNonNegative: startGold >= 0 && gold >= 0,
       pressureInBand: pressureRatio >= 0.55 && pressureRatio <= 1.75,
       expectedBandValid:
         !waveData.expectedDpsBand ||
@@ -367,47 +316,111 @@ function run() {
           waveData.expectedDpsBand[1] >= waveData.expectedDpsBand[0]),
     });
   }
-  const upgradeSanity = Object.keys(towerCatalog).map((towerType) => {
-    const startOptions = getUpgradeOptionsForTower({ tier: 0, branch: null, type: towerType });
-    const pathA = getUpgradeOptionsForTower({ tier: 2, branch: "a", type: towerType });
-    const pathB = getUpgradeOptionsForTower({ tier: 2, branch: "b", type: towerType });
-    const isBasic = towerType === "basic";
-    return {
-      towerType,
-      hasTier1: isBasic ? true : startOptions.some((entry) => entry.id === "level1"),
-      hasTier3A: isBasic ? true : pathA.some((entry) => entry.id === "level3"),
-      hasTier3B: isBasic ? true : pathB.some((entry) => entry.id === "level3"),
-      hasConversions: isBasic ? startOptions.some((entry) => String(entry.id).startsWith("convert:")) : true,
-    };
-  });
+  const failed = sanity.filter((entry) => Object.values(entry).includes(false));
+  const spikeWaves = rows.filter((row) => row.flag === "spike").map((row) => row.wave);
+  const waveClear = firstCombatFailureWave == null ? WAVE_LIMIT : firstCombatFailureWave - 1;
+  const avgPressure = rows.reduce((sum, row) => sum + row.pressureRatio, 0) / Math.max(1, rows.length);
+  const worstTtk = rows.reduce((max, row) => Math.max(max, row.ttk), 0);
+  const firstFailWave = failed.length > 0 ? failed[0].wave : null;
+  return {
+    scenario,
+    rows,
+    failed,
+    spikeWaves,
+    finalGold: gold,
+    waveClear,
+    avgPressure,
+    worstTtk,
+    firstFailWave,
+  };
+}
 
-  console.log(`Base tower DPS: ${Object.keys(towerCatalog).map((towerType) => `${towerType}=${estimateCatalogDps(towerType).toFixed(1)}`).join(" | ")}`);
-  console.log("\nStandard build wave simulation (1-15):");
-  for (const row of rows) {
+function printScenario(result) {
+  console.log(`\n=== ${result.scenario.label} (${result.scenario.id}) ===`);
+  for (const row of result.rows) {
     console.log(
       `W${row.wave} ${row.role}${row.secondaryRole ? `/${row.secondaryRole}` : ""} count=${row.count} hp=${row.hp}${row.effectiveHp !== row.hp ? `/eff${row.effectiveHp}` : ""} spawn=${row.spawnDuration}s dps=${row.teamDps} ttk=${row.ttk}s clear=${row.clearTime}s pressure=${row.pressureRatio} gold=${row.startGold}->${row.endGold} ${row.flag}${row.breather ? " breather" : ""}`,
     );
-    if (row.actions.length > 0) {
-      console.log(`  actions: ${row.actions.join(", ")}`);
-    }
     console.log(`  roster: ${row.roster || "(none)"}`);
   }
-  const failed = sanity.filter((entry) => Object.values(entry).includes(false));
-  const failedUpgrade = upgradeSanity.filter((entry) => Object.values(entry).includes(false));
-  const missedAffordable = buildState.missed.filter((entry) => entry.neededGold > 0);
-  if (buildState.missed.length > 0) {
-    console.log("\nMissed standard-build milestones:");
-    for (const entry of buildState.missed.slice(0, 12)) {
-      console.log(`W${entry.wave} ${entry.action}${entry.invalid ? " invalid path" : ` needs +${Math.ceil(entry.neededGold)} gold`}`);
+  console.log(
+    `Summary: waveClear=${result.waveClear}/${WAVE_LIMIT} finalGold=${Math.round(result.finalGold)} spikes=${result.spikeWaves.length > 0 ? result.spikeWaves.join(",") : "none"} firstFailWave=${result.firstFailWave ?? "none"}`,
+  );
+}
+
+function printPhaseSummary(phaseLabel, results) {
+  const sorted = [...results].sort((a, b) => b.waveClear - a.waveClear);
+  const best = sorted[0];
+  const worst = sorted[sorted.length - 1];
+  const median = sorted[Math.floor((sorted.length - 1) / 2)];
+  const failedCount = results.filter((entry) => entry.failed.length > 0).length;
+  console.log(
+    `\n[${phaseLabel}] best=${best.scenario.id}(${best.waveClear}) median=${median.scenario.id}(${median.waveClear}) worst=${worst.scenario.id}(${worst.waveClear}) failedScenarios=${failedCount}/${results.length}`,
+  );
+}
+
+function selectBestBuild(candidates) {
+  const sorted = [...candidates].sort((a, b) => {
+    if (b.waveClear !== a.waveClear) return b.waveClear - a.waveClear;
+    const aFailCount = a.failed.length;
+    const bFailCount = b.failed.length;
+    if (aFailCount !== bFailCount) return aFailCount - bFailCount;
+    if (b.avgPressure !== a.avgPressure) return b.avgPressure - a.avgPressure;
+    return a.worstTtk - b.worstTtk;
+  });
+  return sorted[0];
+}
+
+function run() {
+  console.log(`Base tower DPS: ${Object.keys(towerCatalog).map((towerType) => `${towerType}=${estimateCatalogDps(towerType).toFixed(1)}`).join(" | ")}`);
+
+  const baseScenarios = createPhaseScenarios();
+  const baseResults = baseScenarios.map((scenario) => runScenario(scenario));
+  const phaseGroups = {
+    phase1_unlimited_basic: baseResults.filter((result) => result.scenario.phaseId === "phase1_unlimited_basic"),
+    phase2_t1_single_element: baseResults.filter((result) => result.scenario.phaseId === "phase2_t1_single_element"),
+    phase3_t1_t2_t3_single_element: baseResults.filter((result) => result.scenario.phaseId === "phase3_t1_t2_t3_single_element"),
+  };
+
+  for (const phaseId of Object.keys(phaseGroups)) {
+    const phaseResults = phaseGroups[phaseId];
+    if (phaseResults.length === 0) continue;
+    console.log(`\n######## ${phaseResults[0].scenario.phaseLabel} ########`);
+    for (const result of phaseResults) {
+      printScenario(result);
     }
+    printPhaseSummary(phaseResults[0].scenario.phaseLabel, phaseResults);
   }
-  if (failed.length > 0 || failedUpgrade.length > 0) {
-    console.error("\nSanity checks failed:", { waves: failed, upgrades: failedUpgrade });
+
+  const bestCandidates = createCandidateBestBuildScenarios().map((scenario) => runScenario(scenario));
+  const bestBuild = selectBestBuild(bestCandidates);
+  console.log(`\n######## Phase #4 - Best build search (max wave-clear) ########`);
+  printScenario(bestBuild);
+  console.log(`Selected best build from ${bestCandidates.length} candidates: ${bestBuild.scenario.id}`);
+
+  const allResults = [...baseResults, bestBuild];
+  console.log("\n=== Compact scenario comparison ===");
+  console.log("scenarioId                        waveClear  avgPressure  worstTtk  firstFailWave");
+  for (const result of allResults) {
+    const scenarioId = String(result.scenario.id).padEnd(32);
+    const waveClearLabel = `${result.waveClear}/${WAVE_LIMIT}`.padStart(9);
+    const avgPressureLabel = result.avgPressure.toFixed(2).padStart(11);
+    const worstTtkLabel = result.worstTtk.toFixed(1).padStart(8);
+    const firstFailLabel = String(result.firstFailWave ?? "none").padStart(13);
+    console.log(`${scenarioId} ${waveClearLabel} ${avgPressureLabel} ${worstTtkLabel} ${firstFailLabel}`);
+  }
+
+  const failedResults = allResults
+    .filter((entry) => entry.failed.length > 0)
+    .map((entry) => ({
+      scenarioId: entry.scenario.id,
+      failedWaves: entry.failed.map((wave) => wave.wave),
+    }));
+  if (failedResults.length > 0) {
+    console.error("\nSanity checks failed:", failedResults);
     process.exit(1);
   }
-  console.log(
-    `\nSanity checks passed for waves 1-15, upgrade graph, and economy model.${missedAffordable.length > 0 ? " Some desired milestones were intentionally unaffordable and listed above." : ""}`,
-  );
+  console.log("\nSanity checks passed for all scenarios.");
 }
 
 run();

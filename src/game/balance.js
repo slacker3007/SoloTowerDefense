@@ -137,12 +137,23 @@ export const economy = {
   startingLives: 20,
   baseTowerCost: 100,
   sellRefundRate: 0.5,
-  tierCostMultiplier: {
-    t1: 1.5,
-    t2: 2.2,
-    t3: 3.5,
+  conversionCost: 120,
+  tierCosts: {
+    t1: 120,
+    t2: 180,
+    t3: 260,
   },
-  conversionCost: 90,
+};
+
+const towerCostProfiles = {
+  archer: { conversion: 120, tierCosts: { t1: 120, t2: 180, t3: 260 } },
+  fire: { conversion: 130, tierCosts: { t1: 100, t2: 190, t3: 300 } },
+  ice: { conversion: 100, tierCosts: { t1: 90, t2: 140, t3: 170 } },
+  lightning: { conversion: 120, tierCosts: { t1: 120, t2: 180, t3: 280 } },
+  nature: { conversion: 80, tierCosts: { t1: 80, t2: 120, t3: 170 } },
+  earth: { conversion: 120, tierCosts: { t1: 110, t2: 170, t3: 260 } },
+  dark: { conversion: 100, tierCosts: { t1: 100, t2: 150, t3: 200 } },
+  holy: { conversion: 110, tierCosts: { t1: 110, t2: 170, t3: 230 } },
 };
 
 export const upgrades = {
@@ -322,9 +333,9 @@ export const upgrades = {
 };
 
 export const upgradeMeta = {
-  level1: { label: "Level 1", cost: () => getTowerTierCost(1) },
-  level2: { label: "Level 2", cost: () => getTowerTierCost(2) },
-  level3: { label: "Level 3", cost: () => getTowerTierCost(3) },
+  level1: { label: "Level 1" },
+  level2: { label: "Level 2" },
+  level3: { label: "Level 3" },
 };
 
 export const enemyRoleModifiers = {
@@ -587,15 +598,29 @@ export function toWorldRange(rangeTiles) {
   return rangeTiles * TILE_RANGE_TO_WORLD;
 }
 
-export function getTowerTierCost(tier) {
+export function getTowerCostProfile(towerType) {
+  return towerCostProfiles[towerType] ?? null;
+}
+
+export function getTowerConversionCost(towerType) {
+  const profile = getTowerCostProfile(towerType);
+  if (profile && Number.isFinite(profile.conversion)) {
+    return Math.floor(profile.conversion);
+  }
+  return economy.conversionCost;
+}
+
+export function getTowerTierCost(tier, towerType) {
+  const profile = getTowerCostProfile(towerType);
+  const profileTierCosts = profile?.tierCosts;
   if (tier === 1) {
-    return Math.floor(economy.baseTowerCost * economy.tierCostMultiplier.t1);
+    return Math.floor(profileTierCosts?.t1 ?? economy.tierCosts.t1);
   }
   if (tier === 2) {
-    return Math.floor(economy.baseTowerCost * economy.tierCostMultiplier.t2);
+    return Math.floor(profileTierCosts?.t2 ?? economy.tierCosts.t2);
   }
   if (tier === 3) {
-    return Math.floor(economy.baseTowerCost * economy.tierCostMultiplier.t3);
+    return Math.floor(profileTierCosts?.t3 ?? economy.tierCosts.t3);
   }
   return economy.baseTowerCost;
 }
@@ -610,7 +635,7 @@ export function getUpgradeOptionsForTower(tower) {
       tier: 0,
       path: null,
       label: `To ${towerCatalog[towerType]?.label ?? towerType}`,
-      cost: economy.conversionCost,
+      cost: getTowerConversionCost(towerType),
     }));
   }
   const currentTier = Math.max(0, Math.min(MAX_TOWER_LEVEL, tower.tier ?? 0));
@@ -625,8 +650,9 @@ export function getUpgradeOptionsForTower(tower) {
       tier: nextTier,
       path: null,
       label: upgradeMeta[id]?.label ?? `Level ${nextTier}`,
-      cost: upgradeMeta[id]?.cost?.() ?? economy.baseTowerCost,
+      cost: getTowerTierCost(nextTier, tower.type),
       summary: upgrades[tower.type]?.[id]?.summary ?? "",
+      isHighInvestment: nextTier === 3,
     },
   ];
 }
@@ -877,7 +903,8 @@ export function getWaveBaseSpeed(waveIndex) {
 }
 
 export function getGoldPerKill(waveIndex, isBreatherWave = false) {
-  const value = 8 + waveIndex * 1.5;
+  const waveBonus = waveIndex >= 10 ? 10 : 0;
+  const value = 8 + waveIndex * 1.5 + waveBonus;
   return Math.round(value * (isBreatherWave ? 1.5 : 1));
 }
 

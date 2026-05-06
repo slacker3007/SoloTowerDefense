@@ -914,6 +914,13 @@ export class GameScene extends Phaser.Scene {
         const summary = typeof nextOption.summary === "string" && nextOption.summary.length > 0
           ? ` ${nextOption.summary}`
           : "";
+        const warningParts = [];
+        if (nextOption.isHighInvestment) {
+          warningParts.push(`Upgrade III (${nextOption.cost}g): High investment, optional.`);
+        }
+        if (this.gameState.gold < nextOption.cost) {
+          warningParts.push("Not enough gold");
+        }
         const upgradeDescription = `${getTowerDescription(tower?.type)} ${getTowerTooltipSummary(tower?.type)} Upgrade to ${nextOption.label}.${summary}`;
         actionDefs.push({
           innerRow: 1,
@@ -926,7 +933,7 @@ export class GameScene extends Phaser.Scene {
           tooltipDescription: upgradeDescription,
           tooltipCost: nextOption.cost,
           tooltipResource: "gold",
-          tooltipWarning: this.gameState.gold >= nextOption.cost ? "" : "Not enough gold",
+          tooltipWarning: warningParts.join(" "),
           accentColor: getTowerUiAccentColor(tower?.type),
           cost: nextOption.cost,
         });
