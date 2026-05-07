@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { GAME_HEIGHT, GAME_WIDTH } from "../game/constants";
 import { cozyTheme, createCozyButton, createCozyPanel } from "../game/ui/CozyTheme";
+import { getViewportProfile } from "../game/config";
 
 export class MainMenuScene extends Phaser.Scene {
   constructor() {
@@ -8,7 +9,18 @@ export class MainMenuScene extends Phaser.Scene {
   }
 
   create() {
+    this._boundResize = (size) => this._handleResize(size);
+    this.scale.on(Phaser.Scale.Events.RESIZE, this._boundResize);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.scale.off(Phaser.Scale.Events.RESIZE, this._boundResize);
+    });
+    this.rebuildLayout();
+  }
+
+  rebuildLayout() {
+    this.children.removeAll(true);
     const { width, height } = this.scale;
+    const viewport = getViewportProfile(width, height);
     const contentWidth = Math.min(width - 24, 760);
     const centerX = width * 0.5;
     this.add.rectangle(0, 0, width, height, cozyTheme.colors.bgDark, 1).setOrigin(0, 0);
@@ -26,6 +38,11 @@ export class MainMenuScene extends Phaser.Scene {
       fontFamily: cozyTheme.typography.titleFamily,
       fontSize: `${Math.max(18, Math.min(24, Math.round(contentWidth * 0.035)))}px`,
       color: cozyTheme.colors.textSecondary,
+    }).setOrigin(0.5, 0.5);
+    this.add.text(panel.x, subtitle.y + 30, `Best on ${viewport.preferredOrientation} for your device`, {
+      fontFamily: cozyTheme.typography.bodyFamily,
+      fontSize: "14px",
+      color: cozyTheme.colors.textMuted,
     }).setOrigin(0.5, 0.5);
 
     const buttonWidth = Math.min(320, contentWidth - 96);
@@ -53,13 +70,12 @@ export class MainMenuScene extends Phaser.Scene {
     }).setOrigin(0.5, 0.5);
     hint.setAlpha(0.9);
 
-    this.scale.on(Phaser.Scale.Events.RESIZE, this._handleResize, this);
   }
 
   _handleResize(size) {
     const w = size.width || GAME_WIDTH;
     const h = size.height || GAME_HEIGHT;
     this.cameras.main.setViewport(0, 0, w, h);
-    this.scene.restart();
+    this.rebuildLayout();
   }
 }

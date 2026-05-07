@@ -86,6 +86,9 @@ export class EditorPanel {
     mount.innerHTML = "";
     mount.className = "editor-panel";
     mount.hidden = true;
+    mount.style.height = "100%";
+    mount.style.maxHeight = "100%";
+    mount.style.overscrollBehavior = "contain";
 
     const title = document.createElement("h2");
     title.className = "editor-panel__title";

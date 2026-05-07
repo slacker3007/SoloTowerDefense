@@ -48,6 +48,7 @@ import { EditorPanel } from "../game/editor/EditorPanel";
 import { GRID_KEYBIND_ACTION_IDS, KeybindStore } from "../game/input/KeybindStore.js";
 import { ensureMapOverrideGrids, ensureMapTilesets, ensurePathMaskGrid } from "../game/maps/mapUtils";
 import { cozyTheme, createCozyButton, createCozyPanel } from "../game/ui/CozyTheme";
+import { getViewportProfile } from "../game/config";
 
 /**
  * @param {unknown} ov
@@ -120,6 +121,9 @@ export class GameScene extends Phaser.Scene {
     this._runEndOverlayRoot = null;
     this._settingsReturnToPause = false;
     this._placementReturnMode = null;
+    this._orientationHintRoot = null;
+    this._orientationHintText = null;
+    this._dismissedOrientationHint = false;
   }
 
   create() {
@@ -231,6 +235,7 @@ export class GameScene extends Phaser.Scene {
     this.bindInput();
     this.createPauseOverlay();
     this.createRunEndOverlay();
+    this.createOrientationHintOverlay();
     ensureUnitHpOverlay(this);
     this.syncHudForEditorMode();
     this.updateHudActions();
@@ -269,6 +274,9 @@ export class GameScene extends Phaser.Scene {
     this._pauseOverlayRoot = null;
     this._runEndOverlayRoot?.destroy(true);
     this._runEndOverlayRoot = null;
+    this._orientationHintRoot?.destroy(true);
+    this._orientationHintRoot = null;
+    this._orientationHintText = null;
     destroyUnitHpOverlay(this);
   }
 
@@ -1254,14 +1262,79 @@ export class GameScene extends Phaser.Scene {
   handleResize(size) {
     const width = Math.max(1, Number(size?.width) || this.scale.width || GAME_WIDTH);
     const height = Math.max(1, Number(size?.height) || this.scale.height || GAME_HEIGHT);
+    const viewportProfile = getViewportProfile(width, height);
     this.cameras.main.setViewport(0, 0, width, height);
     this.uiCamera?.setViewport?.(0, 0, width, height);
-    const portrait = height >= width;
-    if (portrait && this.cameras.main.zoom > 0.8) {
-      this.cameras.main.setZoom(0.8);
+    if (viewportProfile.isPortrait && this.cameras.main.zoom > 0.82) {
+      this.cameras.main.setZoom(0.82);
     }
+    if (viewportProfile.isLandscape && this.cameras.main.zoom < 0.7) {
+      this.cameras.main.setZoom(0.7);
+    }
+    this.hud?.setViewportMode?.(viewportProfile.isPortrait ? "portrait" : "landscape");
     this.hud?.layout?.(width, height);
+    this.layoutOrientationHint(width, height);
+    this.updateOrientationHint(viewportProfile);
     this._clampCameraScroll();
+  }
+
+  createOrientationHintOverlay() {
+    const width = this.scale.width;
+    const root = this.add.container(0, 0);
+    const panel = this.add.rectangle(width * 0.5, 88, Math.min(640, width - 30), 56, cozyTheme.colors.surface, 0.94);
+    panel.setStrokeStyle(2, cozyTheme.colors.accent, 0.95);
+    const text = this.add.text(width * 0.5, 88, "", {
+      fontFamily: cozyTheme.typography.bodyFamily,
+      fontSize: "16px",
+      color: cozyTheme.colors.textPrimary,
+      align: "center",
+    }).setOrigin(0.5, 0.5);
+    const close = this.add.text(panel.x + panel.width * 0.5 - 18, panel.y, "x", {
+      fontFamily: cozyTheme.typography.bodyFamily,
+      fontSize: "20px",
+      color: cozyTheme.colors.textMuted,
+    }).setOrigin(0.5, 0.5);
+    close.setInteractive({ useHandCursor: true });
+    close.on("pointerdown", () => {
+      this._dismissedOrientationHint = true;
+      root.setVisible(false);
+    });
+    root.add([panel, text, close]);
+    root.setDepth(165);
+    root.setVisible(false);
+    this._attachOverlayToUiCamera(root);
+    this._orientationHintRoot = root;
+    this._orientationHintText = text;
+  }
+
+  layoutOrientationHint(width, _height) {
+    if (!this._orientationHintRoot) {
+      return;
+    }
+    const panel = this._orientationHintRoot.list[0];
+    const text = this._orientationHintRoot.list[1];
+    const close = this._orientationHintRoot.list[2];
+    panel.setPosition(width * 0.5, 88);
+    panel.setSize(Math.min(640, width - 30), 56);
+    text.setPosition(width * 0.5, 88);
+    close.setPosition(panel.x + panel.width * 0.5 - 18, panel.y);
+  }
+
+  updateOrientationHint(profile) {
+    if (!this._orientationHintRoot || !this._orientationHintText) {
+      return;
+    }
+    if (profile.orientationMatchesPreference) {
+      this._orientationHintRoot.setVisible(false);
+      this._dismissedOrientationHint = false;
+      return;
+    }
+    if (this._dismissedOrientationHint) {
+      return;
+    }
+    const preferredLabel = profile.preferredOrientation === "portrait" ? "portrait" : "landscape";
+    this._orientationHintText.setText(`Recommended orientation: ${preferredLabel} for ${profile.deviceType}.`);
+    this._orientationHintRoot.setVisible(true);
   }
 
   /**
@@ -1334,14 +1407,7 @@ export class GameScene extends Phaser.Scene {
       if (this.gameState.paused) {
         return;
       }
-      const margins = this.hud?.getOcclusionMargins?.() ?? { top: 0, bottom: 0, left: 0, right: 0 };
-      const viewW = this.scale.width;
-      const viewH = this.scale.height;
-      const inTopHud = margins.top > 0 && pointer.y <= margins.top;
-      const inBottomHud = margins.bottom > 0 && pointer.y >= viewH - margins.bottom;
-      const inLeftHud = margins.left > 0 && pointer.x <= margins.left;
-      const inRightHud = margins.right > 0 && pointer.x >= viewW - margins.right;
-      if (inTopHud || inBottomHud || inLeftHud || inRightHud) {
+      if (this.hud?.isPointBlockedByHud?.(pointer.x, pointer.y)) {
         return;
       }
       if (this._pendingPlacement?.type === "tower") {

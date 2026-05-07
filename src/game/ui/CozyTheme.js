@@ -20,6 +20,11 @@ export const cozyTheme = {
     textDanger: "#f28b82",
     textSuccess: "#b7e3a1",
     textOnDark: "#ffffff",
+    surface: 0x312936,
+    surfaceRaised: 0x3b3140,
+    accent: 0x7aa2d1,
+    success: 0x4aa37a,
+    danger: 0xb35a5a,
   },
   spacing: {
     xs: 4,
@@ -36,6 +41,12 @@ export const cozyTheme = {
     titleFamily: "Georgia, serif",
     bodyFamily: "monospace",
     titleWeight: "normal",
+    scale: {
+      sm: 12,
+      md: 14,
+      lg: 18,
+      xl: 24,
+    },
   },
   hud: {
     topBar: 0x2a2229,
@@ -50,6 +61,14 @@ export const cozyTheme = {
     tooltipBg: 0x1a141b,
     tooltipStroke: 0xbda67a,
     actionFrame: 0x5d4b63,
+    landscapeContextScale: 0.9,
+    landscapeSidePanelMinWidth: 280,
+    landscapeSidePanelMaxWidth: 380,
+    windowHeader: 0x352c38,
+    windowHandle: 0x6b8fb5,
+    windowHandleActive: 0x8fb7e3,
+    lockLocked: "#ffe3a3",
+    lockUnlocked: "#b7f7da",
   },
 };
 

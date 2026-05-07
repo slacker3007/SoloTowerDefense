@@ -25,10 +25,9 @@
         flex-direction: row;
         align-items: flex-start;
         width: 100vw;
-        height: 100vh;
-        height: 100dvh;
-        max-height: 100vh;
-        max-height: 100dvh;
+        height: 100svh;
+        min-height: 100svh;
+        max-height: 100svh;
         overflow: hidden;
       }
       #app {
@@ -69,13 +68,31 @@
       #editor-panel {
         flex: 0 0 288px;
         width: 288px;
-        height: 100vh;
-        height: 100dvh;
-        max-height: 100vh;
-        max-height: 100dvh;
+        height: 100%;
+        max-height: 100%;
         border-left: 1px solid #2a3548;
         background: #141b28;
         overflow-y: auto;
+      }
+      @media (orientation: portrait) {
+        #editor-panel {
+          flex-basis: 42vw;
+          width: 42vw;
+          min-width: 220px;
+          max-width: 340px;
+        }
+      }
+      @media (max-width: 900px) {
+        #editor-panel {
+          position: absolute;
+          right: 0;
+          top: 0;
+          bottom: 0;
+          z-index: 40;
+          width: min(82vw, 340px);
+          border-left: 1px solid #34445f;
+          box-shadow: -8px 0 24px rgba(0, 0, 0, 0.35);
+        }
       }
       .editor-panel {
         padding: 12px 14px 24px;
