@@ -813,11 +813,11 @@ export class GameScene extends Phaser.Scene {
           { innerRow: 1, innerCol: 1, towerType: "archer" },
           { innerRow: 1, innerCol: 2, towerType: "lightning" },
           { innerRow: 1, innerCol: 3, towerType: "earth" },
+          { innerRow: 1, innerCol: 4, towerType: "dark" },
           { innerRow: 2, innerCol: 1, towerType: "fire" },
+          { innerRow: 2, innerCol: 2, towerType: "ice" },
           { innerRow: 2, innerCol: 3, towerType: "holy" },
-          { innerRow: 3, innerCol: 1, towerType: "ice" },
-          { innerRow: 3, innerCol: 2, towerType: "dark" },
-          { innerRow: 3, innerCol: 3, towerType: "nature" },
+          { innerRow: 2, innerCol: 4, towerType: "nature" },
         ];
         const actionDefs = [];
         for (const cell of gridCells) {
@@ -847,8 +847,8 @@ export class GameScene extends Phaser.Scene {
           });
         }
         actionDefs.push({
-          innerRow: 2,
-          innerCol: 4,
+          innerRow: 3,
+          innerCol: 1,
           actionId: "sellTower",
           label: "",
           enabled: true,
