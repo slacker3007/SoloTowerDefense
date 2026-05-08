@@ -800,7 +800,6 @@ export class GameScene extends Phaser.Scene {
           conversionByType.set(type, option);
         }
         const conversionIconByType = {
-          basic: "blueTower",
           archer: "tower_archer_icon",
           lightning: "tower_lightning_icon",
           earth: "tower_earth_icon",
@@ -815,7 +814,6 @@ export class GameScene extends Phaser.Scene {
           { innerRow: 1, innerCol: 2, towerType: "lightning" },
           { innerRow: 1, innerCol: 3, towerType: "earth" },
           { innerRow: 2, innerCol: 1, towerType: "fire" },
-          { innerRow: 2, innerCol: 2, towerType: "basic" },
           { innerRow: 2, innerCol: 3, towerType: "holy" },
           { innerRow: 3, innerCol: 1, towerType: "ice" },
           { innerRow: 3, innerCol: 2, towerType: "dark" },
@@ -823,24 +821,7 @@ export class GameScene extends Phaser.Scene {
         ];
         const actionDefs = [];
         for (const cell of gridCells) {
-          const iconKey = conversionIconByType[cell.towerType] ?? conversionIconByType.basic;
-          if (cell.towerType === "basic") {
-            actionDefs.push({
-              innerRow: cell.innerRow,
-              innerCol: cell.innerCol,
-              actionId: "conversionCurrent",
-              label: "",
-              enabled: false,
-              iconKey,
-              tooltipTitle: "Basic Tower",
-              tooltipDescription: "Current tower type. Pick any element icon to convert instantly.",
-              tooltipCost: null,
-              tooltipResource: "gold",
-              accentColor: getTowerUiAccentColor("basic"),
-              cost: null,
-            });
-            continue;
-          }
+          const iconKey = conversionIconByType[cell.towerType];
           if (!BASIC_CONVERSION_ORDER.includes(cell.towerType)) {
             continue;
           }
@@ -936,7 +917,7 @@ export class GameScene extends Phaser.Scene {
         const upgradeDescription = `${getTowerDescription(tower?.type)} ${getTowerTooltipSummary(tower?.type)} Upgrade to ${nextOption.label}.${summary}`;
         actionDefs.push({
           innerRow: 1,
-          innerCol: 2,
+          innerCol: 1,
           actionId: `upgrade:${nextOption.id}`,
           label: nextOption.label,
           enabled: this.gameState.gold >= nextOption.cost,
@@ -952,7 +933,7 @@ export class GameScene extends Phaser.Scene {
       } else {
         actionDefs.push({
           innerRow: 1,
-          innerCol: 2,
+          innerCol: 1,
           actionId: "upgradeMaxed",
           label: "Max level",
           enabled: false,

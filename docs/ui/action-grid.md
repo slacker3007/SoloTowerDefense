@@ -80,7 +80,7 @@ Placement rules:
     - `(2,4)`: Sell (`sellTower`)
     - `(3,4)`: Back (`clearSelection`)
   - for non-basic towers:
-    - `(1,2)`: Upgrade icon (`upgrade:level1|level2|level3`) with visible cost badge
+    - `(1,1)`: Upgrade icon (`upgrade:level1|level2|level3`) with visible cost badge
     - `(3,1)`: Sell (`sellTower`)
     - `(3,4)`: Back (`clearSelection`)
 
