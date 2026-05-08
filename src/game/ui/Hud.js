@@ -101,8 +101,8 @@ export class Hud {
       },
       action: {
         locked: true,
-        customBounds: { x: 947, y: 278, width: 230, height: 440 },
-        bounds: { x: 947, y: 278, width: 230, height: 440 },
+        customBounds: { x: 951, y: 290, width: 325, height: 426 },
+        bounds: { x: 951, y: 290, width: 325, height: 426 },
         minWidth: 200,
         minHeight: 96,
       },
