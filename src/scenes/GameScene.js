@@ -2113,6 +2113,7 @@ export class GameScene extends Phaser.Scene {
     this.waveSystem.update(deltaSeconds);
     this.towerSystem.updateCooldowns(deltaSeconds);
     this.combatSystem.update(deltaSeconds, this.gameState);
+    this.gameState.lives = Math.max(0, Math.floor(Number(this.gameState.lives) || 0));
 
     const escaped = this.enemySystem.consumeEscapedCount();
     if (escaped > 0) {

@@ -1,4 +1,4 @@
-import { balanceRules, clampUtilityBudget, economy, getTowerProjectileColor, toWorldRange, towerCatalog } from "../balance";
+import { balanceRules, clampUtilityBudget, getTowerProjectileColor, toWorldRange, towerCatalog } from "../balance";
 
 export class CombatSystem {
   constructor(scene, towerSystem, enemySystem) {
@@ -261,11 +261,7 @@ export class CombatSystem {
       } else if (effect.type === "weakening") {
         this.enemySystem.applyStatus(enemy, { type: "weakening", duration: effect.duration, ratio: effect.ratio });
       } else if (effect.type === "drain") {
-        const maxLives = effects.some((entry) => entry.type === "overhealShield")
-          ? Math.ceil(economy.startingLives * 1.25)
-          : economy.startingLives;
         tower.lifestealPool = (tower.lifestealPool ?? 0) + resolvedDamage * effect.ratio;
-        gameState.lives = Math.min(maxLives, gameState.lives + resolvedDamage * effect.ratio * 0.01);
       }
       if (effect.type === "auraSlow") {
         this.applyAuraStatus(tower, "slow", effect.radiusTiles ?? 2.5, {

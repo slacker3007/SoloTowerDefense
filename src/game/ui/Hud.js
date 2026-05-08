@@ -2039,8 +2039,9 @@ export class Hud {
     this.speedButton.setText(`x${gameSpeed}`);
     this.applySpeedButtonStyle(gameSpeed);
     this.pauseButton.setText(state.paused ? "Resume" : "Pause");
-    const hpMax = typeof maxLives === "number" && maxLives > 0 ? maxLives : state.lives;
-    this.hpText.setText(`❤ ${state.lives}/${hpMax}`);
+    const hpCurrent = Math.max(0, Math.floor(Number(state.lives) || 0));
+    const hpMax = Math.max(hpCurrent, Math.floor(Number(maxLives) || hpCurrent));
+    this.hpText.setText(`❤ ${hpCurrent}/${hpMax}`);
     this.updateGoldDelta(state.gold);
     this.goldText.setText(`💰 ${state.gold}`);
     this.towersText.setVisible(false);
