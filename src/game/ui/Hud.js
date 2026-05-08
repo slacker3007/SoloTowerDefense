@@ -9,6 +9,9 @@ import {
 } from "../input/KeybindStore.js";
 import { cozyTheme } from "./CozyTheme";
 
+/** Keep action rail chrome (one empty row) visible when no slots are configured. */
+const RESERVE_EMPTY_ACTION_RAIL = true;
+
 export class Hud {
   /**
    * @param {Phaser.Scene} scene
@@ -708,6 +711,7 @@ export class Hud {
       panel.customBounds.width = interaction.startBounds.width + dx;
       panel.customBounds.height = interaction.startBounds.height + dy;
     }
+    if (!interaction._loggedFirstMove) interaction._loggedFirstMove = true;
     this.layout();
   }
 
@@ -1122,10 +1126,15 @@ export class Hud {
               1,
               Math.min(4, Math.floor((maxRailW - 2 * railInnerPad + cellGap) / (actionCell + cellGap))),
             );
-      const railRowsEst = occupiedCount === 0 ? 0 : Math.ceil(occupiedCount / maxCols);
+      const reserveEmptyStrip =
+        RESERVE_EMPTY_ACTION_RAIL && this._bottomVisible && occupiedCount === 0;
+      const railRowsEst =
+        occupiedCount === 0 ? (reserveEmptyStrip ? 1 : 0) : Math.ceil(occupiedCount / maxCols);
       const actionStripH =
         occupiedCount === 0
-          ? 0
+          ? reserveEmptyStrip
+            ? railInnerPad * 2 + actionCell
+            : 0
           : railInnerPad * 2 + railRowsEst * (actionCell + cellGap) - cellGap;
       let totalBottom =
         panelPadding * 2 +
@@ -1539,20 +1548,29 @@ export class Hud {
         }
       }
       const n = occupiedIndices.length;
+      const reserveEmptyActionRail = RESERVE_EMPTY_ACTION_RAIL && this._bottomVisible && n === 0;
       const maxColsRail =
         n === 0
-          ? 1
+          ? reserveEmptyActionRail
+            ? 4
+            : 1
           : Math.max(
               1,
               Math.min(4, Math.floor((maxRailW - 2 * railInnerPad + cellGap) / (actionCell + cellGap))),
             );
-      const railRows = n === 0 ? 0 : Math.ceil(n / maxColsRail);
-      let railW = n === 0 ? 0 : maxColsRail * (actionCell + cellGap) - cellGap + 2 * railInnerPad;
+      const railRows =
+        n === 0 ? (reserveEmptyActionRail ? 1 : 0) : Math.ceil(n / maxColsRail);
+      let railW =
+        n === 0 && !reserveEmptyActionRail
+          ? 0
+          : maxColsRail * (actionCell + cellGap) - cellGap + 2 * railInnerPad;
       let railH =
-        n === 0 ? 0 : railInnerPad * 2 + railRows * (actionCell + cellGap) - cellGap;
+        n === 0 && !reserveEmptyActionRail
+          ? 0
+          : railInnerPad * 2 + railRows * (actionCell + cellGap) - cellGap;
       let stripTop = yCursor;
       let railX = contentX;
-      if (n > 0) {
+      if (n > 0 || reserveEmptyActionRail) {
         let stripTopCandidate = gridBottomLimit - railH;
         if (stripTopCandidate < yCursor) {
           stripTopCandidate = yCursor;
@@ -1567,7 +1585,6 @@ export class Hud {
         this._actionGridBackground.setScale(1);
         this._actionGridBackground.setPosition(railX, stripTop);
       } else {
-        this._actionRailBg.setVisible(false);
         this._actionGridBackground.setPosition(contentX, stripTop);
       }
       const actionDefaultRect = { x: railX, y: stripTop, width: railW, height: railH };
@@ -1581,7 +1598,7 @@ export class Hud {
         this._actionRailBg.setSize(railW, railH);
         this._actionGridBackground.setPosition(railX, stripTop);
       }
-      this._actionRailBg.setVisible(Boolean(this._bottomVisible && n > 0));
+      this._actionRailBg.setVisible(Boolean(this._bottomVisible && (n > 0 || reserveEmptyActionRail)));
       this.actionDragZone.setPosition(railX, stripTop);
       this.actionDragZone.setSize(Math.max(80, railW - 28), 20);
       this.actionLockText.setPosition(railX + railW - 4, stripTop + 2);
@@ -1617,9 +1634,14 @@ export class Hud {
         }
       }
 
+      const showEmptyRailGhost = reserveEmptyActionRail;
       for (let i = 0; i < this._actionButtons.length; i += 1) {
         const slot = this._actionSlotConfigs[i];
-        const order = occupiedIndices.indexOf(i);
+        let order = occupiedIndices.indexOf(i);
+        const isGhost = Boolean(showEmptyRailGhost && !slot && i < maxColsRail);
+        if (isGhost) {
+          order = i;
+        }
         const col = order >= 0 ? order % maxColsRail : 0;
         const row = order >= 0 ? Math.floor(order / maxColsRail) : 0;
         const x =
@@ -1655,12 +1677,21 @@ export class Hud {
         const iconSize = Math.round(Math.min(contentCellW, contentCellH) * 0.75);
         const accentColor = Number.isFinite(slot?.accentColor) ? slot.accentColor : 0x6f99c9;
         const accentInner = Math.max(40, contentCellW - 8);
-        accent
-          .setSize(accentInner, accentInner)
-          .setPosition(x, y)
-          .setVisible(Boolean(slot))
-          .setFillStyle(accentColor, slot?.enabled === false ? 0.18 : 0.34)
-          .setStrokeStyle(2, accentColor, slot?.enabled === false ? 0.35 : 0.85);
+        if (isGhost) {
+          accent
+            .setSize(accentInner, accentInner)
+            .setPosition(x, y)
+            .setVisible(true)
+            .setFillStyle(this._hudColors.actionFrame, 0.14)
+            .setStrokeStyle(2, this._hudColors.chipStroke, 0.4);
+        } else {
+          accent
+            .setSize(accentInner, accentInner)
+            .setPosition(x, y)
+            .setVisible(Boolean(slot))
+            .setFillStyle(accentColor, slot?.enabled === false ? 0.18 : 0.34)
+            .setStrokeStyle(2, accentColor, slot?.enabled === false ? 0.35 : 0.85);
+        }
         if (currentIcon) {
           const offsetX = slot?.iconOffsetX ?? 0;
           const offsetY = slot?.iconOffsetY ?? 0;
