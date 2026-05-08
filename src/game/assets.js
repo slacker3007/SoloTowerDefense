@@ -75,6 +75,11 @@ export const spriteSheets = [
     frameConfig: { frameWidth: 192, frameHeight: 192 },
   },
   {
+    key: "blackWarriorRunSheet",
+    path: `${tinySwordsRoot}/Units/Black Units/Warrior/Warrior_Run.png`,
+    frameConfig: { frameWidth: 192, frameHeight: 192 },
+  },
+  {
     key: "bluePawnRunHammerSheet",
     path: `${tinySwordsRoot}/Units/Blue Units/Pawn/Pawn_Run Hammer.png`,
     frameConfig: { frameWidth: 192, frameHeight: 192 },
@@ -170,6 +175,7 @@ export function createTinySwordsAnimations(scene) {
   createRunLoop("redLancerRunSheet", "red-lancer-run", 5);
   createRunLoop("redMonkRunSheet", "red-monk-run");
   createRunLoop("redArcherRunSheet", "red-archer-run");
+  createRunLoop("blackWarriorRunSheet", "black-warrior-run");
   createRunLoop("bluePawnRunHammerSheet", "blue-pawn-run-hammer");
   createRunLoop("bluePawnInteractHammerSheet", "blue-pawn-interact-hammer");
   createRunLoop("fire01Sheet", "fire-01-loop", 7);

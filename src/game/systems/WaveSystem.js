@@ -7,6 +7,14 @@ import {
   getWaveStep,
 } from "../balance";
 
+const ROLE_VISUALS = {
+  normal: { textureKey: "redWarriorRunSheet", animationKey: "red-warrior-run", scale: 0.5 },
+  fast: { textureKey: "redArcherRunSheet", animationKey: "red-archer-run", scale: 0.5 },
+  tank: { textureKey: "blackWarriorRunSheet", animationKey: "black-warrior-run", scale: 0.5 },
+  swarm: { textureKey: "redMonkRunSheet", animationKey: "red-monk-run", scale: 0.5 },
+  elite: { textureKey: "redLancerRunSheet", animationKey: "red-lancer-run", scale: 0.5 },
+};
+
 export class WaveSystem {
   constructor(enemySystem) {
     this.enemySystem = enemySystem;
@@ -49,7 +57,7 @@ export class WaveSystem {
         role: step.role,
         tags: this._buildEnemyTags(step.role, waveIndex),
         rewardGold: getGoldPerKill(waveIndex, step.breather),
-        visual: this._getWaveVisual(waveIndex),
+        visual: this._getWaveVisualForRole(step.role),
       },
       waveRole: step.role,
       secondaryRole: step.secondaryRole ?? null,
@@ -101,14 +109,15 @@ export class WaveSystem {
     const rewardMult = Number.isFinite(pack.rewardMultiplier) ? pack.rewardMultiplier : 1;
     const rewardGold = Math.max(1, Math.round(rewardBase * (archetype.rewardMultiplier ?? 1) * rewardMult));
     const tags = [...new Set([archetype.role ?? "normal", ...(archetype.tags ?? []), ...(pack.tags ?? [])])];
+    const role = archetype.role ?? "normal";
     return {
       hp,
       speed,
-      role: archetype.role ?? "normal",
+      role,
       archetype: pack.type,
       tags,
       rewardGold,
-      visual: this._getWaveVisual(waveIndex),
+      visual: this._getWaveVisualForRole(role),
       bonusGoldOnKill: archetype.bonusGoldOnKill ?? 0,
       shieldHp: Number.isFinite(archetype.shieldHpMultiplier) ? hp * archetype.shieldHpMultiplier : 0,
       regenPerSecond: Number.isFinite(archetype.regenPerSecondMultiplier) ? hp * archetype.regenPerSecondMultiplier : 0,
@@ -118,17 +127,9 @@ export class WaveSystem {
     };
   }
 
-  _getWaveVisual(waveIndex) {
-    if (waveIndex === 2) {
-      return { textureKey: "redLancerRunSheet", animationKey: "red-lancer-run", scale: 0.5 };
-    }
-    if (waveIndex === 3) {
-      return { textureKey: "redMonkRunSheet", animationKey: "red-monk-run", scale: 0.5 };
-    }
-    if (waveIndex === 4) {
-      return { textureKey: "redArcherRunSheet", animationKey: "red-archer-run", scale: 0.5 };
-    }
-    return { textureKey: "redWarriorRunSheet", animationKey: "red-warrior-run", scale: 0.5 };
+  _getWaveVisualForRole(role) {
+    const safeRole = typeof role === "string" && role.length > 0 ? role : "normal";
+    return ROLE_VISUALS[safeRole] ?? ROLE_VISUALS.normal;
   }
 
   update(deltaSeconds) {
@@ -221,7 +222,7 @@ export class WaveSystem {
       secondaryRole,
       iconKey: this._getRoleIconKey(role),
       secondaryIconKey: secondaryRole ? this._getRoleIconKey(secondaryRole) : null,
-      visual: this._getWaveVisual(safeWave),
+      visual: this._getWaveVisualForRole(role),
       breather: Boolean(step?.breather),
     };
   }
