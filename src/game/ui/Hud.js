@@ -91,6 +91,7 @@ export class Hud {
     this.root.setDepth(this.depth);
     this.root.setScrollFactor(0);
     this._hudColors = cozyTheme.hud;
+    this._previewIconSize = 44;
     this._panelWindows = {
       context: {
         locked: true,
@@ -1328,7 +1329,16 @@ export class Hud {
           this.waveProgressText.setPosition(this.waveProgressTrack.x, this.waveProgressTrack.y + this.waveProgressTrack.height + 6);
           this.upcomingEnemiesTitleText.setPosition(this.contextPanelFrame.x + contextPad, this.waveProgressText.y + this.waveProgressText.height + 8);
           const chipTop = this.upcomingEnemiesTitleText.y + this.upcomingEnemiesTitleText.height + 6;
-          const previewCardSize = 56;
+          const previewGap = 16;
+          const previewCardSize = this.clamp(
+            Math.floor((contextPanelW - contextPad * 2 - previewGap) / 2),
+            56,
+            128,
+          );
+          this._previewIconSize = Math.round(previewCardSize * 0.78);
+          const previewLabelSize = this.clamp(Math.round(previewCardSize * 0.22), 12, 18);
+          this.upcomingCurrentIconLabel.setStyle({ fontSize: `${previewLabelSize}px` });
+          this.upcomingNextIconLabel.setStyle({ fontSize: `${previewLabelSize}px` });
           this.upcomingCurrentIconBg.setSize(previewCardSize, previewCardSize);
           this.upcomingNextIconBg.setSize(previewCardSize, previewCardSize);
           this.upcomingCurrentIconBg.setPosition(this.contextPanelFrame.x + contextPad, chipTop);
@@ -1336,16 +1346,22 @@ export class Hud {
             this.upcomingCurrentIconBg.x + this.upcomingCurrentIconBg.width / 2,
             this.upcomingCurrentIconBg.y + this.upcomingCurrentIconBg.height / 2,
           );
+          if (this.upcomingCurrentIcon.visible) {
+            this.upcomingCurrentIcon.setDisplaySize(this._previewIconSize, this._previewIconSize);
+          }
           this.upcomingCurrentIconLabel.setPosition(
             this.upcomingCurrentIconBg.x,
             this.upcomingCurrentIconBg.y + this.upcomingCurrentIconBg.height + 4,
           );
-          const nextX = this.upcomingCurrentIconBg.x + this.upcomingCurrentIconBg.width + 20;
+          const nextX = this.upcomingCurrentIconBg.x + this.upcomingCurrentIconBg.width + previewGap;
           this.upcomingNextIconBg.setPosition(nextX, chipTop);
           this.upcomingNextIcon.setPosition(
             this.upcomingNextIconBg.x + this.upcomingNextIconBg.width / 2,
             this.upcomingNextIconBg.y + this.upcomingNextIconBg.height / 2,
           );
+          if (this.upcomingNextIcon.visible) {
+            this.upcomingNextIcon.setDisplaySize(this._previewIconSize, this._previewIconSize);
+          }
           this.upcomingNextIconLabel.setPosition(
             this.upcomingNextIconBg.x,
             this.upcomingNextIconBg.y + this.upcomingNextIconBg.height + 4,
@@ -1419,6 +1435,7 @@ export class Hud {
         this.upcomingEnemiesTitleText.setPosition(this.contextPanelFrame.x + contextPad, chipY);
         const chipTop = this.upcomingEnemiesTitleText.y + this.upcomingEnemiesTitleText.height + 6;
         const previewCardSize = 52;
+        this._previewIconSize = 44;
         this.upcomingCurrentIconBg.setSize(previewCardSize, previewCardSize);
         this.upcomingNextIconBg.setSize(previewCardSize, previewCardSize);
         this.upcomingCurrentIconBg.setPosition(this.contextPanelFrame.x + contextPad, chipTop);
@@ -1426,6 +1443,9 @@ export class Hud {
           this.upcomingCurrentIconBg.x + this.upcomingCurrentIconBg.width / 2,
           this.upcomingCurrentIconBg.y + this.upcomingCurrentIconBg.height / 2,
         );
+        if (this.upcomingCurrentIcon.visible) {
+          this.upcomingCurrentIcon.setDisplaySize(this._previewIconSize, this._previewIconSize);
+        }
         this.upcomingCurrentIconLabel.setPosition(
           this.upcomingCurrentIconBg.x,
           this.upcomingCurrentIconBg.y + this.upcomingCurrentIconBg.height + 4,
@@ -1437,6 +1457,9 @@ export class Hud {
           this.upcomingNextIconBg.x + this.upcomingNextIconBg.width / 2,
           this.upcomingNextIconBg.y + this.upcomingNextIconBg.height / 2,
         );
+        if (this.upcomingNextIcon.visible) {
+          this.upcomingNextIcon.setDisplaySize(this._previewIconSize, this._previewIconSize);
+        }
         this.upcomingNextIconLabel.setPosition(
           this.upcomingNextIconBg.x,
           this.upcomingNextIconBg.y + this.upcomingNextIconBg.height + 4,
@@ -2111,7 +2134,8 @@ export class Hud {
         continue;
       }
       image.setTexture(key);
-      image.setDisplaySize(44, 44);
+      const iconSize = this._previewIconSize || 44;
+      image.setDisplaySize(iconSize, iconSize);
       image.setVisible(true);
       return;
     }

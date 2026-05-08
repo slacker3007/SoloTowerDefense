@@ -740,8 +740,8 @@ export class GameScene extends Phaser.Scene {
             cost: this.towerSystem.towerCost,
           },
           {
-            innerRow: 3,
-            innerCol: 4,
+            innerRow: 1,
+            innerCol: 2,
             actionId: "backFromCraft",
             label: "",
             enabled: true,
@@ -772,8 +772,8 @@ export class GameScene extends Phaser.Scene {
           showInfoButton: false,
         },
         {
-          innerRow: 3,
-          innerCol: 4,
+          innerRow: 1,
+          innerCol: 2,
           actionId: "clearSelection",
           label: "",
           enabled: true,
