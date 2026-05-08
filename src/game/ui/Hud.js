@@ -101,8 +101,8 @@ export class Hud {
       },
       action: {
         locked: true,
-        customBounds: { x: 951, y: 290, width: 325, height: 426 },
-        bounds: { x: 951, y: 290, width: 325, height: 426 },
+        customBounds: { x: 951, y: 488, width: 325, height: 228 },
+        bounds: { x: 951, y: 488, width: 325, height: 228 },
         minWidth: 200,
         minHeight: 96,
       },
@@ -1142,17 +1142,24 @@ export class Hud {
       const occupiedCount = this._bottomVisible
         ? this._actionSlotConfigs.reduce((n, s) => n + (s ? 1 : 0), 0)
         : 0;
-      const maxCols =
-        occupiedCount === 0
-          ? 4
-          : Math.max(
-              1,
-              Math.min(4, Math.floor((maxRailW - 2 * railInnerPad + cellGap) / (actionCell + cellGap))),
-            );
+      let actionGridRowSpan = 0;
+      if (this._bottomVisible && occupiedCount > 0) {
+        let minR = 2;
+        let maxR = 0;
+        for (let gi = 0; gi < 12; gi += 1) {
+          if (!this._actionSlotConfigs[gi]) {
+            continue;
+          }
+          const r = Math.floor(gi / 4);
+          minR = Math.min(minR, r);
+          maxR = Math.max(maxR, r);
+        }
+        actionGridRowSpan = maxR - minR + 1;
+      }
       const reserveEmptyStrip =
         RESERVE_EMPTY_ACTION_RAIL && this._bottomVisible && occupiedCount === 0;
       const railRowsEst =
-        occupiedCount === 0 ? (reserveEmptyStrip ? 1 : 0) : Math.ceil(occupiedCount / maxCols);
+        occupiedCount === 0 ? (reserveEmptyStrip ? 1 : 0) : actionGridRowSpan;
       const actionStripH =
         occupiedCount === 0
           ? reserveEmptyStrip
@@ -1564,21 +1571,25 @@ export class Hud {
       }
       const n = occupiedIndices.length;
       const reserveEmptyActionRail = RESERVE_EMPTY_ACTION_RAIL && this._bottomVisible && n === 0;
-      const maxColsRail =
-        n === 0
-          ? reserveEmptyActionRail
-            ? 4
-            : 1
-          : Math.max(
-              1,
-              Math.min(4, Math.floor((maxRailW - 2 * railInnerPad + cellGap) / (actionCell + cellGap))),
-            );
-      const railRows =
-        n === 0 ? (reserveEmptyActionRail ? 1 : 0) : Math.ceil(n / maxColsRail);
+      let minActionCol = 3;
+      let maxActionCol = 0;
+      let minActionRow = 2;
+      let maxActionRow = 0;
+      for (const idx of occupiedIndices) {
+        const c = idx % 4;
+        const r = Math.floor(idx / 4);
+        minActionCol = Math.min(minActionCol, c);
+        maxActionCol = Math.max(maxActionCol, c);
+        minActionRow = Math.min(minActionRow, r);
+        maxActionRow = Math.max(maxActionRow, r);
+      }
+      const gridCols =
+        n === 0 ? (reserveEmptyActionRail ? 4 : 1) : maxActionCol - minActionCol + 1;
+      const railRows = n === 0 ? (reserveEmptyActionRail ? 1 : 0) : maxActionRow - minActionRow + 1;
       let railW =
         n === 0 && !reserveEmptyActionRail
           ? 0
-          : maxColsRail * (actionCell + cellGap) - cellGap + 2 * railInnerPad;
+          : gridCols * (actionCell + cellGap) - cellGap + 2 * railInnerPad;
       let railH =
         n === 0 && !reserveEmptyActionRail
           ? 0
@@ -1650,23 +1661,25 @@ export class Hud {
       }
 
       const showEmptyRailGhost = reserveEmptyActionRail;
+      const ghostColCount = reserveEmptyActionRail ? 4 : 1;
       for (let i = 0; i < this._actionButtons.length; i += 1) {
         const slot = this._actionSlotConfigs[i];
-        let order = occupiedIndices.indexOf(i);
-        const isGhost = Boolean(showEmptyRailGhost && !slot && i < maxColsRail);
+        const isGhost = Boolean(showEmptyRailGhost && !slot && i < ghostColCount);
+        let x = 0;
+        let y = 0;
         if (isGhost) {
-          order = i;
+          const col = i % ghostColCount;
+          const row = 0;
+          x = railInnerPad + col * (contentCellW + cellGap) + contentCellW / 2;
+          y = railInnerPad + row * (contentCellH + cellGap) + contentCellH / 2;
+        } else if (slot) {
+          const absCol = i % 4;
+          const absRow = Math.floor(i / 4);
+          const col = absCol - minActionCol;
+          const row = absRow - minActionRow;
+          x = railInnerPad + col * (contentCellW + cellGap) + contentCellW / 2;
+          y = railInnerPad + row * (contentCellH + cellGap) + contentCellH / 2;
         }
-        const col = order >= 0 ? order % maxColsRail : 0;
-        const row = order >= 0 ? Math.floor(order / maxColsRail) : 0;
-        const x =
-          order >= 0
-            ? railInnerPad + col * (contentCellW + cellGap) + contentCellW / 2
-            : 0;
-        const y =
-          order >= 0
-            ? railInnerPad + row * (contentCellH + cellGap) + contentCellH / 2
-            : 0;
         const icon = this._actionIcons[i];
         const accent = this._actionAccentFrames[i];
         const costText = this._actionCostTexts[i];

@@ -74,6 +74,7 @@ const TOWER_DOUBLE_CLICK_MS = 300;
 const DEFAULT_CAMERA_ZOOM = 0.59;
 const DEFAULT_CAMERA_SCROLL_X = -12;
 const DEFAULT_CAMERA_SCROLL_Y = 228;
+const CAMERA_VERTICAL_ONLY = true;
 
 /**
  * @typedef {Object} HudActionPlacement
@@ -1262,7 +1263,11 @@ export class GameScene extends Phaser.Scene {
     const maxSX = Math.max(0, this._mapPixelW - visW) - leftVisible;
     const minSY = Math.min(0, this._mapPixelH - visH) - topVisible;
     const maxSY = Math.max(0, this._mapPixelH - visH) - topVisible;
-    cam.setScroll(Phaser.Math.Clamp(cam.scrollX, minSX, maxSX), Phaser.Math.Clamp(cam.scrollY, minSY, maxSY));
+    const beforeX = cam.scrollX;
+    const beforeY = cam.scrollY;
+    const clampedX = CAMERA_VERTICAL_ONLY ? DEFAULT_CAMERA_SCROLL_X : Phaser.Math.Clamp(beforeX, minSX, maxSX);
+    const clampedY = Phaser.Math.Clamp(beforeY, minSY, maxSY);
+    cam.setScroll(clampedX, clampedY);
     this._syncHudCameraTelemetry();
   }
 
@@ -1528,7 +1533,11 @@ export class GameScene extends Phaser.Scene {
         const dy = pointer.y - this._lastPanY;
         this._lastPanX = pointer.x;
         this._lastPanY = pointer.y;
-        cam.scrollX -= dx / cam.zoom;
+        if (!CAMERA_VERTICAL_ONLY) {
+          cam.scrollX -= dx / cam.zoom;
+        } else {
+          cam.scrollX = DEFAULT_CAMERA_SCROLL_X;
+        }
         cam.scrollY -= dy / cam.zoom;
         this._clampCameraScroll();
         return;
@@ -1546,29 +1555,11 @@ export class GameScene extends Phaser.Scene {
     };
     this.input.on("pointerup", this._boundPointerUp);
 
-    this._boundWheel = (pointer, _over, deltaX, deltaY) => {
-      const cam = this.cameras.main;
-      const e = /** @type {UIEvent & { shiftKey?: boolean } | undefined} */ (pointer.event);
-      if (e?.shiftKey) {
-        const k = 0.25 / cam.zoom;
-        cam.scrollX += deltaX * k;
-        cam.scrollY += deltaY * k;
-        this._clampCameraScroll();
-        return;
-      }
-      const oldZoom = cam.zoom;
-      const newZoom = Phaser.Math.Clamp(oldZoom * (1 - deltaY * 0.001), CAMERA_ZOOM_MIN, CAMERA_ZOOM_MAX);
-      if (Math.abs(newZoom - oldZoom) < 1e-6) {
-        return;
-      }
-      const before = new Phaser.Math.Vector2();
-      const after = new Phaser.Math.Vector2();
-      cam.getWorldPoint(pointer.x, pointer.y, before);
-      cam.setZoom(newZoom);
-      cam.getWorldPoint(pointer.x, pointer.y, after);
-      cam.scrollX += before.x - after.x;
-      cam.scrollY += before.y - after.y;
-      this._clampCameraScroll();
+    this._boundWheel = (pointer, _objects, _deltaX, deltaY, deltaZ, event) => {
+      const cam = this.cameras?.main;
+      // Temporary requirement: disable all mouse-wheel camera behavior.
+      // Keep binding in place so we can re-enable quickly later.
+      return;
     };
     this.input.on("wheel", this._boundWheel);
 
