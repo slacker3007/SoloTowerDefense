@@ -145,6 +145,10 @@ export class GameScene extends Phaser.Scene {
     this._lastSelectionPulseKey = null;
     this._cameraPanning = false;
     this._performance = { clearedWaves: 0, leaksInWave: 0, livesAtWaveStart: STARTING_LIVES, waveTimer: 0 };
+    // On scene.restart(), old overlay references can briefly survive until recreated.
+    // Clear them before the first resize/layout pass to avoid stale-child access.
+    this._orientationHintRoot = null;
+    this._orientationHintText = null;
 
     this.map = createFreshMap001();
     this.gameState = {
@@ -1333,6 +1337,9 @@ export class GameScene extends Phaser.Scene {
     const panel = this._orientationHintRoot.list[0];
     const text = this._orientationHintRoot.list[1];
     const close = this._orientationHintRoot.list[2];
+    if (!panel || !text || !close) {
+      return;
+    }
     panel.setPosition(width * 0.5, 88);
     panel.setSize(Math.min(640, width - 30), 56);
     text.setPosition(width * 0.5, 88);
