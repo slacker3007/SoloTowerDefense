@@ -71,6 +71,9 @@ const BLUE_BARRACKS_FIRE_POINTS = [
   { x: 0, y: 42, scale: 1.35 },
 ];
 const TOWER_DOUBLE_CLICK_MS = 300;
+const DEFAULT_CAMERA_ZOOM = 0.59;
+const DEFAULT_CAMERA_SCROLL_X = -12;
+const DEFAULT_CAMERA_SCROLL_Y = 228;
 
 /**
  * @typedef {Object} HudActionPlacement
@@ -230,6 +233,9 @@ export class GameScene extends Phaser.Scene {
     this._boundResize = (size) => this.handleResize(size);
     this.scale.on(Phaser.Scale.Events.RESIZE, this._boundResize);
     this.handleResize({ width: this.scale.width, height: this.scale.height });
+    this.cameras.main.setZoom(DEFAULT_CAMERA_ZOOM);
+    this.cameras.main.setScroll(DEFAULT_CAMERA_SCROLL_X, DEFAULT_CAMERA_SCROLL_Y);
+    this._clampCameraScroll();
 
     this.unbindInput();
     this.bindInput();
@@ -1257,6 +1263,19 @@ export class GameScene extends Phaser.Scene {
     const minSY = Math.min(0, this._mapPixelH - visH) - topVisible;
     const maxSY = Math.max(0, this._mapPixelH - visH) - topVisible;
     cam.setScroll(Phaser.Math.Clamp(cam.scrollX, minSX, maxSX), Phaser.Math.Clamp(cam.scrollY, minSY, maxSY));
+    this._syncHudCameraTelemetry();
+  }
+
+  _syncHudCameraTelemetry() {
+    const cam = this.cameras?.main;
+    if (!cam || !this.hud?.setCameraTelemetry) {
+      return;
+    }
+    this.hud.setCameraTelemetry({
+      zoom: cam.zoom,
+      x: cam.scrollX,
+      y: cam.scrollY,
+    });
   }
 
   handleResize(size) {
@@ -1653,6 +1672,7 @@ export class GameScene extends Phaser.Scene {
       this.selectedBuilding,
       this.getWaveInfo(),
     );
+    this._syncHudCameraTelemetry();
   }
 
   createPauseOverlay() {
@@ -2137,6 +2157,7 @@ export class GameScene extends Phaser.Scene {
     this._updateBlueBarracksFireEffect();
     this.refreshTowerGroupSelection();
     this.updateHudActions();
+    this._syncHudCameraTelemetry();
     if (this.selectedBuilding?.kind === "barracks" && this.selectedBuilding?.label === "Blue Barracks") {
       this.selectedBuilding.hpCurrent = this.gameState.lives;
       this.selectedBuilding.hpMax = STARTING_LIVES;

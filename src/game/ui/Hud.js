@@ -67,6 +67,7 @@ export class Hud {
     /** Right chrome width used for camera occlusion in landscape split mode. */
     this._effectiveRightChromeWidth = 0;
     this._effectiveLeftChromeWidth = 0;
+    this._cameraTelemetry = { zoom: 1, x: 0, y: 0 };
     this._viewportMode = "portrait";
     this._actionButtons = [];
     /** @type {Phaser.GameObjects.Zone[]} Full-cell hit targets for action grid slots (64×64 local space). */
@@ -228,6 +229,11 @@ export class Hud {
       fontSize: "16px",
       color: "#ffffff",
     });
+    this.cameraTelemetryText = scene.add.text(0, 0, "", {
+      fontFamily: "monospace",
+      fontSize: "13px",
+      color: "#d2e4ff",
+    });
     this.contextPanelFrame = scene.add.rectangle(0, 0, 320, 130, this._hudColors.panel, 0.95);
     this.contextPanelFrame.setOrigin(0, 0);
     this.contextPanelFrame.setStrokeStyle(2, this._hudColors.panelStrokeSoft, 0.9);
@@ -343,6 +349,7 @@ export class Hud {
       this.hpText,
       this.goldText,
       this.towersText,
+      this.cameraTelemetryText,
       this.contextTitleText,
       this.contextSubtitleText,
       this.waveCountText,
@@ -557,6 +564,7 @@ export class Hud {
       this.goldText,
       this.goldDeltaText,
       this.towersText,
+      this.cameraTelemetryText,
       this.contextPanelFrame,
       this.contextDragZone,
       this.contextLockText,
@@ -605,6 +613,7 @@ export class Hud {
       this.goldText,
       this.goldDeltaText,
       this.towersText,
+      this.cameraTelemetryText,
     ];
     this.bottomUiObjects = [
       this.bottomBackground,
@@ -1160,6 +1169,8 @@ export class Hud {
       this.hpText.setStyle({ fontSize: `${statFontSize}px` });
       this.goldText.setStyle({ fontSize: `${statFontSize}px` });
       this.towersText.setStyle({ fontSize: "18px" });
+      this.cameraTelemetryText.setStyle({ fontSize: `${this.clamp(Math.round(topHeight * 0.28), 12, 16)}px` });
+      this.cameraTelemetryText.setText(this._formatCameraTelemetry());
 
       const landscapeContextScale = Number(cozyTheme.hud.landscapeContextScale) || 0.9;
       const contextTitleSize = splitLandscape
@@ -1259,6 +1270,11 @@ export class Hud {
       this.goldText.setPosition(rightPadding, centerY);
       this.hpText.setPosition(this.goldText.x - statGap - this.hpText.width, centerY);
       this.goldDeltaText.setPosition(this.goldText.x + 8, centerY - Math.max(10, Math.round(topHeight * 0.28)));
+      this.cameraTelemetryText.setOrigin(0, 0.5);
+      const cameraTextLeft = this.pauseButton.x + this.pauseButton.width + gapSm + 6;
+      const cameraTextRight = this.hpText.x - this.hpText.width - gapSm;
+      const cameraTextX = this.clamp(cameraTextLeft, cameraTextLeft, Math.max(cameraTextLeft, cameraTextRight));
+      this.cameraTelemetryText.setPosition(cameraTextX, centerY);
 
       const bottomY = Math.max(0, rootHeight - activeBottomHeight);
       const contextPanelW = splitLandscape ? rightPanelW - panelPadding : railContentW - panelPadding * 2;
@@ -1864,6 +1880,22 @@ export class Hud {
     this._viewportMode = mode === "landscape" ? "landscape" : "portrait";
   }
 
+  setCameraTelemetry({ zoom, x, y } = {}) {
+    const nextZoom = Number(zoom);
+    const nextX = Number(x);
+    const nextY = Number(y);
+    if (Number.isFinite(nextZoom)) {
+      this._cameraTelemetry.zoom = nextZoom;
+    }
+    if (Number.isFinite(nextX)) {
+      this._cameraTelemetry.x = nextX;
+    }
+    if (Number.isFinite(nextY)) {
+      this._cameraTelemetry.y = nextY;
+    }
+    this.cameraTelemetryText.setText(this._formatCameraTelemetry());
+  }
+
   setActionPanelTransform({
     scale = this.actionPanelScale,
     corner = this.actionPanelCorner,
@@ -2131,6 +2163,13 @@ export class Hud {
         this.goldDeltaText.setAlpha(1);
       },
     });
+  }
+
+  _formatCameraTelemetry() {
+    const zoom = Number.isFinite(this._cameraTelemetry.zoom) ? this._cameraTelemetry.zoom : 1;
+    const x = Number.isFinite(this._cameraTelemetry.x) ? this._cameraTelemetry.x : 0;
+    const y = Number.isFinite(this._cameraTelemetry.y) ? this._cameraTelemetry.y : 0;
+    return `Cam z:${zoom.toFixed(2)} x:${Math.round(x)} y:${Math.round(y)}`;
   }
 
 }
