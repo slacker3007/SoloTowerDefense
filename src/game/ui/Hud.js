@@ -1776,6 +1776,9 @@ export class Hud {
       for (const infoZone of this._actionInfoHitZones) {
         this._actionGridBackground.bringToTop(infoZone);
       }
+      for (const costText of this._actionCostTexts) {
+        this._actionGridBackground.bringToTop(costText);
+      }
       for (const z of this._actionHitZones) {
         this._actionGridBackground.bringToTop(z);
       }

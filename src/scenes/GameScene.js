@@ -736,18 +736,6 @@ export class GameScene extends Phaser.Scene {
             cost: this.towerSystem.towerCost,
           },
           {
-            innerRow: 1,
-            innerCol: 2,
-            actionId: "craftTypeInfo",
-            label: `Type: Basic (${this.towerSystem.towerCost}g)`,
-            enabled: false,
-            tooltipTitle: getTowerDisplayName("basic"),
-            tooltipDescription: `${getTowerDescription("basic")} ${getTowerTooltipSummary("basic")}`,
-            tooltipCost: this.towerSystem.towerCost,
-            tooltipResource: "gold",
-            tooltipWarning: canAffordTower ? "" : "Not enough gold",
-          },
-          {
             innerRow: 3,
             innerCol: 4,
             actionId: "backFromCraft",
