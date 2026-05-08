@@ -68,6 +68,7 @@ export class Hud {
     this._effectiveRightChromeWidth = 0;
     this._effectiveLeftChromeWidth = 0;
     this._cameraTelemetry = { zoom: 1, x: 0, y: 0 };
+    this._debugPanelVisible = false;
     this._viewportMode = "portrait";
     this._actionButtons = [];
     /** @type {Phaser.GameObjects.Zone[]} Full-cell hit targets for action grid slots (64×64 local space). */
@@ -93,16 +94,16 @@ export class Hud {
     this._panelWindows = {
       context: {
         locked: true,
-        customBounds: null,
-        bounds: { x: 0, y: 0, width: 320, height: 180 },
+        customBounds: { x: 4, y: 295, width: 340, height: 420 },
+        bounds: { x: 4, y: 295, width: 340, height: 420 },
         minWidth: 260,
         minHeight: 180,
       },
       action: {
         locked: true,
-        customBounds: null,
-        bounds: { x: 0, y: 0, width: 360, height: 140 },
-        minWidth: 280,
+        customBounds: { x: 947, y: 278, width: 230, height: 440 },
+        bounds: { x: 947, y: 278, width: 230, height: 440 },
+        minWidth: 200,
         minHeight: 96,
       },
     };
@@ -234,6 +235,19 @@ export class Hud {
       fontSize: "13px",
       color: "#d2e4ff",
     });
+    this.cameraTelemetryText.setVisible(false);
+    this.debugPanelBg = scene.add.rectangle(0, 0, 340, 76, 0x0d1522, 0.9);
+    this.debugPanelBg.setOrigin(0, 0);
+    this.debugPanelBg.setStrokeStyle(1, 0x5f7aa3, 0.95);
+    this.debugPanelText = scene.add.text(0, 0, "", {
+      fontFamily: "monospace",
+      fontSize: "13px",
+      color: "#d2e4ff",
+      lineSpacing: 4,
+    });
+    this.debugPanelText.setOrigin(0, 0);
+    this.debugPanelRoot = scene.add.container(0, 0, [this.debugPanelBg, this.debugPanelText]);
+    this.debugPanelRoot.setVisible(false);
     this.contextPanelFrame = scene.add.rectangle(0, 0, 320, 130, this._hudColors.panel, 0.95);
     this.contextPanelFrame.setOrigin(0, 0);
     this.contextPanelFrame.setStrokeStyle(2, this._hudColors.panelStrokeSoft, 0.9);
@@ -565,6 +579,7 @@ export class Hud {
       this.goldDeltaText,
       this.towersText,
       this.cameraTelemetryText,
+      this.debugPanelRoot,
       this.contextPanelFrame,
       this.contextDragZone,
       this.contextLockText,
@@ -613,7 +628,6 @@ export class Hud {
       this.goldText,
       this.goldDeltaText,
       this.towersText,
-      this.cameraTelemetryText,
     ];
     this.bottomUiObjects = [
       this.bottomBackground,
@@ -1170,7 +1184,6 @@ export class Hud {
       this.goldText.setStyle({ fontSize: `${statFontSize}px` });
       this.towersText.setStyle({ fontSize: "18px" });
       this.cameraTelemetryText.setStyle({ fontSize: `${this.clamp(Math.round(topHeight * 0.28), 12, 16)}px` });
-      this.cameraTelemetryText.setText(this._formatCameraTelemetry());
 
       const landscapeContextScale = Number(cozyTheme.hud.landscapeContextScale) || 0.9;
       const contextTitleSize = splitLandscape
@@ -1275,6 +1288,9 @@ export class Hud {
       const cameraTextRight = this.hpText.x - this.hpText.width - gapSm;
       const cameraTextX = this.clamp(cameraTextLeft, cameraTextLeft, Math.max(cameraTextLeft, cameraTextRight));
       this.cameraTelemetryText.setPosition(cameraTextX, centerY);
+      const debugPad = 8;
+      this.debugPanelRoot.setPosition(contentX + debugPad, this.topBarHeight + debugPad);
+      this._refreshDebugTelemetryText();
 
       const bottomY = Math.max(0, rootHeight - activeBottomHeight);
       const contextPanelW = splitLandscape ? rightPanelW - panelPadding : railContentW - panelPadding * 2;
@@ -1284,23 +1300,6 @@ export class Hud {
       const splitPanelTop = splitLandscape ? this.topBarHeight + panelPadding : yCursor;
       const splitPanelBottomLimit = splitLandscape ? bottomY - panelPadding : rootHeight - panelPadding;
       const splitPanelH = splitLandscape ? Math.max(120, splitPanelBottomLimit - splitPanelTop) : 0;
-
-      if (splitLandscape && !this._panelWindows.context.customBounds) {
-        this._panelWindows.context.customBounds = {
-          x: 8,
-          y: this.topBarHeight + Math.round(rootHeight * 0.36),
-          width: this.clamp(rightPanelW, 280, 380),
-          height: Math.max(160, Math.round(rootHeight * 0.34)),
-        };
-      }
-      if (splitLandscape && !this._panelWindows.action.customBounds) {
-        this._panelWindows.action.customBounds = {
-          x: rootWidth - Math.max(300, Math.round(rightPanelW * 0.95)) - 10,
-          y: rootHeight - Math.max(220, Math.round(rootHeight * 0.33)) - 10,
-          width: Math.max(300, Math.round(rightPanelW * 0.95)),
-          height: Math.max(220, Math.round(rootHeight * 0.33)),
-        };
-      }
 
       if (splitLandscape && this._bottomVisible) {
         this.contextPanelFrame.setPosition(contextBaseX, splitPanelTop);
@@ -1893,7 +1892,21 @@ export class Hud {
     if (Number.isFinite(nextY)) {
       this._cameraTelemetry.y = nextY;
     }
-    this.cameraTelemetryText.setText(this._formatCameraTelemetry());
+    this._refreshDebugTelemetryText();
+  }
+
+  toggleDebugPanelVisibility() {
+    this.setDebugPanelVisible(!this._debugPanelVisible);
+  }
+
+  setDebugPanelVisible(visible) {
+    this._debugPanelVisible = Boolean(visible);
+    this._refreshDebugTelemetryText();
+    this.debugPanelRoot?.setVisible(this._debugPanelVisible);
+  }
+
+  isDebugPanelVisible() {
+    return Boolean(this._debugPanelVisible);
   }
 
   setActionPanelTransform({
@@ -2170,6 +2183,31 @@ export class Hud {
     const x = Number.isFinite(this._cameraTelemetry.x) ? this._cameraTelemetry.x : 0;
     const y = Number.isFinite(this._cameraTelemetry.y) ? this._cameraTelemetry.y : 0;
     return `Cam z:${zoom.toFixed(2)} x:${Math.round(x)} y:${Math.round(y)}`;
+  }
+
+  _formatPanelTelemetry(label, rect, { visible = true } = {}) {
+    if (!visible || !rect) {
+      return `${label} hidden`;
+    }
+    return `${label} x:${Math.round(rect.x)} y:${Math.round(rect.y)} w:${Math.round(rect.width)} h:${Math.round(rect.height)}`;
+  }
+
+  _refreshDebugTelemetryText() {
+    if (!this.debugPanelText || !this.debugPanelBg) {
+      return;
+    }
+    const camLine = this._formatCameraTelemetry();
+    const waveLine = this._formatPanelTelemetry("Wave", this._panelWindows?.context?.bounds, {
+      visible: this._bottomVisible && this._contextMode === "wave",
+    });
+    const actionLine = this._formatPanelTelemetry("Action", this._panelWindows?.action?.bounds, {
+      visible: this._bottomVisible,
+    });
+    this.debugPanelText.setText(`${camLine}\n${waveLine}\n${actionLine}`);
+    const pad = 8;
+    this.debugPanelText.setPosition(pad, pad);
+    this.debugPanelBg.setSize(this.debugPanelText.width + pad * 2, this.debugPanelText.height + pad * 2);
+    this.debugPanelRoot.setVisible(this._debugPanelVisible);
   }
 
 }

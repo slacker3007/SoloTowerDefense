@@ -233,9 +233,7 @@ export class GameScene extends Phaser.Scene {
     this._boundResize = (size) => this.handleResize(size);
     this.scale.on(Phaser.Scale.Events.RESIZE, this._boundResize);
     this.handleResize({ width: this.scale.width, height: this.scale.height });
-    this.cameras.main.setZoom(DEFAULT_CAMERA_ZOOM);
-    this.cameras.main.setScroll(DEFAULT_CAMERA_SCROLL_X, DEFAULT_CAMERA_SCROLL_Y);
-    this._clampCameraScroll();
+    this._applyInitialCameraPose();
 
     this.unbindInput();
     this.bindInput();
@@ -243,7 +241,7 @@ export class GameScene extends Phaser.Scene {
     this.createRunEndOverlay();
     this.createOrientationHintOverlay();
     ensureUnitHpOverlay(this);
-    this.syncHudForEditorMode();
+    this.syncHudForEditorMode({ clampCamera: false });
     this.updateHudActions();
     this.hud.render(
       this.gameState,
@@ -1244,11 +1242,13 @@ export class GameScene extends Phaser.Scene {
     this.debugOverlay.redraw();
   }
 
-  syncHudForEditorMode() {
+  syncHudForEditorMode({ clampCamera = true } = {}) {
     const editorEnabled = Boolean(this.editor?.enabled);
     this.hud?.setTopVisible(true);
     this.hud?.setBottomVisible(!editorEnabled);
-    this._clampCameraScroll();
+    if (clampCamera) {
+      this._clampCameraScroll();
+    }
   }
 
   _clampCameraScroll() {
@@ -1276,6 +1276,13 @@ export class GameScene extends Phaser.Scene {
       x: cam.scrollX,
       y: cam.scrollY,
     });
+  }
+
+  _applyInitialCameraPose() {
+    this.cameras.main.setZoom(DEFAULT_CAMERA_ZOOM);
+    this.cameras.main.setScroll(DEFAULT_CAMERA_SCROLL_X, DEFAULT_CAMERA_SCROLL_Y);
+    // Intentionally do not clamp here: user expects exact startup pose.
+    this._syncHudCameraTelemetry();
   }
 
   handleResize(size) {
@@ -1387,6 +1394,10 @@ export class GameScene extends Phaser.Scene {
     if (kb && this._boundKeyDebug) {
       kb.off("keydown-G", this._boundKeyDebug);
       this._boundKeyDebug = null;
+    }
+    if (kb && this._boundKeyHudDebug) {
+      kb.off("keydown-F3", this._boundKeyHudDebug);
+      this._boundKeyHudDebug = null;
     }
     if (kb && this._boundKeyPause) {
       kb.off("keydown-P", this._boundKeyPause);
@@ -1565,6 +1576,10 @@ export class GameScene extends Phaser.Scene {
       this.debugOverlay.toggle();
     };
     this.input.keyboard.on("keydown-G", this._boundKeyDebug);
+    this._boundKeyHudDebug = () => {
+      this.hud?.toggleDebugPanelVisibility?.();
+    };
+    this.input.keyboard.on("keydown-F3", this._boundKeyHudDebug);
 
     this._boundKeyPause = () => {
       if (this.editor.enabled) {
