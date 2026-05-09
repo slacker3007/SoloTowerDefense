@@ -2125,6 +2125,11 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
+    if (this.waveSystem.isCampaignComplete()) {
+      this.endRun("victory");
+      return;
+    }
+
     if (this.gameState.wave !== this.waveSystem.waveIndex) {
       this._performance.clearedWaves += 1;
       const livesLostInWave = Math.max(0, this._performance.livesAtWaveStart - this.gameState.lives);

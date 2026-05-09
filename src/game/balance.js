@@ -351,9 +351,9 @@ export const enemyArchetypes = {
   runner: { role: "fast", hpMultiplier: 0.7, speedMultiplier: 1.65, rewardMultiplier: 1.0, tags: [] },
   brute: { role: "tank", hpMultiplier: 2.4, speedMultiplier: 0.58, rewardMultiplier: 1.3, tags: ["armor", "tank"] },
   swarm: { role: "swarm", hpMultiplier: 0.42, speedMultiplier: 1.06, rewardMultiplier: 0.85, tags: [] },
-  linkedPack: { role: "fast", hpMultiplier: 0.85, speedMultiplier: 1.35, rewardMultiplier: 1.1, tags: ["linkedPack"] },
+  linked: { role: "fast", hpMultiplier: 0.85, speedMultiplier: 1.35, rewardMultiplier: 1.1, tags: ["linkedPack"] },
   hoarder: { role: "normal", hpMultiplier: 1.05, speedMultiplier: 1.12, rewardMultiplier: 1.0, tags: ["hoarder"], bonusGoldOnKill: 6 },
-  shieldedMage: {
+  shielded: {
     role: "elite",
     hpMultiplier: 1.05,
     speedMultiplier: 0.9,
@@ -377,21 +377,21 @@ export const enemyArchetypes = {
     tags: ["splitter"],
     splitOnDeath: { childType: "swarm", count: 2 },
   },
-  fireResistSwarm: {
+  fire_swarm: {
     role: "swarm",
     hpMultiplier: 0.48,
     speedMultiplier: 1.08,
     rewardMultiplier: 0.9,
     tags: ["fireResist"],
   },
-  slowImmuneRunner: {
+  swift_runner: {
     role: "fast",
     hpMultiplier: 0.8,
     speedMultiplier: 1.75,
     rewardMultiplier: 1.1,
     tags: ["slowResist", "slowImmune"],
   },
-  siegeGolem: {
+  siege_golem: {
     role: "elite",
     hpMultiplier: 7.5,
     speedMultiplier: 0.45,
@@ -403,159 +403,102 @@ export const enemyArchetypes = {
       { threshold: 0.25, type: "swarm", count: 2 },
     ],
   },
+  ancient_golem: {
+    role: "elite",
+    hpMultiplier: 10.5,
+    speedMultiplier: 0.4,
+    rewardMultiplier: 3.8,
+    tags: ["boss", "armor", "tank", "ancient"],
+    spawnOnThresholds: [
+      { threshold: 0.75, type: "runner", count: 3 },
+      { threshold: 0.5, type: "swarm", count: 4 },
+      { threshold: 0.25, type: "shielded", count: 2 },
+    ],
+  },
+  colossus: {
+    role: "elite",
+    hpMultiplier: 14.0,
+    speedMultiplier: 0.34,
+    rewardMultiplier: 4.5,
+    tags: ["boss", "armor", "tank", "colossus"],
+    shieldHpMultiplier: 0.9,
+    spawnOnThresholds: [
+      { threshold: 0.75, type: "brute", count: 2 },
+      { threshold: 0.5, type: "swarm", count: 6 },
+      { threshold: 0.25, type: "runner", count: 4 },
+    ],
+  },
+  worldbreaker: {
+    role: "elite",
+    hpMultiplier: 20.0,
+    speedMultiplier: 0.28,
+    rewardMultiplier: 8.0,
+    tags: ["boss", "armor", "tank", "worldbreaker"],
+    shieldHpMultiplier: 1.2,
+    regenPerSecondMultiplier: 0.012,
+    spawnOnThresholds: [
+      { threshold: 0.75, type: "swarm", count: 6 },
+      { threshold: 0.5, type: "runner", count: 6 },
+      { threshold: 0.25, type: "shielded", count: 4 },
+    ],
+  },
 };
 
 export const scriptedWaveProgram = [
-  { phase: "foundation", role: "normal", packs: [{ type: "grunt", count: 8 }] },
-  { phase: "foundation", role: "normal", packs: [{ type: "grunt", count: 12, speedMultiplier: 1.08 }] },
-  {
-    phase: "foundation",
-    role: "fast",
-    packs: [
-      { type: "grunt", count: 8 },
-      { type: "runner", count: 4 },
-    ],
-  },
-  { phase: "foundation", role: "swarm", packs: [{ type: "grunt", count: 16 }] },
-  {
-    phase: "foundation",
-    role: "swarm",
-    packs: [
-      { type: "grunt", count: 12 },
-      { type: "swarm", count: 8 },
-    ],
-  },
-  {
-    phase: "roleIntro",
-    role: "tank",
-    packs: [
-      { type: "brute", count: 4 },
-      { type: "grunt", count: 6 },
-    ],
-  },
-  {
-    phase: "roleIntro",
-    role: "fast",
-    packs: [
-      { type: "runner", count: 10 },
-      { type: "grunt", count: 6 },
-    ],
-  },
-  {
-    phase: "roleIntro",
-    role: "fast",
-    packs: [
-      { type: "linkedPack", count: 8 },
-      { type: "runner", count: 4 },
-    ],
-  },
-  {
-    phase: "roleIntro",
-    role: "mixed",
-    packs: [
-      { type: "brute", count: 2 },
-      { type: "swarm", count: 10 },
-      { type: "runner", count: 4 },
-    ],
-  },
-  {
-    phase: "roleIntro",
-    role: "economy",
-    packs: [
-      { type: "hoarder", count: 6 },
-      { type: "grunt", count: 8 },
-    ],
-  },
-  {
-    phase: "synergy",
-    role: "elite",
-    packs: [
-      { type: "shieldedMage", count: 6 },
-      { type: "grunt", count: 6 },
-    ],
-  },
-  {
-    phase: "synergy",
-    role: "tank",
-    packs: [
-      { type: "regenerator", count: 4 },
-      { type: "swarm", count: 8 },
-    ],
-  },
-  {
-    phase: "synergy",
-    role: "mixed",
-    packs: [
-      { type: "splitter", count: 6 },
-      { type: "runner", count: 6 },
-    ],
-  },
-  {
-    phase: "synergy",
-    role: "mixed",
-    packs: [
-      { type: "brute", count: 2 },
-      { type: "swarm", count: 6 },
-      { type: "shieldedMage", count: 4 },
-      { type: "runner", count: 4 },
-    ],
-  },
-  {
-    phase: "synergy",
-    role: "mixed",
-    packs: [
-      { type: "brute", count: 3 },
-      { type: "shieldedMage", count: 3 },
-      { type: "swarm", count: 6 },
-      { type: "runner", count: 4 },
-    ],
-  },
-  {
-    phase: "punishment",
-    role: "swarm",
-    packs: [
-      { type: "fireResistSwarm", count: 6 },
-      { type: "brute", count: 4 },
-    ],
-  },
-  {
-    phase: "punishment",
-    role: "fast",
-    packs: [
-      { type: "slowImmuneRunner", count: 6 },
-      { type: "shieldedMage", count: 6 },
-    ],
-  },
-  {
-    phase: "punishment",
-    role: "economy",
-    interval: 0.62,
-    packs: [
-      { type: "hoarder", count: 8 },
-      { type: "splitter", count: 6 },
-    ],
-  },
-  {
-    phase: "punishment",
-    role: "mixed",
-    packs: [
-      { type: "brute", count: 2 },
-      { type: "runner", count: 6 },
-      { type: "swarm", count: 6 },
-      { type: "shieldedMage", count: 4 },
-      { type: "regenerator", count: 2 },
-    ],
-  },
-  {
-    phase: "punishment",
-    role: "boss",
-    maxAlive: 18,
-    packs: [
-      { type: "siegeGolem", count: 1 },
-      { type: "runner", count: 6 },
-      { type: "swarm", count: 6 },
-    ],
-  },
+  { phase: "early", name: "Warmup", role: "normal", packs: [{ type: "grunt", count: 8 }] },
+  { phase: "early", name: "More Targets", role: "normal", packs: [{ type: "grunt", count: 12 }] },
+  { phase: "early", name: "Fast Ones", role: "fast", packs: [{ type: "grunt", count: 8 }, { type: "runner", count: 4 }] },
+  { phase: "early", name: "Crowded Path", role: "normal", packs: [{ type: "grunt", count: 16 }] },
+  { phase: "early", name: "Swarm Intro", role: "swarm", packs: [{ type: "grunt", count: 12 }, { type: "swarm", count: 8 }] },
+  { phase: "early", name: "Heavy Armor", role: "tank", packs: [{ type: "brute", count: 4 }, { type: "grunt", count: 6 }] },
+  { phase: "early", name: "Need for Control", role: "fast", packs: [{ type: "runner", count: 10 }, { type: "grunt", count: 6 }] },
+  { phase: "early", name: "Chain Value", role: "fast", packs: [{ type: "linked", count: 8 }, { type: "runner", count: 4 }] },
+  { phase: "early", name: "Mixed Pressure", role: "mixed", packs: [{ type: "brute", count: 2 }, { type: "swarm", count: 10 }, { type: "runner", count: 4 }] },
+  { phase: "early", name: "Greed Test", role: "economy", packs: [{ type: "hoarder", count: 6 }, { type: "grunt", count: 8 }] },
+
+  { phase: "mid", name: "Arcane Shields", role: "elite", packs: [{ type: "shielded", count: 6 }, { type: "grunt", count: 6 }] },
+  { phase: "mid", name: "Regeneration", role: "tank", packs: [{ type: "regenerator", count: 4 }, { type: "swarm", count: 8 }] },
+  { phase: "mid", name: "Splitting Trouble", role: "mixed", packs: [{ type: "splitter", count: 6 }, { type: "runner", count: 6 }] },
+  { phase: "mid", name: "Combined Arms", role: "mixed", packs: [{ type: "brute", count: 2 }, { type: "swarm", count: 6 }, { type: "shielded", count: 4 }, { type: "runner", count: 4 }] },
+  { phase: "mid", name: "Build Check", role: "mixed", packs: [{ type: "brute", count: 3 }, { type: "shielded", count: 3 }, { type: "swarm", count: 6 }, { type: "runner", count: 4 }] },
+  { phase: "mid", name: "Fire Resistant", role: "swarm", packs: [{ type: "fire_swarm", count: 8 }, { type: "brute", count: 4 }] },
+  { phase: "mid", name: "Slow Immune", role: "fast", packs: [{ type: "swift_runner", count: 6 }, { type: "shielded", count: 6 }] },
+  { phase: "mid", name: "Economy Trap", role: "economy", interval: 0.62, packs: [{ type: "hoarder", count: 8 }, { type: "splitter", count: 6 }] },
+  { phase: "mid", name: "Chaos Rising", role: "mixed", packs: [{ type: "brute", count: 2 }, { type: "runner", count: 6 }, { type: "swarm", count: 6 }, { type: "shielded", count: 4 }, { type: "regenerator", count: 2 }] },
+  { phase: "mid", name: "First Siege", role: "boss", maxAlive: 18, packs: [{ type: "siege_golem", count: 1 }, { type: "runner", count: 6 }, { type: "swarm", count: 6 }] },
+
+  { phase: "expansion", name: "Endurance", role: "mixed", packs: [{ type: "grunt", count: 20 }, { type: "runner", count: 10 }] },
+  { phase: "expansion", name: "Heavy March", role: "tank", packs: [{ type: "brute", count: 8 }] },
+  { phase: "expansion", name: "Lightning Storm", role: "fast", packs: [{ type: "linked", count: 16 }, { type: "swarm", count: 10 }] },
+  { phase: "expansion", name: "Frozen Panic", role: "fast", packs: [{ type: "runner", count: 14 }, { type: "swift_runner", count: 6 }] },
+  { phase: "expansion", name: "Corruption", role: "elite", packs: [{ type: "shielded", count: 10 }, { type: "regenerator", count: 6 }] },
+  { phase: "expansion", name: "Treasure Caravan", role: "economy", packs: [{ type: "hoarder", count: 14 }, { type: "runner", count: 8 }] },
+  { phase: "expansion", name: "Burning Tide", role: "swarm", packs: [{ type: "swarm", count: 24 }, { type: "splitter", count: 8 }] },
+  { phase: "expansion", name: "Crushing Force", role: "tank", packs: [{ type: "brute", count: 10 }, { type: "shielded", count: 6 }] },
+  { phase: "expansion", name: "Adaptive Threat", role: "mixed", packs: [{ type: "fire_swarm", count: 10 }, { type: "swift_runner", count: 8 }, { type: "shielded", count: 6 }] },
+  { phase: "expansion", name: "Second Siege", role: "boss", maxAlive: 20, packs: [{ type: "ancient_golem", count: 1 }, { type: "swarm", count: 12 }, { type: "runner", count: 8 }] },
+
+  { phase: "late", name: "No Weakness", role: "mixed", packs: [{ type: "brute", count: 6 }, { type: "runner", count: 8 }, { type: "shielded", count: 8 }, { type: "swarm", count: 10 }] },
+  { phase: "late", name: "Unstoppable", role: "fast", packs: [{ type: "swift_runner", count: 12 }, { type: "linked", count: 10 }] },
+  { phase: "late", name: "Decay", role: "elite", packs: [{ type: "regenerator", count: 10 }, { type: "shielded", count: 8 }] },
+  { phase: "late", name: "Overrun", role: "swarm", packs: [{ type: "swarm", count: 30 }, { type: "splitter", count: 12 }] },
+  { phase: "late", name: "Wall of Steel", role: "tank", packs: [{ type: "brute", count: 14 }] },
+  { phase: "late", name: "Relentless", role: "mixed", packs: [{ type: "runner", count: 12 }, { type: "swarm", count: 16 }, { type: "shielded", count: 8 }] },
+  { phase: "late", name: "Arcane Collapse", role: "elite", packs: [{ type: "shielded", count: 12 }, { type: "linked", count: 12 }] },
+  { phase: "late", name: "Toxic Bloom", role: "swarm", packs: [{ type: "regenerator", count: 10 }, { type: "swarm", count: 20 }] },
+  { phase: "late", name: "Shattered Line", role: "mixed", packs: [{ type: "splitter", count: 16 }, { type: "runner", count: 12 }] },
+  { phase: "late", name: "Third Siege", role: "boss", maxAlive: 20, packs: [{ type: "colossus", count: 1 }, { type: "brute", count: 8 }, { type: "swarm", count: 16 }] },
+
+  { phase: "endgame", name: "Attrition", role: "elite", packs: [{ type: "brute", count: 10 }, { type: "shielded", count: 10 }, { type: "regenerator", count: 8 }] },
+  { phase: "endgame", name: "Inferno Rush", role: "fast", packs: [{ type: "fire_swarm", count: 20 }, { type: "runner", count: 14 }] },
+  { phase: "endgame", name: "Impossible Speed", role: "fast", packs: [{ type: "swift_runner", count: 16 }, { type: "linked", count: 12 }] },
+  { phase: "endgame", name: "Golden Temptation", role: "economy", packs: [{ type: "hoarder", count: 20 }, { type: "shielded", count: 10 }] },
+  { phase: "endgame", name: "Cataclysm", role: "mixed", packs: [{ type: "brute", count: 12 }, { type: "splitter", count: 16 }, { type: "swarm", count: 20 }] },
+  { phase: "endgame", name: "Everything At Once", role: "mixed", packs: [{ type: "runner", count: 12 }, { type: "shielded", count: 12 }, { type: "regenerator", count: 10 }, { type: "splitter", count: 10 }, { type: "swarm", count: 16 }] },
+  { phase: "endgame", name: "Last Resistance", role: "tank", packs: [{ type: "brute", count: 16 }, { type: "shielded", count: 12 }] },
+  { phase: "endgame", name: "Collapse", role: "fast", packs: [{ type: "swift_runner", count: 18 }, { type: "splitter", count: 18 }, { type: "linked", count: 14 }] },
+  { phase: "endgame", name: "Before the End", role: "mixed", packs: [{ type: "brute", count: 12 }, { type: "runner", count: 16 }, { type: "shielded", count: 12 }, { type: "regenerator", count: 10 }, { type: "swarm", count: 20 }] },
+  { phase: "endgame", name: "The Worldbreaker", role: "boss", boss: true, maxAlive: 22, packs: [{ type: "worldbreaker", count: 1 }, { type: "brute", count: 10 }, { type: "runner", count: 12 }, { type: "swarm", count: 24 }] },
 ];
 
 export const waveProgram = [
@@ -933,7 +876,11 @@ export function getWaveStep(waveIndex) {
 }
 
 export function getScriptedWave(waveIndex) {
-  return scriptedWaveProgram[Math.max(0, Math.min(scriptedWaveProgram.length - 1, waveIndex - 1))] ?? null;
+  const index = Math.max(0, waveIndex - 1);
+  if (index >= scriptedWaveProgram.length) {
+    return null;
+  }
+  return scriptedWaveProgram[index] ?? null;
 }
 
 export function getEnemyArchetype(type) {

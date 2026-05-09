@@ -14,6 +14,7 @@ const ROLE_VISUALS = {
   swarm: { textureKey: "redMonkRunSheet", animationKey: "red-monk-run", scale: 0.5 },
   elite: { textureKey: "redLancerRunSheet", animationKey: "red-lancer-run", scale: 0.5 },
 };
+const MAX_WAVES = 50;
 
 export class WaveSystem {
   constructor(enemySystem) {
@@ -25,9 +26,11 @@ export class WaveSystem {
       speedScale: 1,
       countOffset: 0,
     };
+    this.campaignComplete = false;
   }
 
   startAutoSpawner(_spawnerDefinition) {
+    this.campaignComplete = false;
     this.waveIndex += 1;
     this.spawner = this._buildSpawnerForWave(this.waveIndex);
   }
@@ -39,6 +42,9 @@ export class WaveSystem {
   }
 
   _buildSpawnerForWave(waveIndex) {
+    if (waveIndex > MAX_WAVES) {
+      return null;
+    }
     const scriptedWave = getScriptedWave(waveIndex);
     if (scriptedWave) {
       return this._buildScriptedSpawnerForWave(waveIndex, scriptedWave);
@@ -133,7 +139,7 @@ export class WaveSystem {
   }
 
   update(deltaSeconds) {
-    if (!this.spawner) {
+    if (!this.spawner || this.campaignComplete) {
       return;
     }
 
@@ -147,6 +153,11 @@ export class WaveSystem {
       return;
     }
     if (this.spawner.totalSpawned >= this.spawner.spawnTarget && activeCount === 0) {
+      if (this.waveIndex >= MAX_WAVES) {
+        this.campaignComplete = true;
+        this.spawner = null;
+        return;
+      }
       this.waveIndex += 1;
       this.spawner = this._buildSpawnerForWave(this.waveIndex);
       return;
@@ -209,7 +220,7 @@ export class WaveSystem {
   }
 
   getWavePreview(waveIndex) {
-    const safeWave = Math.max(1, Number(waveIndex) || 1);
+    const safeWave = Math.max(1, Math.min(MAX_WAVES, Number(waveIndex) || 1));
     const scripted = getScriptedWave(safeWave);
     const step = scripted ?? getWaveStep(safeWave);
     const role = typeof step?.role === "string" && step.role.length > 0 ? step.role : "normal";
@@ -229,10 +240,15 @@ export class WaveSystem {
 
   getWaveHudPreview() {
     const currentWave = Math.max(1, Number(this.waveIndex) || 1);
+    const canShowNext = !this.campaignComplete && currentWave < MAX_WAVES;
     return {
       current: this.getWavePreview(currentWave),
-      next: this.getWavePreview(currentWave + 1),
+      next: canShowNext ? this.getWavePreview(currentWave + 1) : null,
     };
+  }
+
+  isCampaignComplete() {
+    return this.campaignComplete;
   }
 
   _buildEnemyTags(role, waveIndex) {
