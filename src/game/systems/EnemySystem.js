@@ -2,7 +2,7 @@ import { buildDefaultPathMask, computeRouteFromPathMask } from "../maps/enemyPat
 import { ensurePathMaskGrid } from "../maps/mapUtils";
 import { cellToWorld, worldToCell } from "../maps/tileRules";
 import { createUnitHpBar } from "../ui/UnitHpBar";
-import { balanceRules, getStatusColors, STATUS_PRIORITY } from "../balance";
+import { balanceRules, getEnemySpriteHpScaleMultiplier, getStatusColors, STATUS_PRIORITY } from "../balance";
 
 const ENEMY_HP_BAR_Y_OFFSET = 52;
 const STATUS_RING_OFFSET_Y = 12;
@@ -84,6 +84,9 @@ export class EnemySystem {
     const textureKey = typeof visual.textureKey === "string" ? visual.textureKey : "redWarriorRunSheet";
     const animationKey = typeof visual.animationKey === "string" ? visual.animationKey : "red-warrior-run";
     const scale = Number.isFinite(visual.scale) ? visual.scale : 0.5;
+    const hpScale = getEnemySpriteHpScaleMultiplier(definition.hp);
+    const finalScale = scale * hpScale;
+    const hpBarYOffset = ENEMY_HP_BAR_Y_OFFSET * (finalScale / Math.max(scale, 1e-3));
     const fallbackTextureKey = "redWarriorRunSheet";
     const fallbackAnimationKey = "red-warrior-run";
 
@@ -95,7 +98,7 @@ export class EnemySystem {
         : null;
     if (resolvedTextureKey) {
       sprite = this.scene.add.sprite(startWorld.x, startWorld.y, resolvedTextureKey, 0);
-      sprite.setScale(scale);
+      sprite.setScale(finalScale);
       const resolvedAnimationKey = this.scene.anims.exists(animationKey)
         ? animationKey
         : this.scene.anims.exists(fallbackAnimationKey)
@@ -106,6 +109,7 @@ export class EnemySystem {
       }
     } else {
       sprite = this.scene.add.circle(startWorld.x, startWorld.y, 14, 0xcf3f3f);
+      sprite.setScale(finalScale);
     }
 
     const tc = path[waypointIndex];
@@ -137,6 +141,7 @@ export class EnemySystem {
       spawnOnThresholds: Array.isArray(definition.spawnOnThresholds) ? definition.spawnOnThresholds.map((entry) => ({ ...entry })) : [],
       triggeredThresholds: new Set(),
       goldBonusOnKill: Math.max(0, Number(definition.bonusGoldOnKill) || 0),
+      hpBarYOffset,
     };
     this._warnedNoPath = false;
 
@@ -147,7 +152,7 @@ export class EnemySystem {
     enemy.hpBar = createUnitHpBar(this.scene, {
       style: "small",
       worldX: startWorld.x,
-      worldY: startWorld.y - ENEMY_HP_BAR_Y_OFFSET,
+      worldY: startWorld.y - hpBarYOffset,
     });
     if (enemy.hpBar) {
       enemy.hpBar.setRatio(1);
@@ -171,9 +176,9 @@ export class EnemySystem {
       if (distance < enemy.speed * deltaSeconds) {
         enemy.sprite.x = target.x;
         enemy.sprite.y = target.y;
-        enemy.hpBar?.setWorldPosition(enemy.sprite.x, enemy.sprite.y - ENEMY_HP_BAR_Y_OFFSET);
+        enemy.hpBar?.setWorldPosition(enemy.sprite.x, enemy.sprite.y - enemy.hpBarYOffset);
         if (enemy.statusFx) {
-          enemy.statusFx.setPosition(enemy.sprite.x, enemy.sprite.y - ENEMY_HP_BAR_Y_OFFSET - STATUS_RING_OFFSET_Y);
+          enemy.statusFx.setPosition(enemy.sprite.x, enemy.sprite.y - enemy.hpBarYOffset - STATUS_RING_OFFSET_Y);
         }
         const advanced = this._advanceWaypoint(enemy);
         if (!advanced) {
@@ -189,9 +194,9 @@ export class EnemySystem {
       if (typeof enemy.sprite.setFlipX === "function") {
         enemy.sprite.setFlipX(nx < 0);
       }
-      enemy.hpBar?.setWorldPosition(enemy.sprite.x, enemy.sprite.y - ENEMY_HP_BAR_Y_OFFSET);
+      enemy.hpBar?.setWorldPosition(enemy.sprite.x, enemy.sprite.y - enemy.hpBarYOffset);
       if (enemy.statusFx) {
-        enemy.statusFx.setPosition(enemy.sprite.x, enemy.sprite.y - ENEMY_HP_BAR_Y_OFFSET - STATUS_RING_OFFSET_Y);
+        enemy.statusFx.setPosition(enemy.sprite.x, enemy.sprite.y - enemy.hpBarYOffset - STATUS_RING_OFFSET_Y);
       }
     }
   }
@@ -415,7 +420,7 @@ export class EnemySystem {
       enemy.sprite.setTint(colors.tint);
     }
     const ringX = enemy.sprite.x;
-    const ringY = enemy.sprite.y - ENEMY_HP_BAR_Y_OFFSET - STATUS_RING_OFFSET_Y;
+    const ringY = enemy.sprite.y - enemy.hpBarYOffset - STATUS_RING_OFFSET_Y;
     if (!enemy.statusFx) {
       const gfx = this.scene.add.graphics();
       gfx.setDepth(35);

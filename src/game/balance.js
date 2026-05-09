@@ -592,6 +592,12 @@ export const balanceRules = {
     struggle: { hpScale: 1, speedScale: 0.9, countOffset: -1 },
     neutral: { hpScale: 1, speedScale: 1, countOffset: 0 },
   },
+  /** Visual scale vs max HP at spawn (sublinear so late waves stay readable). */
+  enemySpriteHpScale: {
+    exponent: 0.42,
+    minMultiplier: 0.85,
+    maxMultiplier: 2.2,
+  },
 };
 
 export function toWorldRange(rangeTiles) {
@@ -892,6 +898,20 @@ export function getTowerEffectiveDps(towerType, damage, cooldownSeconds) {
 
 export function getWaveBaseHp(waveIndex) {
   return 50 * 1.16 ** Math.max(0, waveIndex - 1);
+}
+
+/**
+ * Multiplier applied to enemy sprite `visual.scale` from max HP at spawn.
+ * Baseline: wave 1 base HP (`getWaveBaseHp(1)`).
+ * @param {number} maxHp
+ * @returns {number}
+ */
+export function getEnemySpriteHpScaleMultiplier(maxHp) {
+  const cfg = balanceRules.enemySpriteHpScale;
+  const refHp = Math.max(1, getWaveBaseHp(1));
+  const hp = Math.max(1, Number(maxHp) || 0);
+  const raw = (hp / refHp) ** cfg.exponent;
+  return Math.min(cfg.maxMultiplier, Math.max(cfg.minMultiplier, raw));
 }
 
 export function getWaveBaseCount(waveIndex) {
