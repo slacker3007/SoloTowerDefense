@@ -12,6 +12,8 @@ import { cozyTheme } from "./CozyTheme";
 /** Keep action rail chrome (one empty row) visible when no slots are configured. */
 const RESERVE_EMPTY_ACTION_RAIL = true;
 
+const DETAILS_CLOSE_ICON_KEY = "detailsCloseIcon09";
+
 export class Hud {
   /**
    * @param {Phaser.Scene} scene
@@ -87,6 +89,7 @@ export class Hud {
     this._topVisible = true;
     this._bottomVisible = true;
     this._detailsSlotIndex = -1;
+    this._detailsCloseWorldBlockFrame = -1;
     this.root = scene.add.container(0, 0);
     this.root.setDepth(this.depth);
     this.root.setScrollFactor(0);
@@ -556,8 +559,19 @@ export class Hud {
       color: "#ff9a9a",
     });
     this.detailsWarningText.setOrigin(0, 0);
-    this.detailsCloseButton = this.createButton("Close", true, () => this.hideActionDetails());
-    this.detailsCloseButton.setOrigin(1, 0);
+    if (scene.textures.exists(DETAILS_CLOSE_ICON_KEY)) {
+      const img = scene.add.image(0, 0, DETAILS_CLOSE_ICON_KEY);
+      img.setOrigin(1, 0);
+      img.setDisplaySize(30, 30);
+      img.setInteractive({ useHandCursor: true });
+      img.on("pointerdown", () => this.hideActionDetails());
+      img.on("pointerover", () => img.setTint(0xcccccc));
+      img.on("pointerout", () => img.clearTint());
+      this.detailsCloseButton = img;
+    } else {
+      this.detailsCloseButton = this.createButton("×", true, () => this.hideActionDetails());
+      this.detailsCloseButton.setOrigin(1, 0);
+    }
     this.detailsRoot = scene.add.container(0, 0, [
       this.detailsBackdrop,
       this.detailsBackground,
@@ -981,6 +995,7 @@ export class Hud {
   }
 
   hideActionDetails() {
+    this._detailsCloseWorldBlockFrame = this.scene?.sys?.game?.loop?.frame ?? -1;
     this._detailsSlotIndex = -1;
     this.detailsRoot.setVisible(false);
   }
@@ -2012,6 +2027,12 @@ export class Hud {
     }
     if (!this._bottomVisible) {
       return false;
+    }
+    if (this._detailsSlotIndex >= 0 && this.detailsRoot?.visible) {
+      return true;
+    }
+    if (this._detailsCloseWorldBlockFrame === (this.scene?.sys?.game?.loop?.frame ?? -1)) {
+      return true;
     }
     const windows = this._getVisiblePanelRects();
     for (const rect of windows) {
