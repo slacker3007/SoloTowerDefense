@@ -204,16 +204,10 @@ export class TowerSystem {
 
   tryUpgradeTowerAtCell(cellX, cellY, gameState, optionId) {
     const tower = this.getTowerAtCell(cellX, cellY);
-    // #region agent log
-    fetch('http://127.0.0.1:7576/ingest/1dec1a9b-9444-4174-b16c-c421bd677924',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'3311f3'},body:JSON.stringify({sessionId:'3311f3',runId:'run1',hypothesisId:'H4',location:'src/game/systems/TowerSystem.js:tryUpgradeTowerAtCell:entry',message:'tryUpgradeTowerAtCell called',data:{cellX,cellY,optionId,hasTower:Boolean(tower),towerType:tower?.type??null,gold:gameState?.gold},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     if (!tower) {
       return false;
     }
     const option = this.getUpgradeOptions(tower).find((entry) => entry.id === optionId);
-    // #region agent log
-    fetch('http://127.0.0.1:7576/ingest/1dec1a9b-9444-4174-b16c-c421bd677924',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'3311f3'},body:JSON.stringify({sessionId:'3311f3',runId:'run1',hypothesisId:'H4',location:'src/game/systems/TowerSystem.js:tryUpgradeTowerAtCell:option-lookup',message:'Upgrade option lookup result',data:{optionId,availableOptionIds:this.getUpgradeOptions(tower).map((entry)=>entry.id),foundOptionId:option?.id??null,optionCost:option?.cost??null},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     if (!option || gameState.gold < option.cost) {
       return false;
     }
@@ -243,9 +237,6 @@ export class TowerSystem {
         tower.sprite.setDisplaySize(TILE_SIZE, TILE_SIZE * 2);
         tower.sprite.setDepth(18);
       }
-      // #region agent log
-      fetch('http://127.0.0.1:7576/ingest/1dec1a9b-9444-4174-b16c-c421bd677924',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'3311f3'},body:JSON.stringify({sessionId:'3311f3',runId:'run1',hypothesisId:'H5',location:'src/game/systems/TowerSystem.js:tryUpgradeTowerAtCell:convert-success',message:'Tower conversion applied',data:{targetType,remainingGold:gameState.gold,newTowerType:tower.type,tier:tower.tier},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
       return true;
     }
     const typeUpgrades = upgrades[tower.type];
@@ -267,9 +258,6 @@ export class TowerSystem {
     if (Array.isArray(upgradeData.effects)) {
       tower.effects.push(...upgradeData.effects);
     }
-    // #region agent log
-    fetch('http://127.0.0.1:7576/ingest/1dec1a9b-9444-4174-b16c-c421bd677924',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'3311f3'},body:JSON.stringify({sessionId:'3311f3',runId:'run1',hypothesisId:'H5',location:'src/game/systems/TowerSystem.js:tryUpgradeTowerAtCell:upgrade-success',message:'Non-conversion upgrade applied',data:{optionId,newTier:tower.tier,remainingGold:gameState.gold},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     return true;
   }
 }

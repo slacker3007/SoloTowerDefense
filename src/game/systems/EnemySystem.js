@@ -113,12 +113,14 @@ export class EnemySystem {
     }
 
     const tc = path[waypointIndex];
+    const rootMoveSpeed = definition.speed;
     const enemy = {
       sprite,
       hp: definition.hp,
       maxHp: definition.hp,
       speed: definition.speed,
       baseSpeed: definition.speed,
+      _rootMoveSpeed: rootMoveSpeed,
       rewardGold: definition.rewardGold,
       role: definition.role ?? "normal",
       tags: definition.tags ?? [],
@@ -142,6 +144,22 @@ export class EnemySystem {
       triggeredThresholds: new Set(),
       goldBonusOnKill: Math.max(0, Number(definition.bonusGoldOnKill) || 0),
       hpBarYOffset,
+      evasionChance: Math.max(0, Math.min(1, Number(definition.evasionChance) || 0)),
+      flatDamageReduction: Math.max(0, Number(definition.flatDamageReduction) || 0),
+      fireHitDamageMultiplier: Number.isFinite(definition.fireHitDamageMultiplier) ? definition.fireHitDamageMultiplier : 1,
+      postShieldDamageMultiplier: Number.isFinite(definition.postShieldDamageMultiplier) ? definition.postShieldDamageMultiplier : 1,
+      slowEffectivenessMultiplier: Number.isFinite(definition.slowEffectivenessMultiplier) ? definition.slowEffectivenessMultiplier : 1,
+      chainVulnerabilityMultiplier: Number.isFinite(definition.chainVulnerabilityMultiplier) ? definition.chainVulnerabilityMultiplier : 1,
+      damageTakenMultiplier: Number.isFinite(definition.damageTakenMultiplier) ? definition.damageTakenMultiplier : 1,
+      earlyKillHpThreshold: definition.earlyKillHpThreshold ?? null,
+      earlyKillBonusGold: Math.max(0, Number(definition.earlyKillBonusGold) || 0),
+      stompAuraRadiusTiles: Math.max(0, Number(definition.stompAuraRadiusTiles) || 0),
+      stompAuraInterval: Math.max(0.25, Number(definition.stompAuraInterval) || 2.4),
+      stompAuraAcc: 0,
+      bossPhaseBands: Array.isArray(definition.bossPhaseBands) ? definition.bossPhaseBands.map((b) => ({ ...b })) : null,
+      bossSpawnAcc: 0,
+      _bossBandIx: -1,
+      _killHpRatioBeforeDeath: 1,
     };
     this._warnedNoPath = false;
 
@@ -166,6 +184,7 @@ export class EnemySystem {
       if (!enemy.alive || enemy.escaped) {
         continue;
       }
+      this._tickWorldbreakerBoss(enemy, deltaSeconds);
       this._tickStatuses(enemy, deltaSeconds);
 
       const target = enemy.target;
@@ -201,8 +220,14 @@ export class EnemySystem {
     }
   }
 
-  damageEnemy(enemy, amount) {
+  damageEnemy(enemy, amount, damageOptions = {}) {
     if (!enemy || !enemy.alive || enemy.escaped) {
+      return false;
+    }
+
+    enemy._killHpRatioBeforeDeath = enemy.maxHp > 0 ? enemy.hp / enemy.maxHp : 0;
+
+    if (!damageOptions.skipEvasion && enemy.evasionChance > 0 && Math.random() < enemy.evasionChance) {
       return false;
     }
 
@@ -212,13 +237,22 @@ export class EnemySystem {
         damageMultiplier += status.ratio ?? 0;
       }
     }
-    const incoming = amount * damageMultiplier;
+    let incoming = amount * damageMultiplier;
+    if (damageOptions.fireHit && enemy.fireHitDamageMultiplier < 1) {
+      incoming *= enemy.fireHitDamageMultiplier;
+    }
+    const flatDr = Math.max(0, enemy.flatDamageReduction ?? 0);
+    incoming = Math.max(0, incoming - flatDr);
+    const takenMult = Number.isFinite(enemy.damageTakenMultiplier) ? enemy.damageTakenMultiplier : 1;
+    incoming *= takenMult;
     let hpDamage = incoming;
     if (enemy.shieldHp > 0) {
       const absorbed = Math.min(enemy.shieldHp, hpDamage);
       enemy.shieldHp -= absorbed;
       hpDamage -= absorbed;
     }
+    const postShield = Number.isFinite(enemy.postShieldDamageMultiplier) ? enemy.postShieldDamageMultiplier : 1;
+    hpDamage *= postShield;
     enemy.hp -= hpDamage;
     this._triggerHpThresholdSpawns(enemy);
     enemy.hpBar?.setRatio(enemy.hp / enemy.maxHp);
@@ -247,9 +281,19 @@ export class EnemySystem {
     if (!enemy) {
       return 0;
     }
-    const progress = this._getEnemyPathProgress(enemy);
-    const earlyKillBonus = progress <= 0.45 ? (enemy.goldBonusOnKill ?? 0) : 0;
-    return Math.max(0, (enemy.rewardGold ?? 0) + earlyKillBonus);
+    let bonus = 0;
+    if (enemy.earlyKillHpThreshold != null && Number.isFinite(enemy.earlyKillBonusGold) && enemy.earlyKillBonusGold > 0) {
+      const ratio = enemy._killHpRatioBeforeDeath ?? 0;
+      if (ratio >= enemy.earlyKillHpThreshold) {
+        bonus += enemy.earlyKillBonusGold;
+      }
+    } else {
+      const progress = this._getEnemyPathProgress(enemy);
+      if (progress <= 0.45) {
+        bonus += enemy.goldBonusOnKill ?? 0;
+      }
+    }
+    return Math.max(0, (enemy.rewardGold ?? 0) + bonus);
   }
 
   applyStatus(enemy, status) {
@@ -305,7 +349,9 @@ export class EnemySystem {
         const resistMultiplier = status.type === "burn" && enemy.tags.includes("fireResist") ? 0.35 : 1;
         enemy.hp -= status.dps * deltaSeconds * resistMultiplier;
       } else if (status.type === "slow") {
-        speedMultiplier = Math.min(speedMultiplier, 1 - status.ratio);
+        const slowEff = Number.isFinite(enemy.slowEffectivenessMultiplier) ? enemy.slowEffectivenessMultiplier : 1;
+        const effectiveRatio = (status.ratio ?? 0) * slowEff;
+        speedMultiplier = Math.min(speedMultiplier, 1 - effectiveRatio);
         ccInFrame = true;
       } else if (status.type === "stun" || status.type === "freeze" || status.type === "root") {
         immobilized = true;
@@ -381,6 +427,39 @@ export class EnemySystem {
       return;
     }
     this._enqueueTriggeredSpawn(split.childType, Number(split.count) || 0);
+  }
+
+  _tickWorldbreakerBoss(enemy, deltaSeconds) {
+    const bands = enemy.bossPhaseBands;
+    if (!bands || bands.length < 4) {
+      return;
+    }
+    const r = enemy.maxHp > 0 ? enemy.hp / enemy.maxHp : 0;
+    let ix = 3;
+    if (r > 0.75) {
+      ix = 0;
+    } else if (r > 0.5) {
+      ix = 1;
+    } else if (r > 0.25) {
+      ix = 2;
+    }
+    const band = bands[ix];
+    if (enemy._bossBandIx !== ix) {
+      enemy._bossBandIx = ix;
+      enemy.bossSpawnAcc = 0;
+    }
+    enemy.damageTakenMultiplier = Number.isFinite(band.damageTakenMultiplier) ? band.damageTakenMultiplier : 1;
+    const rage = Number.isFinite(band.rageSpeed) ? band.rageSpeed : 1;
+    const root = Number.isFinite(enemy._rootMoveSpeed) ? enemy._rootMoveSpeed : enemy.baseSpeed;
+    enemy.baseSpeed = root * rage;
+    enemy.bossSpawnAcc = (enemy.bossSpawnAcc ?? 0) + deltaSeconds;
+    const interval = Math.max(0.5, Number(band.spawnInterval) || 10);
+    if (enemy.bossSpawnAcc >= interval) {
+      enemy.bossSpawnAcc -= interval;
+      const spawnEnemy = typeof band.spawnEnemy === "string" ? band.spawnEnemy : "grunt";
+      const spawnAmount = Math.max(1, Number(band.spawnAmount) || 1);
+      this._enqueueTriggeredSpawn(spawnEnemy, spawnAmount);
+    }
   }
 
   _resolveDominantStatus(enemy) {

@@ -130,6 +130,18 @@ export class WaveSystem {
       splitOnDeath: archetype.splitOnDeath ?? null,
       spawnOnThresholds: Array.isArray(archetype.spawnOnThresholds) ? archetype.spawnOnThresholds.map((entry) => ({ ...entry })) : [],
       waveIndex,
+      evasionChance: Number.isFinite(archetype.evasionChance) ? archetype.evasionChance : 0,
+      flatDamageReduction: Number.isFinite(archetype.flatDamageReduction) ? archetype.flatDamageReduction : 0,
+      fireHitDamageMultiplier: Number.isFinite(archetype.fireHitDamageMultiplier) ? archetype.fireHitDamageMultiplier : 1,
+      postShieldDamageMultiplier: Number.isFinite(archetype.postShieldDamageMultiplier) ? archetype.postShieldDamageMultiplier : 1,
+      slowEffectivenessMultiplier: Number.isFinite(archetype.slowEffectivenessMultiplier) ? archetype.slowEffectivenessMultiplier : 1,
+      chainVulnerabilityMultiplier: Number.isFinite(archetype.chainVulnerabilityMultiplier) ? archetype.chainVulnerabilityMultiplier : 1,
+      damageTakenMultiplier: Number.isFinite(archetype.damageTakenMultiplier) ? archetype.damageTakenMultiplier : 1,
+      earlyKillHpThreshold: archetype.earlyKillHpThreshold ?? null,
+      earlyKillBonusGold: Number.isFinite(archetype.earlyKillBonusGold) ? archetype.earlyKillBonusGold : 0,
+      stompAuraRadiusTiles: Number.isFinite(archetype.stompAuraRadiusTiles) ? archetype.stompAuraRadiusTiles : 0,
+      stompAuraInterval: Number.isFinite(archetype.stompAuraInterval) ? archetype.stompAuraInterval : 2.4,
+      bossPhaseBands: Array.isArray(archetype.bossPhaseBands) ? archetype.bossPhaseBands.map((b) => ({ ...b })) : null,
     };
   }
 

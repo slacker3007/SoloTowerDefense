@@ -1,0 +1,10 @@
+{"sessionId":"3f9f34","runId":"post-fix","hypothesisId":"B","location":"GameScene.js:create:entry","message":"GameScene.create entered","data":{},"timestamp":1778333887835}
+{"sessionId":"3f9f34","runId":"post-fix","hypothesisId":"A","location":"balance.js:getEnemyArchetype:entry","message":"getEnemyArchetype called","data":{"type":"grunt"},"timestamp":1778333887943}
+{"sessionId":"3f9f34","runId":"post-fix","hypothesisId":"A","location":"balance.js:getEnemyArchetype:entry","message":"getEnemyArchetype called","data":{"type":"grunt"},"timestamp":1778333887943}
+{"sessionId":"3f9f34","runId":"post-fix","hypothesisId":"A","location":"balance.js:getEnemyArchetype:entry","message":"getEnemyArchetype called","data":{"type":"grunt"},"timestamp":1778333887944}
+{"sessionId":"3f9f34","runId":"post-fix","hypothesisId":"A","location":"balance.js:getEnemyArchetype:entry","message":"getEnemyArchetype called","data":{"type":"grunt"},"timestamp":1778333887945}
+{"sessionId":"3f9f34","runId":"post-fix","hypothesisId":"A","location":"balance.js:getEnemyArchetype:entry","message":"getEnemyArchetype called","data":{"type":"grunt"},"timestamp":1778333887945}
+{"sessionId":"3f9f34","runId":"post-fix","hypothesisId":"A","location":"balance.js:getEnemyArchetype:entry","message":"getEnemyArchetype called","data":{"type":"grunt"},"timestamp":1778333887946}
+{"sessionId":"3f9f34","runId":"post-fix","hypothesisId":"A","location":"balance.js:getEnemyArchetype:entry","message":"getEnemyArchetype called","data":{"type":"grunt"},"timestamp":1778333887946}
+{"sessionId":"3f9f34","runId":"post-fix","hypothesisId":"A","location":"balance.js:getEnemyArchetype:entry","message":"getEnemyArchetype called","data":{"type":"grunt"},"timestamp":1778333887947}
+{"sessionId":"3f9f34","runId":"post-fix","hypothesisId":"D","location":"GameScene.js:create:afterSpawner","message":"startAutoSpawner completed","data":{"waveIndex":1},"timestamp":1778333887947}

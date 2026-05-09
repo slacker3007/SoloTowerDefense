@@ -346,103 +346,9 @@ export const enemyRoleModifiers = {
   elite: { hp: 3.95, speed: 0.8, count: 1.0 },
 };
 
-export const enemyArchetypes = {
-  grunt: { role: "normal", hpMultiplier: 1.0, speedMultiplier: 1.0, rewardMultiplier: 1.0, tags: [] },
-  runner: { role: "fast", hpMultiplier: 0.7, speedMultiplier: 1.65, rewardMultiplier: 1.0, tags: [] },
-  brute: { role: "tank", hpMultiplier: 2.4, speedMultiplier: 0.58, rewardMultiplier: 1.3, tags: ["armor", "tank"] },
-  swarm: { role: "swarm", hpMultiplier: 0.42, speedMultiplier: 1.06, rewardMultiplier: 0.85, tags: [] },
-  linked: { role: "fast", hpMultiplier: 0.85, speedMultiplier: 1.35, rewardMultiplier: 1.1, tags: ["linkedPack"] },
-  hoarder: { role: "normal", hpMultiplier: 1.05, speedMultiplier: 1.12, rewardMultiplier: 1.0, tags: ["hoarder"], bonusGoldOnKill: 6 },
-  shielded: {
-    role: "elite",
-    hpMultiplier: 1.05,
-    speedMultiplier: 0.9,
-    rewardMultiplier: 1.2,
-    tags: ["shielded"],
-    shieldHpMultiplier: 0.55,
-  },
-  regenerator: {
-    role: "tank",
-    hpMultiplier: 1.85,
-    speedMultiplier: 0.75,
-    rewardMultiplier: 1.2,
-    tags: ["regenerator"],
-    regenPerSecondMultiplier: 0.03,
-  },
-  splitter: {
-    role: "normal",
-    hpMultiplier: 1.1,
-    speedMultiplier: 1.0,
-    rewardMultiplier: 1.05,
-    tags: ["splitter"],
-    splitOnDeath: { childType: "swarm", count: 2 },
-  },
-  fire_swarm: {
-    role: "swarm",
-    hpMultiplier: 0.48,
-    speedMultiplier: 1.08,
-    rewardMultiplier: 0.9,
-    tags: ["fireResist"],
-  },
-  swift_runner: {
-    role: "fast",
-    hpMultiplier: 0.8,
-    speedMultiplier: 1.75,
-    rewardMultiplier: 1.1,
-    tags: ["slowResist", "slowImmune"],
-  },
-  siege_golem: {
-    role: "elite",
-    hpMultiplier: 7.5,
-    speedMultiplier: 0.45,
-    rewardMultiplier: 3.0,
-    tags: ["boss", "armor", "tank"],
-    spawnOnThresholds: [
-      { threshold: 0.75, type: "swarm", count: 2 },
-      { threshold: 0.5, type: "swarm", count: 2 },
-      { threshold: 0.25, type: "swarm", count: 2 },
-    ],
-  },
-  ancient_golem: {
-    role: "elite",
-    hpMultiplier: 10.5,
-    speedMultiplier: 0.4,
-    rewardMultiplier: 3.8,
-    tags: ["boss", "armor", "tank", "ancient"],
-    spawnOnThresholds: [
-      { threshold: 0.75, type: "runner", count: 3 },
-      { threshold: 0.5, type: "swarm", count: 4 },
-      { threshold: 0.25, type: "shielded", count: 2 },
-    ],
-  },
-  colossus: {
-    role: "elite",
-    hpMultiplier: 14.0,
-    speedMultiplier: 0.34,
-    rewardMultiplier: 4.5,
-    tags: ["boss", "armor", "tank", "colossus"],
-    shieldHpMultiplier: 0.9,
-    spawnOnThresholds: [
-      { threshold: 0.75, type: "brute", count: 2 },
-      { threshold: 0.5, type: "swarm", count: 6 },
-      { threshold: 0.25, type: "runner", count: 4 },
-    ],
-  },
-  worldbreaker: {
-    role: "elite",
-    hpMultiplier: 20.0,
-    speedMultiplier: 0.28,
-    rewardMultiplier: 8.0,
-    tags: ["boss", "armor", "tank", "worldbreaker"],
-    shieldHpMultiplier: 1.2,
-    regenPerSecondMultiplier: 0.012,
-    spawnOnThresholds: [
-      { threshold: 0.75, type: "swarm", count: 6 },
-      { threshold: 0.5, type: "runner", count: 6 },
-      { threshold: 0.25, type: "shielded", count: 4 },
-    ],
-  },
-};
+import { enemyArchetypes, enemyCatalog, getEnemyCatalogMeta } from "./enemyCatalog.js";
+
+export { enemyArchetypes, enemyCatalog, getEnemyCatalogMeta };
 
 export const scriptedWaveProgram = [
   { phase: "early", name: "Warmup", role: "normal", packs: [{ type: "grunt", count: 8 }] },
@@ -498,7 +404,7 @@ export const scriptedWaveProgram = [
   { phase: "endgame", name: "Last Resistance", role: "tank", packs: [{ type: "brute", count: 16 }, { type: "shielded", count: 12 }] },
   { phase: "endgame", name: "Collapse", role: "fast", packs: [{ type: "swift_runner", count: 18 }, { type: "splitter", count: 18 }, { type: "linked", count: 14 }] },
   { phase: "endgame", name: "Before the End", role: "mixed", packs: [{ type: "brute", count: 12 }, { type: "runner", count: 16 }, { type: "shielded", count: 12 }, { type: "regenerator", count: 10 }, { type: "swarm", count: 20 }] },
-  { phase: "endgame", name: "The Worldbreaker", role: "boss", boss: true, maxAlive: 22, packs: [{ type: "worldbreaker", count: 1 }, { type: "brute", count: 10 }, { type: "runner", count: 12 }, { type: "swarm", count: 24 }] },
+  { phase: "endgame", name: "The Worldbreaker", role: "boss", boss: true, maxAlive: 22, packs: [{ type: "worldbreaker", count: 1 }, { type: "brute", count: 8 }, { type: "runner", count: 10 }, { type: "swarm", count: 20 }] },
 ];
 
 export const waveProgram = [

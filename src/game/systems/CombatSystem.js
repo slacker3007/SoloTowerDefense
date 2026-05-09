@@ -9,9 +9,38 @@ export class CombatSystem {
   }
 
   update(deltaSeconds, gameState) {
+    this.tickColossusStompAuras(deltaSeconds);
     this.updateTowerPulses(deltaSeconds, gameState);
     this.handleTowerAttacks(gameState);
     this.updateProjectiles(deltaSeconds, gameState);
+  }
+
+  /** @param {{ type?: string }} tower */
+  _fireDamageOpts(tower) {
+    return { fireHit: tower?.type === "fire" };
+  }
+
+  tickColossusStompAuras(deltaSeconds) {
+    for (const enemy of this.enemySystem.getActiveEnemies()) {
+      const radTiles = enemy.stompAuraRadiusTiles;
+      if (!Number.isFinite(radTiles) || radTiles <= 0) {
+        continue;
+      }
+      enemy.stompAuraAcc = (enemy.stompAuraAcc ?? 0) + deltaSeconds;
+      const interval = Math.max(0.35, Number(enemy.stompAuraInterval) || 2.4);
+      if (enemy.stompAuraAcc < interval) {
+        continue;
+      }
+      enemy.stompAuraAcc -= interval;
+      const radiusWorld = toWorldRange(radTiles);
+      for (const tower of this.towerSystem.towers) {
+        const d = Math.hypot(tower.x - enemy.sprite.x, tower.y - enemy.sprite.y);
+        if (d <= radiusWorld) {
+          const cd = Math.max(0.01, Number(tower.cooldown) || 0.5);
+          tower.cooldownRemaining = Math.max(tower.cooldownRemaining ?? 0, cd * 0.4);
+        }
+      }
+    }
   }
 
   /**
@@ -38,7 +67,7 @@ export class CombatSystem {
         }
         const raw = tower.damage * ratio;
         const dmg = this.resolveDamage(tower, enemy, raw);
-        const killed = this.enemySystem.damageEnemy(enemy, dmg);
+        const killed = this.enemySystem.damageEnemy(enemy, dmg, this._fireDamageOpts(tower));
         if (killed) {
           gameState.gold += this.enemySystem.getKillGold(enemy);
           for (const effect of tower.effects ?? []) {
@@ -112,7 +141,11 @@ export class CombatSystem {
 
       if (distance <= step + 8) {
         const resolvedDamage = this.resolveDamage(projectile.tower, projectile.target, projectile.damage);
-        const killed = this.enemySystem.damageEnemy(projectile.target, resolvedDamage);
+        const killed = this.enemySystem.damageEnemy(
+          projectile.target,
+          resolvedDamage,
+          this._fireDamageOpts(projectile.tower),
+        );
         this.applyTowerEffects(projectile.tower, projectile.target, resolvedDamage, gameState);
         if (killed) {
           gameState.gold += this.enemySystem.getKillGold(projectile.target);
@@ -249,8 +282,12 @@ export class CombatSystem {
           duration: effect.duration,
           dps: (tower.damage * effect.dpsFactor) / effect.duration,
         });
-      } else if (effect.type === "slow" && !enemy.tags.includes("slowResist")) {
-        this.enemySystem.applyStatus(enemy, { type: "slow", duration: effect.duration, ratio: effect.ratio });
+      } else if (effect.type === "slow" && !enemy.tags.includes("slowImmune")) {
+        if (enemy.tags.includes("slowResist") && !enemy.tags.includes("slowResistPartial")) {
+          /* binary slow resist (e.g. wave-tagged fast) */
+        } else {
+          this.enemySystem.applyStatus(enemy, { type: "slow", duration: effect.duration, ratio: effect.ratio });
+        }
       } else if (effect.type === "stunChance" && Math.random() < (effect.chance ?? 0)) {
         const statusType = effect.asFreeze ? "freeze" : "stun";
         this.enemySystem.applyStatus(enemy, { type: statusType, duration: effect.duration });
@@ -344,7 +381,7 @@ export class CombatSystem {
       }
       const distance = Math.hypot(enemy.sprite.x - target.sprite.x, enemy.sprite.y - target.sprite.y);
       if (distance <= radius) {
-        this.enemySystem.damageEnemy(enemy, baseDamage * ratio);
+        this.enemySystem.damageEnemy(enemy, baseDamage * ratio, this._fireDamageOpts(tower));
       }
     }
   }
@@ -358,7 +395,12 @@ export class CombatSystem {
     let ratio = 0.75;
     const hit = [];
     for (const enemy of enemies) {
-      this.enemySystem.damageEnemy(enemy, baseDamage * (decay ? ratio : 1));
+      const vuln = enemy.tags.includes("linkedPack") ? (enemy.chainVulnerabilityMultiplier ?? 1) : 1;
+      this.enemySystem.damageEnemy(
+        enemy,
+        baseDamage * (decay ? ratio : 1) * vuln,
+        this._fireDamageOpts(tower),
+      );
       hit.push(enemy);
       if (decay) {
         ratio *= 0.85;
@@ -444,7 +486,7 @@ export class CombatSystem {
     for (const enemy of this.enemySystem.getActiveEnemies()) {
       const distance = Math.hypot(enemy.sprite.x - tower.x, enemy.sprite.y - tower.y);
       if (distance <= tower.range) {
-        this.enemySystem.damageEnemy(enemy, amount);
+        this.enemySystem.damageEnemy(enemy, amount, this._fireDamageOpts(tower));
       }
     }
   }
@@ -456,11 +498,21 @@ export class CombatSystem {
       .filter((enemy) => Math.hypot(enemy.sprite.x - tower.x, enemy.sprite.y - tower.y) <= tower.range)
       .slice(0, safeArrows);
     for (const enemy of enemies) {
-      this.enemySystem.damageEnemy(enemy, amount * 0.35);
+      this.enemySystem.damageEnemy(enemy, amount * 0.35, this._fireDamageOpts(tower));
     }
     if (!enemies.includes(target)) {
-      this.enemySystem.damageEnemy(target, amount * 0.35);
+      this.enemySystem.damageEnemy(target, amount * 0.35, this._fireDamageOpts(tower));
     }
+  }
+
+  _tryApplySlowWithResist(enemy, payload) {
+    if (enemy.tags.includes("slowImmune")) {
+      return;
+    }
+    if (enemy.tags.includes("slowResist") && !enemy.tags.includes("slowResistPartial")) {
+      return;
+    }
+    this.enemySystem.applyStatus(enemy, { type: "slow", ...payload });
   }
 
   applySplashStatus(originEnemy, statusType, radiusTiles, payload) {
@@ -468,7 +520,11 @@ export class CombatSystem {
     for (const enemy of this.enemySystem.getActiveEnemies()) {
       const distance = Math.hypot(enemy.sprite.x - originEnemy.sprite.x, enemy.sprite.y - originEnemy.sprite.y);
       if (distance <= radius) {
-        this.enemySystem.applyStatus(enemy, { type: statusType, ...payload });
+        if (statusType === "slow") {
+          this._tryApplySlowWithResist(enemy, payload);
+        } else {
+          this.enemySystem.applyStatus(enemy, { type: statusType, ...payload });
+        }
       }
     }
   }
@@ -478,7 +534,11 @@ export class CombatSystem {
     for (const enemy of this.enemySystem.getActiveEnemies()) {
       const distance = Math.hypot(enemy.sprite.x - tower.x, enemy.sprite.y - tower.y);
       if (distance <= radius) {
-        this.enemySystem.applyStatus(enemy, { type: statusType, ...payload });
+        if (statusType === "slow") {
+          this._tryApplySlowWithResist(enemy, payload);
+        } else {
+          this.enemySystem.applyStatus(enemy, { type: statusType, ...payload });
+        }
       }
     }
   }
@@ -490,7 +550,7 @@ export class CombatSystem {
       .filter((enemy) => Math.hypot(enemy.sprite.x - tower.x, enemy.sprite.y - tower.y) <= tower.range)
       .slice(0, safeTargets);
     for (const enemy of enemies) {
-      this.enemySystem.damageEnemy(enemy, enemy === target ? amount * 0.25 : amount * 0.5);
+      this.enemySystem.damageEnemy(enemy, enemy === target ? amount * 0.25 : amount * 0.5, this._fireDamageOpts(tower));
     }
   }
 }

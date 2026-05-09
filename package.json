@@ -8,7 +8,10 @@
     "build": "vite build",
     "preview": "vite preview",
     "balance:sim": "node scripts/balance-sim.js",
-    "survival:sim": "node scripts/survival-sim.js"
+    "survival:sim": "node scripts/survival-sim.js",
+    "survival:sim:progression": "node scripts/survival-sim.js --progression",
+    "survival:sim:unlimited": "node scripts/survival-sim.js --unlimited",
+    "survival:sim:unlimited-progression": "node scripts/survival-sim.js --unlimited --progression"
   },
   "dependencies": {
     "phaser": "^3.90.0"

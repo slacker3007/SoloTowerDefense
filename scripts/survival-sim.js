@@ -10,9 +10,11 @@ import {
   economy,
   getEnemyArchetype,
   getGoldPerKill,
+  getTowerTierCost,
   getWaveBaseHp,
   getWaveBaseSpeed,
   getScriptedWave,
+  getWaveStep,
   towerCatalog,
   upgrades,
 } from "../src/game/balance.js";
@@ -27,6 +29,20 @@ const DT = 0.05;
 const SEEDS_PER_SCENARIO = 10;
 const MAX_SIM_SECONDS = 7200;
 const MAX_SIM_STEPS = Math.ceil(MAX_SIM_SECONDS / DT);
+
+/** Extra bank so progression sims can reach T3 on several towers (placement/conversion treated as sunk). */
+const DYNAMIC_GOLD_PER_TOWER = 560;
+
+/**
+ * Same growth idea as balance-sim `getDynamicSummaryForWave` (unlimited basic): parallel copies scale with wave.
+ * @param {number} waveIndex
+ */
+export function getUnlimitedTowerMultiplier(waveIndex) {
+  const w = Math.max(1, Math.floor(waveIndex));
+  const step = getWaveStep(w);
+  const expected = step?.expectedTowerCount ?? 2;
+  return Math.max(20, expected * 12, w * 3);
+}
 
 /** Seeded PRNG (mulberry32) */
 function mulberry32(seed) {
@@ -125,6 +141,61 @@ function createTower(spec) {
   };
 }
 
+/** Mutate runtime tower with one tier upgrade (level1|2|3). */
+function applySingleUpgradeToTower(tower, upgradeId) {
+  const u = upgrades[tower.type]?.[upgradeId];
+  if (!u || tower.upgrades.includes(upgradeId)) {
+    return false;
+  }
+  if (typeof u.damageMultiplier === "number") tower.damage *= u.damageMultiplier;
+  if (typeof u.cooldownMultiplier === "number") tower.cooldown *= u.cooldownMultiplier;
+  if (typeof u.rangeMultiplier === "number") {
+    tower.rangeTiles *= u.rangeMultiplier;
+    tower.range = tower.rangeTiles * TILE_RANGE_TO_WORLD;
+  }
+  if (Array.isArray(u.effects)) {
+    for (const e of u.effects) tower.effects.push({ ...e });
+  }
+  tower.upgrades.push(upgradeId);
+  if (upgradeId === "level1") tower.tier = 1;
+  else if (upgradeId === "level2") tower.tier = 2;
+  else if (upgradeId === "level3") tower.tier = 3;
+  return true;
+}
+
+function killGoldFromEnemy(enemy, killerTower) {
+  let g = Math.max(0, Number(enemy.rewardGold) || 0) + Math.max(0, Number(enemy.bonusGoldOnKill) || 0);
+  if (killerTower?.effects?.length) {
+    for (const e of killerTower.effects) {
+      if (e?.type === "bonusGoldPerKill" && Number.isFinite(e.amount)) {
+        g += e.amount;
+      }
+    }
+  }
+  return g;
+}
+
+function tryPurchasingUpgrades(gameState, towers) {
+  if (!gameState?.dynamicUpgrades || !Array.isArray(towers)) {
+    return;
+  }
+  for (let iter = 0; iter < 2000; iter += 1) {
+    let bought = false;
+    const sorted = [...towers].sort((a, b) => a.tier - b.tier);
+    for (const tower of sorted) {
+      if (tower.tier >= 3) continue;
+      const nextId = tower.tier === 0 ? "level1" : tower.tier === 1 ? "level2" : "level3";
+      const cost = getTowerTierCost(tower.tier + 1, tower.type);
+      if (gameState.gold >= cost && applySingleUpgradeToTower(tower, nextId)) {
+        gameState.gold -= cost;
+        bought = true;
+        break;
+      }
+    }
+    if (!bought) break;
+  }
+}
+
 function getTowerSpeedMultiplierGlobal(towers) {
   let m = 1;
   for (const t of towers) {
@@ -157,7 +228,10 @@ function getActiveEnemies(enemies) {
   return enemies.filter((e) => e.alive && !e.escaped);
 }
 
-function damageEnemy(enemy, amount, pendingTriggeredSpawns) {
+/**
+ * @param {object | null} killCtx — `{ gameState, killerTower, towers }` when economy progression is enabled
+ */
+function damageEnemy(enemy, amount, pendingTriggeredSpawns, killCtx = null) {
   if (!enemy?.alive || enemy.escaped) return false;
   let damageMultiplier = enemy.tags.includes("armor") ? 0.85 : 1;
   for (const status of enemy.statuses ?? []) {
@@ -175,6 +249,10 @@ function damageEnemy(enemy, amount, pendingTriggeredSpawns) {
   maybeTriggerThresholdSpawns(enemy, pendingTriggeredSpawns);
   if (enemy.hp <= 0) {
     enemy.alive = false;
+    if (killCtx?.gameState?.dynamicUpgrades && killCtx.towers) {
+      killCtx.gameState.gold += killGoldFromEnemy(enemy, killCtx.killerTower ?? null);
+      tryPurchasingUpgrades(killCtx.gameState, killCtx.towers);
+    }
     maybeTriggerSplit(enemy, pendingTriggeredSpawns);
     return true;
   }
@@ -227,7 +305,7 @@ function applyStatus(enemy, status) {
   });
 }
 
-function tickStatuses(enemy, deltaSeconds) {
+function tickStatuses(enemy, deltaSeconds, gameState = null, towers = null) {
   if (!Array.isArray(enemy.statuses) || enemy.statuses.length === 0) {
     enemy.speed = enemy.baseSpeed;
     enemy.ccWindowTimer = Math.max(0, enemy.ccWindowTimer - deltaSeconds);
@@ -272,6 +350,10 @@ function tickStatuses(enemy, deltaSeconds) {
   enemy.speed = immobilized ? 0 : enemy.baseSpeed * speedMultiplier;
   if (enemy.hp <= 0) {
     enemy.alive = false;
+    if (gameState?.dynamicUpgrades && towers) {
+      gameState.gold += killGoldFromEnemy(enemy, null);
+      tryPurchasingUpgrades(gameState, towers);
+    }
   }
 }
 
@@ -319,10 +401,29 @@ function enemiesWithinRadiusOfTarget(active, target, radiusWorld) {
 /**
  * @param {ReturnType<createTower>[]} towers
  * @param {number} seed
+ * @param {{ dynamicUpgrades?: boolean, startingGold?: number, unlimitedTowers?: boolean, economyTowerCount?: number }} [options]
  */
-export function simulateSurvival(towerSpecs, seed) {
+export function simulateSurvival(towerSpecs, seed, options = {}) {
   const rng = mulberry32(seed);
-  const towers = towerSpecs.map((s) => createTower(s));
+  const unlimitedTowers = Boolean(options.unlimitedTowers);
+  const economySlots =
+    typeof options.economyTowerCount === "number" && Number.isFinite(options.economyTowerCount)
+      ? Math.max(0, Math.floor(options.economyTowerCount))
+      : towerSpecs.length;
+  /** @type {{ type: string, upgradeIds?: string[] }[]} */
+  let effectiveSpecs = towerSpecs;
+  if (unlimitedTowers && towerSpecs.length > 0) {
+    const seen = new Set();
+    effectiveSpecs = [];
+    for (const s of towerSpecs) {
+      const key = `${s.type}:${(s.upgradeIds ?? []).join(",")}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        effectiveSpecs.push(s);
+      }
+    }
+  }
+  const towers = effectiveSpecs.map((s) => createTower(s));
   /** @type {any[]} */
   const enemies = [];
   let waveIndex = 1;
@@ -336,15 +437,40 @@ export function simulateSurvival(towerSpecs, seed) {
   let steps = 0;
   const pendingTriggeredSpawns = [];
 
-  const gameState = { lives };
+  const dynamicUpgrades = Boolean(options.dynamicUpgrades);
+  const startingGold =
+    typeof options.startingGold === "number"
+      ? options.startingGold
+      : dynamicUpgrades
+        ? economy.startingGold + economySlots * DYNAMIC_GOLD_PER_TOWER
+        : 0;
+
+  const gameState = {
+    lives,
+    gold: startingGold,
+    dynamicUpgrades,
+    unlimitedTowers,
+    lastUnlimitedM: getUnlimitedTowerMultiplier(1),
+  };
   const speedMulGlobal = getTowerSpeedMultiplierGlobal(towers);
 
   for (steps = 0; steps < MAX_SIM_STEPS && lives > 0; steps += 1) {
     const dt = DT;
 
+    if (unlimitedTowers && towers.length > 0) {
+      const n = towers.length;
+      const M = Math.max(getUnlimitedTowerMultiplier(waveIndex), n);
+      gameState.lastUnlimitedM = M;
+      const base = Math.floor(M / n);
+      const rem = M % n;
+      for (let ti = 0; ti < n; ti += 1) {
+        towers[ti].unlimitedShare = base + (ti < rem ? 1 : 0);
+      }
+    }
+
     for (const enemy of enemies) {
       if (!enemy.alive || enemy.escaped) continue;
-      tickStatuses(enemy, dt);
+      tickStatuses(enemy, dt, gameState, towers);
     }
 
     for (const enemy of enemies) {
@@ -411,22 +537,25 @@ export function simulateSurvival(towerSpecs, seed) {
       active.sort((a, b) => b.progress - a.progress);
       const target = active[0];
       tower.hitCount = (tower.hitCount ?? 0) + 1;
-      tower.cooldownRemaining = tower.cooldown / speedMulGlobal;
+      const share = unlimitedTowers ? Math.max(1, tower.unlimitedShare ?? 1) : 1;
+      tower.cooldownRemaining = tower.cooldown / (speedMulGlobal * share);
 
       const hitDamage = resolveDamage(tower, target, tower.damage, rng);
-      const killed = damageEnemy(target, hitDamage, pendingTriggeredSpawns);
-    if (pendingTriggeredSpawns.length > 0) {
-      for (const trigger of pendingTriggeredSpawns.splice(0, pendingTriggeredSpawns.length)) {
-        const count = Math.max(0, Number(trigger.count) || 0);
-        for (let i = 0; i < count; i += 1) {
-          spawner.spawnQueue.push(buildEnemyDefinitionFromPack(waveIndex, { type: trigger.type }, { hpScale: 1, speedScale: 1, countOffset: 0 }));
+      const killCtx = { gameState, killerTower: tower, towers };
+      const killed = damageEnemy(target, hitDamage, pendingTriggeredSpawns, killCtx);
+      if (pendingTriggeredSpawns.length > 0) {
+        for (const trigger of pendingTriggeredSpawns.splice(0, pendingTriggeredSpawns.length)) {
+          const count = Math.max(0, Number(trigger.count) || 0);
+          for (let i = 0; i < count; i += 1) {
+            spawner.spawnQueue.push(
+              buildEnemyDefinitionFromPack(waveIndex, { type: trigger.type }, { hpScale: 1, speedScale: 1, countOffset: 0 }),
+            );
+          }
         }
+        spawner.spawnTarget = spawner.spawnQueue.length;
       }
-      spawner.spawnTarget = spawner.spawnQueue.length;
-    }
 
-
-      applyTowerCombatEffects(tower, target, hitDamage, killed, towers, enemies, rng, gameState, pendingTriggeredSpawns);
+      applyTowerCombatEffects(tower, target, hitDamage, killed, towers, enemies, rng, gameState, pendingTriggeredSpawns, killCtx);
 
       lives = gameState.lives;
     }
@@ -451,6 +580,9 @@ export function simulateSurvival(towerSpecs, seed) {
     }
   }
 
+  const tierSum = towers.reduce((a, t) => a + (t.tier ?? 0), 0);
+  const t3Count = towers.filter((t) => t.tier >= 3).length;
+
   return {
     wavesCleared,
     gameOverWave: gameOverWave ?? waveIndex,
@@ -458,10 +590,15 @@ export function simulateSurvival(towerSpecs, seed) {
     totalLeaks,
     steps,
     survivedCap: lives > 0,
+    finalGold: gameState.gold,
+    avgTier: towers.length ? tierSum / towers.length : 0,
+    t3Count,
+    finalUnlimitedMultiplier: unlimitedTowers ? gameState.lastUnlimitedM : null,
+    representativeTowerCount: unlimitedTowers ? towers.length : towerSpecs.length,
   };
 }
 
-function applyTowerCombatEffects(tower, primary, resolvedDamage, killed, towers, enemies, rng, gameState, pendingTriggeredSpawns) {
+function applyTowerCombatEffects(tower, primary, resolvedDamage, killed, towers, enemies, rng, gameState, pendingTriggeredSpawns, killCtx) {
   const effects = tower.effects ?? [];
   const effRange = effectiveTowerRange(tower, towers);
 
@@ -514,19 +651,19 @@ function applyTowerCombatEffects(tower, primary, resolvedDamage, killed, towers,
       const radiusWorld = (effect.radiusTiles ?? 1.2) * TILE_RANGE_TO_WORLD;
       const others = enemiesWithinRadiusOfTarget(getActiveEnemies(enemies), primary, radiusWorld);
       for (const e of others) {
-        damageEnemy(e, resolvedDamage * (effect.ratio ?? 0.5), pendingTriggeredSpawns);
+        damageEnemy(e, resolvedDamage * (effect.ratio ?? 0.5), pendingTriggeredSpawns, killCtx);
       }
     }
     if (effect.type === "chain") {
-      applyChainDamage(tower, primary, resolvedDamage, effect.targets ?? 2, true, enemies, effRange, pendingTriggeredSpawns);
+      applyChainDamage(tower, primary, resolvedDamage, effect.targets ?? 2, true, enemies, effRange, pendingTriggeredSpawns, killCtx);
     }
     if (effect.type === "chainNoDecay") {
-      applyChainDamage(tower, primary, resolvedDamage, 999, false, enemies, effRange, pendingTriggeredSpawns);
+      applyChainDamage(tower, primary, resolvedDamage, 999, false, enemies, effRange, pendingTriggeredSpawns, killCtx);
     }
     if (effect.type === "burstAllInRange" && tower.hitCount % 5 === 0) {
       for (const e of getActiveEnemies(enemies)) {
         if (Math.abs(e.progress - 0) <= effRange) {
-          damageEnemy(e, resolvedDamage * 0.8, pendingTriggeredSpawns);
+          damageEnemy(e, resolvedDamage * 0.8, pendingTriggeredSpawns, killCtx);
         }
       }
     }
@@ -534,17 +671,17 @@ function applyTowerCombatEffects(tower, primary, resolvedDamage, killed, towers,
       const cap = Math.min(effect.arrows ?? 3, balanceRules.maxVolleyArrows);
       const inRange = getActiveEnemies(enemies).filter((e) => Math.abs(e.progress - 0) <= effRange).slice(0, cap);
       for (const e of inRange) {
-        damageEnemy(e, resolvedDamage * 0.35, pendingTriggeredSpawns);
+        damageEnemy(e, resolvedDamage * 0.35, pendingTriggeredSpawns, killCtx);
       }
       if (!inRange.includes(primary)) {
-        damageEnemy(primary, resolvedDamage * 0.35, pendingTriggeredSpawns);
+        damageEnemy(primary, resolvedDamage * 0.35, pendingTriggeredSpawns, killCtx);
       }
     }
     if (effect.type === "smiteBeamTargets") {
       const cap = Math.max(1, Math.min(effect.targets ?? 3, balanceRules.maxChainTargets));
       const inRange = getActiveEnemies(enemies).filter((e) => Math.abs(e.progress - 0) <= effRange).slice(0, cap);
       for (const e of inRange) {
-        damageEnemy(e, e === primary ? resolvedDamage * 0.25 : resolvedDamage * 0.5, pendingTriggeredSpawns);
+        damageEnemy(e, e === primary ? resolvedDamage * 0.25 : resolvedDamage * 0.5, pendingTriggeredSpawns, killCtx);
       }
     }
   }
@@ -604,7 +741,7 @@ function splashCurse(origin, enemies, radiusTiles, payload) {
   }
 }
 
-function applyChainDamage(_tower, primary, baseDamage, chainTargets, decay, enemies, effRange, pendingTriggeredSpawns) {
+function applyChainDamage(_tower, primary, baseDamage, chainTargets, decay, enemies, effRange, pendingTriggeredSpawns, killCtx) {
   const safeTargets = Math.min(chainTargets, balanceRules.maxChainTargets);
   const candidates = getActiveEnemies(enemies)
     .filter((e) => e !== primary && Math.abs(e.progress - primary.progress) <= effRange)
@@ -612,7 +749,7 @@ function applyChainDamage(_tower, primary, baseDamage, chainTargets, decay, enem
     .slice(0, safeTargets);
   let ratio = 0.75;
   for (const e of candidates) {
-    damageEnemy(e, baseDamage * (decay ? ratio : 1), pendingTriggeredSpawns);
+    damageEnemy(e, baseDamage * (decay ? ratio : 1), pendingTriggeredSpawns, killCtx);
     if (decay) ratio *= 0.85;
   }
 }
@@ -645,14 +782,95 @@ export const SCENARIOS = [
   },
 ];
 
+/** Same counts as S2–S9 but tier 0 at start; gold from kills + bank buys T1→T3 when affordable (lowest tier first). */
+export const SCENARIOS_PROGRESSION = [
+  ...["archer", "fire", "ice", "lightning", "nature", "earth", "dark", "holy"].map((el, i) => ({
+    id: `P${i + 1}`,
+    label: `30× ${el} tier0 → spend to T3`,
+    specs: Array.from({ length: 30 }, () => ({ type: el, upgradeIds: [] })),
+    dynamicUpgrades: true,
+  })),
+  {
+    id: "P9",
+    label: "Hybrid 25× dark + 25× lightning tier0 → T3",
+    specs: [
+      ...Array.from({ length: 25 }, () => ({ type: "dark", upgradeIds: [] })),
+      ...Array.from({ length: 25 }, () => ({ type: "lightning", upgradeIds: [] })),
+    ],
+    dynamicUpgrades: true,
+  },
+];
+
+/**
+ * One representative tower per build; effective parallel count = balance-sim “unlimited” formula each wave.
+ * DPS scales as if that many identical copies fired in parallel (cooldown ÷ share per template).
+ */
+export const SCENARIOS_UNLIMITED = [
+  { id: "U1", label: "∞× basic (no upgrades)", specs: [{ type: "basic", upgradeIds: [] }], unlimitedTowers: true },
+  ...["archer", "fire", "ice", "lightning", "nature", "earth", "dark", "holy"].map((el, i) => ({
+    id: `U${i + 2}`,
+    label: `∞× ${el} + T1`,
+    specs: [{ type: el, upgradeIds: ["level1"] }],
+    unlimitedTowers: true,
+  })),
+  {
+    id: "U10",
+    label: "∞ dark+T1 + ∞ lightning+T1 (2 reps, split M)",
+    specs: [
+      { type: "dark", upgradeIds: ["level1"] },
+      { type: "lightning", upgradeIds: ["level1"] },
+    ],
+    unlimitedTowers: true,
+  },
+];
+
+/** ∞ parallel scaling (M per wave) + tier0→T3 purchases; 30-slot economy bank, one combat rep per build. */
+export const SCENARIOS_UNLIMITED_PROGRESSION = [
+  ...["archer", "fire", "ice", "lightning", "nature", "earth", "dark", "holy"].map((el, i) => ({
+    id: `UP${i + 1}`,
+    label: `∞× ${el} tier0→T3 (30-slot gold)`,
+    specs: Array.from({ length: 30 }, () => ({ type: el, upgradeIds: [] })),
+    unlimitedTowers: true,
+    dynamicUpgrades: true,
+    economyTowerCount: 30,
+  })),
+  {
+    id: "UP9",
+    label: "∞ hybrid 25 dark + 25 lightning tier0→T3 (50-slot gold)",
+    specs: [
+      ...Array.from({ length: 25 }, () => ({ type: "dark", upgradeIds: [] })),
+      ...Array.from({ length: 25 }, () => ({ type: "lightning", upgradeIds: [] })),
+    ],
+    unlimitedTowers: true,
+    dynamicUpgrades: true,
+    economyTowerCount: 50,
+  },
+];
+
 function runScenarioStats(scenario, seeds = SEEDS_PER_SCENARIO) {
   const waves = [];
   const firstLeaks = [];
+  const avgTiers = [];
+  const t3Counts = [];
+  const finalGolds = [];
+  const simOptions = {
+    dynamicUpgrades: Boolean(scenario.dynamicUpgrades),
+    startingGold: scenario.startingGold,
+    unlimitedTowers: Boolean(scenario.unlimitedTowers),
+    economyTowerCount: scenario.economyTowerCount,
+  };
+  const finalMults = [];
+  const repCounts = [];
   for (let s = 0; s < seeds; s += 1) {
     const seed = scenario.baseSeed + s * 9973;
-    const r = simulateSurvival(scenario.specs, seed);
+    const r = simulateSurvival(scenario.specs, seed, simOptions);
     waves.push(r.wavesCleared);
     firstLeaks.push(r.firstLeakWave ?? r.gameOverWave);
+    avgTiers.push(r.avgTier ?? 0);
+    t3Counts.push(r.t3Count ?? 0);
+    finalGolds.push(r.finalGold ?? 0);
+    finalMults.push(r.finalUnlimitedMultiplier ?? null);
+    repCounts.push(r.representativeTowerCount ?? null);
   }
   return {
     scenarioId: scenario.id,
@@ -662,34 +880,111 @@ function runScenarioStats(scenario, seeds = SEEDS_PER_SCENARIO) {
     maxWaves: Math.max(...waves),
     meanWaves: mean(waves),
     medianFirstLeak: median(firstLeaks.filter((x) => x != null)),
+    medianAvgTier: median(avgTiers),
+    medianT3Count: median(t3Counts),
+    medianFinalGold: median(finalGolds),
+    medianFinalUnlimitedM: median(finalMults.filter((x) => x != null)),
+    medianReps: median(repCounts.filter((x) => x != null)),
     runs: waves.map((w, i) => ({ seed: scenario.baseSeed + i * 9973, wavesCleared: w, firstLeak: firstLeaks[i] })),
   };
 }
 
-function printResults(rows) {
+function printResults(rows, mode = "default") {
   console.log("\n=== Survival simulation (median / min–max waves cleared, 10 seeds) ===\n");
-  console.log("ID     Label                                      med   min–max    mean   firstLeak(med)");
+  if (mode === "progression") {
+    console.log(
+      "ID     Label                                      med   min–max    mean   leak   avgTier  T3#  endGold",
+    );
+  } else if (mode === "unlimited") {
+    console.log(
+      "ID     Label                                      med   min–max    mean   leak   M@end  reps",
+    );
+  } else if (mode === "unlimited-progression") {
+    console.log(
+      "ID     Label                                      med   min–max    mean   leak   tier t3R  endGold  M@end  r",
+    );
+  } else {
+    console.log("ID     Label                                      med   min–max    mean   firstLeak(med)");
+  }
   for (const r of rows) {
     const lab = r.label.length > 40 ? `${r.label.slice(0, 37)}...` : r.label.padEnd(40);
     const mfl = Number.isFinite(r.medianFirstLeak) ? r.medianFirstLeak.toFixed(1) : String(r.medianFirstLeak);
-    console.log(
-      `${r.scenarioId.padEnd(6)} ${lab} ${String(r.medianWaves).padStart(5)}   ${r.minWaves}-${r.maxWaves}      ${r.meanWaves.toFixed(1).padStart(5)}   ${mfl.padStart(6)}`,
-    );
+    if (mode === "progression") {
+      const at = Number.isFinite(r.medianAvgTier) ? r.medianAvgTier.toFixed(2) : "?";
+      const t3 = String(r.medianT3Count ?? "");
+      const fg = Number.isFinite(r.medianFinalGold) ? Math.round(r.medianFinalGold) : "?";
+      console.log(
+        `${r.scenarioId.padEnd(6)} ${lab} ${String(r.medianWaves).padStart(5)}   ${r.minWaves}-${r.maxWaves}      ${r.meanWaves.toFixed(1).padStart(5)}   ${mfl.padStart(6)}   ${at.padStart(7)}  ${t3.padStart(3)}  ${String(fg).padStart(7)}`,
+      );
+    } else if (mode === "unlimited") {
+      const mm = Number.isFinite(r.medianFinalUnlimitedM) ? String(Math.round(r.medianFinalUnlimitedM)) : "?";
+      const rp = r.medianReps != null ? String(r.medianReps) : "?";
+      console.log(
+        `${r.scenarioId.padEnd(6)} ${lab} ${String(r.medianWaves).padStart(5)}   ${r.minWaves}-${r.maxWaves}      ${r.meanWaves.toFixed(1).padStart(5)}   ${mfl.padStart(6)}   ${mm.padStart(6)}  ${rp.padStart(5)}`,
+      );
+    } else if (mode === "unlimited-progression") {
+      const at = Number.isFinite(r.medianAvgTier) ? r.medianAvgTier.toFixed(2) : "?";
+      const t3 = String(r.medianT3Count ?? "");
+      const fg = Number.isFinite(r.medianFinalGold) ? Math.round(r.medianFinalGold) : "?";
+      const mm = Number.isFinite(r.medianFinalUnlimitedM) ? String(Math.round(r.medianFinalUnlimitedM)) : "?";
+      const rp = r.medianReps != null ? String(r.medianReps) : "?";
+      console.log(
+        `${r.scenarioId.padEnd(6)} ${lab} ${String(r.medianWaves).padStart(5)}   ${r.minWaves}-${r.maxWaves}      ${r.meanWaves.toFixed(1).padStart(5)}   ${mfl.padStart(6)}   ${at.padStart(4)}  ${t3.padStart(3)}  ${String(fg).padStart(7)}  ${mm.padStart(6)}  ${rp}`,
+      );
+    } else {
+      console.log(
+        `${r.scenarioId.padEnd(6)} ${lab} ${String(r.medianWaves).padStart(5)}   ${r.minWaves}-${r.maxWaves}      ${r.meanWaves.toFixed(1).padStart(5)}   ${mfl.padStart(6)}`,
+      );
+    }
   }
 }
 
 const BASE_SEED = 0xfeed2025;
 
 function main() {
+  const progression = process.argv.includes("--progression");
+  const unlimited = process.argv.includes("--unlimited");
+
+  let list = SCENARIOS;
+  let printMode = "default";
+  if (unlimited && progression) {
+    list = SCENARIOS_UNLIMITED_PROGRESSION;
+    printMode = "unlimited-progression";
+  } else if (unlimited) {
+    list = SCENARIOS_UNLIMITED;
+    printMode = "unlimited";
+  } else if (progression) {
+    list = SCENARIOS_PROGRESSION;
+    printMode = "progression";
+  }
+
   const rows = [];
-  for (const sc of SCENARIOS) {
+  for (const sc of list) {
     if (sc.id === "S10" && (!sc.specs || sc.specs.length === 0)) {
       console.warn("Skipping S10 — specs empty. Set SCENARIOS S10 specs after tuning.");
       continue;
     }
     rows.push(runScenarioStats({ ...sc, baseSeed: BASE_SEED }, SEEDS_PER_SCENARIO));
   }
-  printResults(rows);
+
+  if (printMode === "progression") {
+    console.log(
+      `\nProgression mode: starting gold = economy.startingGold + towers×${DYNAMIC_GOLD_PER_TOWER} (placement/conversion bank); kills add gold; auto-buy cheapest next tier on lowest-tier towers until broke or all T3.\n`,
+    );
+    printResults(rows, "progression");
+  } else if (printMode === "unlimited") {
+    console.log(
+      "\nUnlimited mode: parallel copy count M(wave) = max(20, expectedTowerCount×12, wave×3) from waveProgram (same spirit as balance-sim unlimited basic). One sim tower per unique build; cooldown ÷ (M split across reps).\n",
+    );
+    printResults(rows, "unlimited");
+  } else if (printMode === "unlimited-progression") {
+    console.log(
+      `\nUnlimited + progression: M(wave) parallel scaling; one combat rep per unique build; bank = economy.startingGold + economyTowerCount×${DYNAMIC_GOLD_PER_TOWER} (30 or 50 slots); kills add gold; auto-buy T1→T3. Columns: t3R = reps at tier 3 (not slot count), r = sim reps.\n`,
+    );
+    printResults(rows, "unlimited-progression");
+  } else {
+    printResults(rows, "default");
+  }
 }
 
 const isMain =
