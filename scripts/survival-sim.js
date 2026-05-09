@@ -10,7 +10,9 @@ import {
   economy,
   getEnemyArchetype,
   getGoldPerKill,
+  getHeavyEnemyEarlyHpMultiplier,
   getTowerTierCost,
+  TANK_ELITE_HP_SCALE,
   getWaveBaseHp,
   getWaveBaseSpeed,
   getScriptedWave,
@@ -79,7 +81,12 @@ function buildSpawner(waveIndex, director = { hpScale: 1, speedScale: 1, countOf
 
 function buildEnemyDefinitionFromPack(waveIndex, pack, director) {
   const archetype = getEnemyArchetype(pack.type ?? "grunt");
-  const hp = getWaveBaseHp(waveIndex) * (archetype.hpMultiplier ?? 1) * (pack.hpMultiplier ?? 1) * director.hpScale;
+  let hp = getWaveBaseHp(waveIndex) * (archetype.hpMultiplier ?? 1) * (pack.hpMultiplier ?? 1) * director.hpScale;
+  const role = archetype.role ?? "normal";
+  if (role === "tank" || role === "elite") {
+    hp *= getHeavyEnemyEarlyHpMultiplier(waveIndex);
+    hp *= TANK_ELITE_HP_SCALE;
+  }
   const speed =
     60 * getWaveBaseSpeed(waveIndex) * (archetype.speedMultiplier ?? 1) * (pack.speedMultiplier ?? 1) * director.speedScale;
   const rewardGold = Math.max(
@@ -89,11 +96,16 @@ function buildEnemyDefinitionFromPack(waveIndex, pack, director) {
   return {
     hp,
     speed,
-    role: archetype.role ?? "normal",
+    role,
     archetype: pack.type ?? "grunt",
-    tags: [...new Set([archetype.role ?? "normal", ...(archetype.tags ?? []), ...(pack.tags ?? [])])],
+    tags: [...new Set([role, ...(archetype.tags ?? []), ...(pack.tags ?? [])])],
     rewardGold,
     bonusGoldOnKill: archetype.bonusGoldOnKill ?? 0,
+    flatDamageReduction: Number.isFinite(archetype.flatDamageReduction) ? archetype.flatDamageReduction : 0,
+    damageTakenMultiplier: Number.isFinite(archetype.damageTakenMultiplier) ? archetype.damageTakenMultiplier : 1,
+    postShieldDamageMultiplier: Number.isFinite(archetype.postShieldDamageMultiplier)
+      ? archetype.postShieldDamageMultiplier
+      : 1,
     shieldHp: Number.isFinite(archetype.shieldHpMultiplier) ? hp * archetype.shieldHpMultiplier : 0,
     regenPerSecond: Number.isFinite(archetype.regenPerSecondMultiplier) ? hp * archetype.regenPerSecondMultiplier : 0,
     splitOnDeath: archetype.splitOnDeath ?? null,
@@ -239,12 +251,19 @@ function damageEnemy(enemy, amount, pendingTriggeredSpawns, killCtx = null) {
       damageMultiplier += status.ratio ?? 0;
     }
   }
-  let hpDamage = amount * damageMultiplier;
+  let incoming = amount * damageMultiplier;
+  const flatDr = Math.max(0, enemy.flatDamageReduction ?? 0);
+  incoming = Math.max(0, incoming - flatDr);
+  const takenMult = Number.isFinite(enemy.damageTakenMultiplier) ? enemy.damageTakenMultiplier : 1;
+  incoming *= takenMult;
+  let hpDamage = incoming;
   if (enemy.shieldHp > 0) {
     const absorbed = Math.min(enemy.shieldHp, hpDamage);
     enemy.shieldHp -= absorbed;
     hpDamage -= absorbed;
   }
+  const postShield = Number.isFinite(enemy.postShieldDamageMultiplier) ? enemy.postShieldDamageMultiplier : 1;
+  hpDamage *= postShield;
   enemy.hp -= hpDamage;
   maybeTriggerThresholdSpawns(enemy, pendingTriggeredSpawns);
   if (enemy.hp <= 0) {
@@ -365,6 +384,12 @@ function resolveDamage(tower, enemy, baseDamage, rng) {
   for (const effect of effects) {
     if (effect.type === "bonusVsDark" && enemy.tags.includes("dark")) {
       damage *= 1 + effect.ratio;
+    }
+    if (
+      effect.type === "bonusVsHeavy" &&
+      (enemy.tags.includes("tank") || enemy.tags.includes("elite") || enemy.tags.includes("armor"))
+    ) {
+      damage *= 1 + (effect.ratio ?? 0);
     }
     if (effect.type === "doubleDamageVsFrozen" && enemy.statuses.some((s) => s.type === "stun")) {
       damage *= 2;
@@ -518,6 +543,11 @@ export function simulateSurvival(towerSpecs, seed, options = {}) {
             spawnOnThresholds: Array.isArray(def.spawnOnThresholds) ? def.spawnOnThresholds.map((entry) => ({ ...entry })) : [],
             triggeredThresholds: new Set(),
             goldBonusOnKill: Math.max(0, Number(def.bonusGoldOnKill) || 0),
+            flatDamageReduction: Math.max(0, Number(def.flatDamageReduction) || 0),
+            damageTakenMultiplier: Number.isFinite(def.damageTakenMultiplier) ? def.damageTakenMultiplier : 1,
+            postShieldDamageMultiplier: Number.isFinite(def.postShieldDamageMultiplier)
+              ? def.postShieldDamageMultiplier
+              : 1,
           });
           spawner.totalSpawned += 1;
         }

@@ -1,10 +1,12 @@
 import {
   getEnemyArchetype,
   getGoldPerKill,
+  getHeavyEnemyEarlyHpMultiplier,
   getWaveBaseHp,
   getWaveBaseSpeed,
   getScriptedWave,
   getWaveStep,
+  TANK_ELITE_HP_SCALE,
 } from "../balance";
 
 const ROLE_VISUALS = {
@@ -50,7 +52,11 @@ export class WaveSystem {
       return this._buildScriptedSpawnerForWave(waveIndex, scriptedWave);
     }
     const step = getWaveStep(waveIndex);
-    const hp = getWaveBaseHp(waveIndex) * this.director.hpScale;
+    const earlyHeavyHp =
+      step.role === "tank" || step.role === "elite" ? getHeavyEnemyEarlyHpMultiplier(waveIndex) : 1;
+    const tankEliteHp =
+      step.role === "tank" || step.role === "elite" ? TANK_ELITE_HP_SCALE : 1;
+    const hp = getWaveBaseHp(waveIndex) * this.director.hpScale * earlyHeavyHp * tankEliteHp;
     const speed = 60 * getWaveBaseSpeed(waveIndex) * this.director.speedScale;
     const spawnCount = Math.max(2, 6 + waveIndex);
     return {
@@ -93,7 +99,7 @@ export class WaveSystem {
       secondaryRole: null,
       metadata: {
         expectedTowerCount: Math.max(2, 2 + Math.floor((waveIndex - 1) * 0.5)),
-        expectedDpsBand: [20 + waveIndex * 10, 34 + waveIndex * 14],
+        expectedDpsBand: [16 + waveIndex * 8, 26 + waveIndex * 11],
       },
       totalSpawned: 0,
       spawnTarget: spawnQueue.length,
@@ -109,13 +115,17 @@ export class WaveSystem {
     const baseSpeed = 60 * getWaveBaseSpeed(waveIndex);
     const packHpMult = Number.isFinite(pack.hpMultiplier) ? pack.hpMultiplier : 1;
     const packSpeedMult = Number.isFinite(pack.speedMultiplier) ? pack.speedMultiplier : 1;
-    const hp = baseHp * (archetype.hpMultiplier ?? 1) * packHpMult * this.director.hpScale;
+    let hp = baseHp * (archetype.hpMultiplier ?? 1) * packHpMult * this.director.hpScale;
+    const role = archetype.role ?? "normal";
+    if (role === "tank" || role === "elite") {
+      hp *= getHeavyEnemyEarlyHpMultiplier(waveIndex);
+      hp *= TANK_ELITE_HP_SCALE;
+    }
     const speed = baseSpeed * (archetype.speedMultiplier ?? 1) * packSpeedMult * this.director.speedScale;
     const rewardBase = getGoldPerKill(waveIndex, false);
     const rewardMult = Number.isFinite(pack.rewardMultiplier) ? pack.rewardMultiplier : 1;
     const rewardGold = Math.max(1, Math.round(rewardBase * (archetype.rewardMultiplier ?? 1) * rewardMult));
-    const tags = [...new Set([archetype.role ?? "normal", ...(archetype.tags ?? []), ...(pack.tags ?? [])])];
-    const role = archetype.role ?? "normal";
+    const tags = [...new Set([role, ...(archetype.tags ?? []), ...(pack.tags ?? [])])];
     return {
       hp,
       speed,

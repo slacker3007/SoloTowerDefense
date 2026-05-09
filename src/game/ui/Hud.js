@@ -14,6 +14,10 @@ const RESERVE_EMPTY_ACTION_RAIL = true;
 
 const DETAILS_CLOSE_ICON_KEY = "detailsCloseIcon09";
 
+/** Discrete pills for wave spawn/clear progress bar. */
+const WAVE_PROGRESS_SEGMENT_COUNT = 8;
+const WAVE_PROGRESS_SEGMENT_GAP = 3;
+
 export class Hud {
   /**
    * @param {Phaser.Scene} scene
@@ -63,7 +67,6 @@ export class Hud {
     this._selectedBuilding = null;
     this._waveInfo = null;
     this._towerDpsProminent = false;
-    this._waveExpanded = false;
     /** Bottom chrome height used for camera occlusion (set in layout). */
     this._effectiveBottomChromeHeight = 0;
     /** Right chrome width used for camera occlusion in landscape split mode. */
@@ -256,7 +259,6 @@ export class Hud {
     this.contextPanelFrame.setOrigin(0, 0);
     this.contextPanelFrame.setStrokeStyle(2, this._hudColors.panelStrokeSoft, 0.9);
     this.contextPanelFrame.setInteractive({ useHandCursor: true });
-    this.contextPanelFrame.on("pointerdown", () => this.toggleWaveExpanded());
     this.contextDragZone = scene.add.zone(0, 0, 120, 22);
     this.contextDragZone.setOrigin(0, 0);
     this.contextLockText = scene.add.text(0, 0, "🔒", {
@@ -303,23 +305,39 @@ export class Hud {
     this.upcomingCurrentIconBg.setStrokeStyle(1, this._hudColors.chipStroke, 0.8);
     this.upcomingCurrentIcon = scene.add.image(0, 0, "__WHITE");
     this.upcomingCurrentIcon.setVisible(false);
-    this.upcomingCurrentIconLabel = scene.add.text(0, 0, "Now", {
+    this.upcomingCurrentNowText = scene.add.text(0, 0, "Now", {
+      fontFamily: "monospace",
+      fontSize: "10px",
+      color: "#fff8e6",
+      stroke: "#0d0a06",
+      strokeThickness: 2,
+    });
+    this.upcomingCurrentNowText.setOrigin(0, 1);
+    this.upcomingCurrentRoleText = scene.add.text(0, 0, "", {
       fontFamily: "monospace",
       fontSize: "11px",
       color: "#d2e4ff",
     });
-    this.upcomingCurrentIconLabel.setOrigin(0, 0);
+    this.upcomingCurrentRoleText.setOrigin(0, 0);
     this.upcomingNextIconBg = scene.add.rectangle(0, 0, 38, 38, this._hudColors.chipBg, 1);
     this.upcomingNextIconBg.setOrigin(0, 0);
     this.upcomingNextIconBg.setStrokeStyle(1, this._hudColors.chipStroke, 0.8);
     this.upcomingNextIcon = scene.add.image(0, 0, "__WHITE");
     this.upcomingNextIcon.setVisible(false);
-    this.upcomingNextIconLabel = scene.add.text(0, 0, "Next", {
+    this.upcomingNextNowText = scene.add.text(0, 0, "Next", {
+      fontFamily: "monospace",
+      fontSize: "10px",
+      color: "#fff8e6",
+      stroke: "#0d0a06",
+      strokeThickness: 2,
+    });
+    this.upcomingNextNowText.setOrigin(0, 1);
+    this.upcomingNextRoleText = scene.add.text(0, 0, "", {
       fontFamily: "monospace",
       fontSize: "11px",
       color: "#d2e4ff",
     });
-    this.upcomingNextIconLabel.setOrigin(0, 0);
+    this.upcomingNextRoleText.setOrigin(0, 0);
     this.towerCardIconBg = scene.add.rectangle(0, 0, 72, 72, this._hudColors.chipBg, 1);
     this.towerCardIconBg.setOrigin(0, 0);
     this.towerCardIconBg.setStrokeStyle(1, this._hudColors.chipStroke, 0.8);
@@ -373,8 +391,10 @@ export class Hud {
       this.waveCountText,
       this.waveEnemiesText,
       this.upcomingEnemiesTitleText,
-      this.upcomingCurrentIconLabel,
-      this.upcomingNextIconLabel,
+      this.upcomingCurrentNowText,
+      this.upcomingCurrentRoleText,
+      this.upcomingNextNowText,
+      this.upcomingNextRoleText,
       this.towerNameTierText,
       this.towerRolePrimaryText,
       this.towerDpsText,
@@ -392,8 +412,10 @@ export class Hud {
     this.waveCountText.setOrigin(0, 0);
     this.waveEnemiesText.setOrigin(0, 0);
     this.upcomingEnemiesTitleText.setOrigin(0, 0);
-    this.upcomingCurrentIconLabel.setOrigin(0, 0);
-    this.upcomingNextIconLabel.setOrigin(0, 0);
+    this.upcomingCurrentNowText.setOrigin(0, 1);
+    this.upcomingCurrentRoleText.setOrigin(0, 0);
+    this.upcomingNextNowText.setOrigin(0, 1);
+    this.upcomingNextRoleText.setOrigin(0, 0);
     this.towerNameTierText.setOrigin(0, 0);
     this.towerRolePrimaryText.setOrigin(0, 0);
     this.towerDpsText.setOrigin(0, 0);
@@ -403,12 +425,11 @@ export class Hud {
     this.waveProgressTrack = scene.add.rectangle(0, 0, 120, 12, this._hudColors.chipBg, 1);
     this.waveProgressTrack.setOrigin(0, 0);
     this.waveProgressTrack.setStrokeStyle(1, this._hudColors.chipStroke, 0.9);
-    this.waveProgressFill = scene.add.rectangle(0, 0, 2, 10, 0x5bbf8a, 1);
-    this.waveProgressFill.setOrigin(0, 0);
+    this.waveProgressSegments = scene.add.graphics();
     this.waveProgressText = scene.add.text(0, 0, "0%", {
       fontFamily: "monospace",
       fontSize: "13px",
-      color: "#b7f7da",
+      color: "#f5e6a3",
     });
     this.waveProgressText.setOrigin(0, 0);
     this.goldDeltaText = scene.add.text(0, 0, "", {
@@ -606,12 +627,14 @@ export class Hud {
       this.upcomingEnemiesTitleText,
       this.upcomingCurrentIconBg,
       this.upcomingCurrentIcon,
-      this.upcomingCurrentIconLabel,
+      this.upcomingCurrentNowText,
+      this.upcomingCurrentRoleText,
       this.upcomingNextIconBg,
       this.upcomingNextIcon,
-      this.upcomingNextIconLabel,
+      this.upcomingNextNowText,
+      this.upcomingNextRoleText,
       this.waveProgressTrack,
-      this.waveProgressFill,
+      this.waveProgressSegments,
       this.waveProgressText,
       this.towerCardIconBg,
       this.towerCardIcon,
@@ -657,12 +680,14 @@ export class Hud {
       this.upcomingEnemiesTitleText,
       this.upcomingCurrentIconBg,
       this.upcomingCurrentIcon,
-      this.upcomingCurrentIconLabel,
+      this.upcomingCurrentNowText,
+      this.upcomingCurrentRoleText,
       this.upcomingNextIconBg,
       this.upcomingNextIcon,
-      this.upcomingNextIconLabel,
+      this.upcomingNextNowText,
+      this.upcomingNextRoleText,
       this.waveProgressTrack,
-      this.waveProgressFill,
+      this.waveProgressSegments,
       this.waveProgressText,
       this.towerCardIconBg,
       this.towerCardIcon,
@@ -1146,8 +1171,7 @@ export class Hud {
           )
         : 0;
       const railContentW = Math.max(220, contentWidth - rightPanelW - (splitLandscape ? gapSm : 0));
-      const waveStripH =
-        splitLandscape ? 0 : this._bottomVisible && isWaveCtx ? (this._waveExpanded ? 120 : 56) : 0;
+      const waveStripH = splitLandscape ? 0 : this._bottomVisible && isWaveCtx ? 120 : 0;
       const towerSummaryEstimate = splitLandscape ? 0 : this._bottomVisible && isTowerCtx ? 200 : 0;
       const maxRailW = railContentW - panelPadding * 2;
       let actionCell = this.clamp(
@@ -1223,8 +1247,10 @@ export class Hud {
       this.waveCountText.setStyle({ fontSize: `${contextInfoSize}px` });
       this.waveEnemiesText.setStyle({ fontSize: `${contextInfoSize}px` });
       this.upcomingEnemiesTitleText.setStyle({ fontSize: `${contextSubSize}px` });
-      this.upcomingCurrentIconLabel.setStyle({ fontSize: `${contextSubSize}px` });
-      this.upcomingNextIconLabel.setStyle({ fontSize: `${contextSubSize}px` });
+      this.upcomingCurrentNowText.setStyle({ fontSize: `${this.clamp(contextSubSize - 1, 9, 12)}px` });
+      this.upcomingCurrentRoleText.setStyle({ fontSize: `${contextSubSize}px` });
+      this.upcomingNextNowText.setStyle({ fontSize: `${this.clamp(contextSubSize - 1, 9, 12)}px` });
+      this.upcomingNextRoleText.setStyle({ fontSize: `${contextSubSize}px` });
       this.towerNameTierText.setStyle({ fontSize: `${contextTitleSize}px` });
       this.towerRolePrimaryText.setStyle({ fontSize: `${contextInfoSize}px` });
       const dpsTowerSize = this._towerDpsProminent
@@ -1333,14 +1359,14 @@ export class Hud {
           this.contextTitleText.y + this.contextTitleText.height + 4,
         );
         if (isWaveCtx) {
-          this.waveCountText.setPosition(this.contextTitleText.x, this.contextSubtitleText.y + this.contextSubtitleText.height + 8);
+          const waveBodyTop = this.contextTitleText.y + this.contextTitleText.height + 8;
+          this.waveCountText.setPosition(this.contextTitleText.x, waveBodyTop);
           this.waveEnemiesText.setPosition(this.contextTitleText.x, this.waveCountText.y + this.waveCountText.height + 6);
           const progressTrackY = this.waveEnemiesText.y + this.waveEnemiesText.height + 8;
           const progressTrackW = Math.max(90, contextPanelW - contextPad * 2);
+          const progressTrackH = 14;
           this.waveProgressTrack.setPosition(this.contextPanelFrame.x + contextPad, progressTrackY);
-          this.waveProgressTrack.setSize(progressTrackW, 12);
-          this.waveProgressFill.setPosition(this.waveProgressTrack.x + 1, this.waveProgressTrack.y + 1);
-          this.waveProgressFill.setSize(2, 10);
+          this.waveProgressTrack.setSize(progressTrackW, progressTrackH);
           this.waveProgressText.setPosition(this.waveProgressTrack.x, this.waveProgressTrack.y + this.waveProgressTrack.height + 6);
           this.upcomingEnemiesTitleText.setPosition(this.contextPanelFrame.x + contextPad, this.waveProgressText.y + this.waveProgressText.height + 8);
           const chipTop = this.upcomingEnemiesTitleText.y + this.upcomingEnemiesTitleText.height + 6;
@@ -1352,8 +1378,11 @@ export class Hud {
           );
           this._previewIconSize = Math.round(previewCardSize * 0.78);
           const previewLabelSize = this.clamp(Math.round(previewCardSize * 0.22), 12, 18);
-          this.upcomingCurrentIconLabel.setStyle({ fontSize: `${previewLabelSize}px` });
-          this.upcomingNextIconLabel.setStyle({ fontSize: `${previewLabelSize}px` });
+          const previewNowSize = this.clamp(previewLabelSize - 2, 9, 14);
+          this.upcomingCurrentNowText.setStyle({ fontSize: `${previewNowSize}px` });
+          this.upcomingCurrentRoleText.setStyle({ fontSize: `${previewLabelSize}px` });
+          this.upcomingNextNowText.setStyle({ fontSize: `${previewNowSize}px` });
+          this.upcomingNextRoleText.setStyle({ fontSize: `${previewLabelSize}px` });
           this.upcomingCurrentIconBg.setSize(previewCardSize, previewCardSize);
           this.upcomingNextIconBg.setSize(previewCardSize, previewCardSize);
           this.upcomingCurrentIconBg.setPosition(this.contextPanelFrame.x + contextPad, chipTop);
@@ -1364,7 +1393,12 @@ export class Hud {
           if (this.upcomingCurrentIcon.visible) {
             this.upcomingCurrentIcon.setDisplaySize(this._previewIconSize, this._previewIconSize);
           }
-          this.upcomingCurrentIconLabel.setPosition(
+          const cornerInset = 4;
+          this.upcomingCurrentNowText.setPosition(
+            this.upcomingCurrentIconBg.x + cornerInset,
+            this.upcomingCurrentIconBg.y + this.upcomingCurrentIconBg.height - cornerInset,
+          );
+          this.upcomingCurrentRoleText.setPosition(
             this.upcomingCurrentIconBg.x,
             this.upcomingCurrentIconBg.y + this.upcomingCurrentIconBg.height + 4,
           );
@@ -1377,10 +1411,15 @@ export class Hud {
           if (this.upcomingNextIcon.visible) {
             this.upcomingNextIcon.setDisplaySize(this._previewIconSize, this._previewIconSize);
           }
-          this.upcomingNextIconLabel.setPosition(
+          this.upcomingNextNowText.setPosition(
+            this.upcomingNextIconBg.x + cornerInset,
+            this.upcomingNextIconBg.y + this.upcomingNextIconBg.height - cornerInset,
+          );
+          this.upcomingNextRoleText.setPosition(
             this.upcomingNextIconBg.x,
             this.upcomingNextIconBg.y + this.upcomingNextIconBg.height + 4,
           );
+          this.setWaveProgressVisual(this._waveInfo?.progress);
         } else if (isTowerCtx) {
           const iconSize = 52;
           this.towerCardIconBg.setSize(iconSize, iconSize);
@@ -1426,10 +1465,8 @@ export class Hud {
           this.contextTitleText.x,
           this.contextTitleText.y + this.contextTitleText.height + 4,
         );
-        this.waveCountText.setPosition(
-          this.contextTitleText.x,
-          this.contextSubtitleText.y + this.contextSubtitleText.height + 4,
-        );
+        const waveBodyTop = this.contextTitleText.y + this.contextTitleText.height + 8;
+        this.waveCountText.setPosition(this.contextTitleText.x, waveBodyTop);
         this.waveEnemiesText.setPosition(
           this.contextTitleText.x,
           this.waveCountText.y + this.waveCountText.height + 4,
@@ -1439,8 +1476,6 @@ export class Hud {
         const progressTrackH = this.clamp(Math.round(wavePanelH * 0.1), 10, 14);
         this.waveProgressTrack.setPosition(this.contextPanelFrame.x + contextPad, progressTrackY);
         this.waveProgressTrack.setSize(progressTrackW, progressTrackH);
-        this.waveProgressFill.setPosition(this.waveProgressTrack.x + 1, this.waveProgressTrack.y + 1);
-        this.waveProgressFill.setSize(2, Math.max(2, progressTrackH - 2));
         this.waveProgressText.setStyle({ fontSize: `${this.clamp(Math.round(progressTrackH * 0.95), 11, 14)}px` });
         this.waveProgressText.setPosition(
           this.waveProgressTrack.x,
@@ -1451,6 +1486,12 @@ export class Hud {
         const chipTop = this.upcomingEnemiesTitleText.y + this.upcomingEnemiesTitleText.height + 6;
         const previewCardSize = 52;
         this._previewIconSize = 44;
+        const previewLabelSize = this.clamp(Math.round(previewCardSize * 0.22), 11, 14);
+        const previewNowSize = this.clamp(previewLabelSize - 1, 9, 12);
+        this.upcomingCurrentNowText.setStyle({ fontSize: `${previewNowSize}px` });
+        this.upcomingCurrentRoleText.setStyle({ fontSize: `${previewLabelSize}px` });
+        this.upcomingNextNowText.setStyle({ fontSize: `${previewNowSize}px` });
+        this.upcomingNextRoleText.setStyle({ fontSize: `${previewLabelSize}px` });
         this.upcomingCurrentIconBg.setSize(previewCardSize, previewCardSize);
         this.upcomingNextIconBg.setSize(previewCardSize, previewCardSize);
         this.upcomingCurrentIconBg.setPosition(this.contextPanelFrame.x + contextPad, chipTop);
@@ -1461,7 +1502,12 @@ export class Hud {
         if (this.upcomingCurrentIcon.visible) {
           this.upcomingCurrentIcon.setDisplaySize(this._previewIconSize, this._previewIconSize);
         }
-        this.upcomingCurrentIconLabel.setPosition(
+        const cornerInset = 4;
+        this.upcomingCurrentNowText.setPosition(
+          this.upcomingCurrentIconBg.x + cornerInset,
+          this.upcomingCurrentIconBg.y + this.upcomingCurrentIconBg.height - cornerInset,
+        );
+        this.upcomingCurrentRoleText.setPosition(
           this.upcomingCurrentIconBg.x,
           this.upcomingCurrentIconBg.y + this.upcomingCurrentIconBg.height + 4,
         );
@@ -1475,10 +1521,15 @@ export class Hud {
         if (this.upcomingNextIcon.visible) {
           this.upcomingNextIcon.setDisplaySize(this._previewIconSize, this._previewIconSize);
         }
-        this.upcomingNextIconLabel.setPosition(
+        this.upcomingNextNowText.setPosition(
+          this.upcomingNextIconBg.x + cornerInset,
+          this.upcomingNextIconBg.y + this.upcomingNextIconBg.height - cornerInset,
+        );
+        this.upcomingNextRoleText.setPosition(
           this.upcomingNextIconBg.x,
           this.upcomingNextIconBg.y + this.upcomingNextIconBg.height + 4,
         );
+        this.setWaveProgressVisual(this._waveInfo?.progress);
         yCursor += wavePanelH + gapSm;
       } else if (this._bottomVisible && isTowerCtx) {
         const towerPanelTop = yCursor;
@@ -1554,12 +1605,13 @@ export class Hud {
           this.upcomingEnemiesTitleText,
           this.upcomingCurrentIconBg,
           this.upcomingCurrentIcon,
-          this.upcomingCurrentIconLabel,
+          this.upcomingCurrentNowText,
+          this.upcomingCurrentRoleText,
           this.upcomingNextIconBg,
           this.upcomingNextIcon,
-          this.upcomingNextIconLabel,
+          this.upcomingNextNowText,
+          this.upcomingNextRoleText,
           this.waveProgressTrack,
-          this.waveProgressFill,
           this.waveProgressText,
           this.towerCardIconBg,
           this.towerCardIcon,
@@ -1576,6 +1628,9 @@ export class Hud {
             continue;
           }
           obj.setPosition(contextRect.x + (obj.x - contextDefaultRect.x) * sx, contextRect.y + (obj.y - contextDefaultRect.y) * sy);
+        }
+        if (this._contextMode === "wave") {
+          this.setWaveProgressVisual(this._waveInfo?.progress);
         }
         this.towerRolePrimaryText.setWordWrapWidth(Math.max(100, contextRect.width - 90), true);
         this.towerDpsText.setWordWrapWidth(Math.max(100, contextRect.width - 90), true);
@@ -1851,28 +1906,30 @@ export class Hud {
     for (const obj of this.bottomUiObjects) {
       obj.setVisible(this._bottomVisible);
     }
-    const splitLandscapeVisible =
-      this._bottomVisible && this._viewportMode === "landscape" && Number(this.scene.scale.width) >= 920;
-    const showWavePanel = this._bottomVisible && this._contextMode === "wave" && (this._waveExpanded || splitLandscapeVisible);
+    const showWavePanel = this._bottomVisible && this._contextMode === "wave";
     const showTowerPanel = this._bottomVisible && this._contextMode === "tower";
+    const subtitleVisible =
+      this._bottomVisible && (this.contextSubtitleText.text?.length ?? 0) > 0;
     this.contextPanelFrame.setVisible(this._bottomVisible);
     this.contextDragZone.setVisible(this._bottomVisible);
     this.contextLockText.setVisible(this._bottomVisible);
     this.contextResizeHandle.setVisible(this._bottomVisible && !this._panelWindows.context.locked);
     this.contextTitleText.setVisible(this._bottomVisible);
-    this.contextSubtitleText.setVisible(this._bottomVisible);
+    this.contextSubtitleText.setVisible(subtitleVisible);
     this.waveCountText.setVisible(showWavePanel);
     this.waveEnemiesText.setVisible(showWavePanel);
     this.waveProgressTrack.setVisible(showWavePanel);
-    this.waveProgressFill.setVisible(showWavePanel);
+    this.waveProgressSegments.setVisible(showWavePanel);
     this.waveProgressText.setVisible(showWavePanel);
     this.upcomingEnemiesTitleText.setVisible(showWavePanel);
     this.upcomingCurrentIconBg.setVisible(showWavePanel);
     this.upcomingCurrentIcon.setVisible(showWavePanel && this.upcomingCurrentIcon.visible);
-    this.upcomingCurrentIconLabel.setVisible(showWavePanel);
+    this.upcomingCurrentNowText.setVisible(showWavePanel);
+    this.upcomingCurrentRoleText.setVisible(showWavePanel);
     this.upcomingNextIconBg.setVisible(showWavePanel);
     this.upcomingNextIcon.setVisible(showWavePanel && this.upcomingNextIcon.visible);
-    this.upcomingNextIconLabel.setVisible(showWavePanel);
+    this.upcomingNextNowText.setVisible(showWavePanel);
+    this.upcomingNextRoleText.setVisible(showWavePanel);
     this.towerCardIconBg.setVisible(showTowerPanel);
     this.towerCardIcon.setVisible(showTowerPanel && this.towerCardIcon.visible);
     this.towerNameTierText.setVisible(false);
@@ -1997,14 +2054,6 @@ export class Hud {
     return [this.root];
   }
 
-  toggleWaveExpanded() {
-    if (this._contextMode !== "wave") {
-      return;
-    }
-    this._waveExpanded = !this._waveExpanded;
-    this.layout();
-  }
-
   getOcclusionMargins() {
     return {
       top: this._topVisible ? this.topBarHeight : 0,
@@ -2081,18 +2130,19 @@ export class Hud {
       const spawnTarget = Number.isFinite(this._waveInfo?.spawnTarget) ? this._waveInfo.spawnTarget : 0;
       const compactSummary = `Wave ${waveNumber} • ${enemiesAlive} left`;
       this.contextTitleText.setText(compactSummary);
-      this.contextSubtitleText.setText(this._waveExpanded ? "Tap to collapse" : "Tap for details");
+      this.contextSubtitleText.setText("");
       this.waveCountText.setText(`Wave ${waveNumber}`);
       this.waveEnemiesText.setText(`Enemies: ${enemiesAlive}  Spawned: ${totalSpawned}/${spawnTarget}`);
-      this.upcomingCurrentIconLabel.setText(`Now\n${this.formatRoleLabel(this._waveInfo?.upcoming?.current?.role)}`);
-      this.upcomingNextIconLabel.setText(`Next\n${this.formatRoleLabel(this._waveInfo?.upcoming?.next?.role)}`);
+      this.upcomingCurrentNowText.setText("Now");
+      this.upcomingCurrentRoleText.setText(this.formatRoleLabel(this._waveInfo?.upcoming?.current?.role));
+      this.upcomingNextNowText.setText("Next");
+      this.upcomingNextRoleText.setText(this.formatRoleLabel(this._waveInfo?.upcoming?.next?.role));
       this.applyPreviewIcon(this.upcomingCurrentIcon, this._waveInfo?.upcoming?.current);
       this.applyPreviewIcon(this.upcomingNextIcon, this._waveInfo?.upcoming?.next);
       this.setWaveProgressVisual(this._waveInfo?.progress);
       return;
     }
     this._contextMode = "tower";
-    this._waveExpanded = false;
     const selectedCount = Number(selected.selectedCount);
     const hasGroupSelection = Number.isFinite(selectedCount) && selectedCount > 1;
     const tierValue = Number.isFinite(selected.tier) ? selected.tier + 1 : 1;
@@ -2189,11 +2239,46 @@ export class Hud {
   }
 
   setWaveProgressVisual(rawProgress) {
+    const g = this.waveProgressSegments;
+    const track = this.waveProgressTrack;
+    if (!g || !track) {
+      return;
+    }
     const progress = Number.isFinite(rawProgress) ? this.clamp(rawProgress, 0, 1) : 0;
-    const trackInnerWidth = Math.max(2, this.waveProgressTrack.width - 2);
-    this.waveProgressFill.width = Math.max(2, Math.round(trackInnerWidth * progress));
     const pct = Math.round(progress * 100);
     this.waveProgressText.setText(`Progress: ${pct}%`);
+
+    const trackX = track.x + 1;
+    const trackY = track.y + 1;
+    const innerW = Math.max(4, track.width - 2);
+    const innerH = Math.max(4, track.height - 2);
+    const n = WAVE_PROGRESS_SEGMENT_COUNT;
+    const gap = WAVE_PROGRESS_SEGMENT_GAP;
+    const totalGaps = gap * Math.max(0, n - 1);
+    const pillW = Math.max(4, (innerW - totalGaps) / n);
+    const radius = Math.min(4, innerH / 2);
+    const litCount = progress >= 1 ? n : Math.min(n, Math.round(progress * n));
+
+    g.clear();
+    g.setPosition(0, 0);
+    for (let i = 0; i < n; i += 1) {
+      const px = trackX + i * (pillW + gap);
+      const py = trackY;
+      const filled = i < litCount;
+      if (filled) {
+        g.fillStyle(0xffe566, 1);
+        g.fillRoundedRect(px, py, pillW, innerH, radius);
+        g.lineStyle(2, 0x1a0f04, 1);
+        g.strokeRoundedRect(px + 1, py + 1, pillW - 2, innerH - 2, Math.max(1, radius - 1));
+        g.fillStyle(0xfff5c0, 0.35);
+        g.fillRoundedRect(px + 2, py + 2, pillW - 4, innerH * 0.38, Math.max(1, radius - 2));
+      } else {
+        g.fillStyle(0x2c2438, 1);
+        g.fillRoundedRect(px, py, pillW, innerH, radius);
+        g.lineStyle(1, 0x141018, 1);
+        g.strokeRoundedRect(px + 0.5, py + 0.5, pillW - 1, innerH - 1, radius);
+      }
+    }
   }
 
   applySpeedButtonStyle(gameSpeed) {

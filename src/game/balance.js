@@ -12,13 +12,13 @@ const ELEMENT_CONVERSIONS = [...BASIC_CONVERSION_ORDER];
 
 export const towerCatalog = {
   basic: { label: "Basic", damage: 9, rate: 1.0, rangeTiles: 3.4, utilityBudget: 1.0, projectileSpeed: 450 },
-  fire: { label: "Fire", damage: 7, rate: 0.52, rangeTiles: 3.5, utilityBudget: 0.72, projectileSpeed: 440 },
-  ice: { label: "Ice", damage: 5, rate: 0.62, rangeTiles: 3.5, utilityBudget: 0.72, projectileSpeed: 410 },
-  lightning: { label: "Lightning", damage: 9, rate: 1.05, rangeTiles: 3.1, utilityBudget: 0.8, projectileSpeed: 500 },
-  nature: { label: "Nature", damage: 5, rate: 0.72, rangeTiles: 3.5, utilityBudget: 0.76, projectileSpeed: 420 },
-  earth: { label: "Earth", damage: 40, rate: 0.3, rangeTiles: 2.85, utilityBudget: 0.76, projectileSpeed: 340 },
-  dark: { label: "Dark", damage: 4, rate: 0.52, rangeTiles: 3.2, utilityBudget: 0.74, projectileSpeed: 420 },
-  holy: { label: "Holy", damage: 7, rate: 0.55, rangeTiles: 3.5, utilityBudget: 0.82, projectileSpeed: 450 },
+  fire: { label: "Fire", damage: 8, rate: 0.52, rangeTiles: 3.5, utilityBudget: 0.74, projectileSpeed: 440 },
+  ice: { label: "Ice", damage: 6, rate: 0.62, rangeTiles: 3.5, utilityBudget: 0.74, projectileSpeed: 410 },
+  lightning: { label: "Lightning", damage: 10, rate: 1.05, rangeTiles: 3.1, utilityBudget: 0.82, projectileSpeed: 500 },
+  nature: { label: "Nature", damage: 6, rate: 0.72, rangeTiles: 3.5, utilityBudget: 0.78, projectileSpeed: 420 },
+  earth: { label: "Earth", damage: 52, rate: 0.42, rangeTiles: 2.85, utilityBudget: 0.95, projectileSpeed: 340 },
+  dark: { label: "Dark", damage: 5, rate: 0.52, rangeTiles: 3.2, utilityBudget: 0.76, projectileSpeed: 420 },
+  holy: { label: "Holy", damage: 8, rate: 0.55, rangeTiles: 3.5, utilityBudget: 0.84, projectileSpeed: 450 },
   archer: { label: "Archer", damage: 12, rate: 1.35, rangeTiles: 3.85, utilityBudget: 1.0, projectileSpeed: 500 },
 };
 
@@ -37,7 +37,7 @@ export const towerBaseEffects = {
   nature: [{ type: "bonusGoldPerKill", amount: 2 }],
   earth: [{ type: "bonusVsHeavy", ratio: 0.52 }],
   dark: [{ type: "curse", ratio: 0.24, duration: 5 }],
-  holy: [{ type: "pulseAoE", interval: 2.0, damageRatio: 0.42 }],
+  holy: [{ type: "pulseAoE", interval: 2.0, damageRatio: 0.48 }],
 };
 
 export const towerUiMeta = {
@@ -408,28 +408,28 @@ export const scriptedWaveProgram = [
 ];
 
 export const waveProgram = [
-  { role: "normal", breather: false, expectedTowerCount: 2, expectedDpsBand: [20, 28] },
-  { role: "normal", breather: false, expectedTowerCount: 2, expectedDpsBand: [24, 34] },
-  { role: "fast", breather: false, expectedTowerCount: 3, expectedDpsBand: [30, 44] },
-  { role: "normal", breather: false, expectedTowerCount: 3, expectedDpsBand: [36, 52] },
-  { role: "tank", breather: true, expectedTowerCount: 4, expectedDpsBand: [46, 64] },
-  { role: "normal", secondaryRole: "fast", breather: false, expectedTowerCount: 4, expectedDpsBand: [58, 78] },
-  { role: "swarm", breather: false, expectedTowerCount: 5, expectedDpsBand: [68, 92] },
-  { role: "tank", secondaryRole: "normal", breather: false, expectedTowerCount: 5, expectedDpsBand: [78, 106] },
-  { role: "fast", breather: false, expectedTowerCount: 6, expectedDpsBand: [92, 124] },
-  { role: "elite", secondaryRole: "normal", breather: true, expectedTowerCount: 6, expectedDpsBand: [106, 142] },
-  { role: "tank", secondaryRole: "swarm", breather: false, expectedTowerCount: 7, expectedDpsBand: [122, 162] },
-  { role: "fast", secondaryRole: "fast", breather: false, expectedTowerCount: 7, expectedDpsBand: [136, 178] },
-  { role: "elite", secondaryRole: "tank", breather: false, expectedTowerCount: 8, expectedDpsBand: [154, 202] },
-  { role: "swarm", breather: false, expectedTowerCount: 9, expectedDpsBand: [172, 226] },
-  { role: "elite", secondaryRole: "fast", breather: true, expectedTowerCount: 9, expectedDpsBand: [188, 248] },
+  { role: "normal", breather: false, expectedTowerCount: 2, expectedDpsBand: [18, 26] },
+  { role: "normal", breather: false, expectedTowerCount: 2, expectedDpsBand: [22, 32] },
+  { role: "fast", breather: false, expectedTowerCount: 3, expectedDpsBand: [28, 40] },
+  { role: "normal", breather: false, expectedTowerCount: 3, expectedDpsBand: [32, 48] },
+  { role: "tank", breather: true, expectedTowerCount: 4, expectedDpsBand: [42, 58] },
+  { role: "normal", secondaryRole: "fast", breather: false, expectedTowerCount: 4, expectedDpsBand: [52, 70] },
+  { role: "swarm", breather: false, expectedTowerCount: 5, expectedDpsBand: [60, 82] },
+  { role: "tank", secondaryRole: "normal", breather: false, expectedTowerCount: 5, expectedDpsBand: [70, 94] },
+  { role: "fast", breather: false, expectedTowerCount: 6, expectedDpsBand: [82, 110] },
+  { role: "elite", secondaryRole: "normal", breather: true, expectedTowerCount: 6, expectedDpsBand: [94, 126] },
+  { role: "tank", secondaryRole: "swarm", breather: false, expectedTowerCount: 7, expectedDpsBand: [108, 144] },
+  { role: "fast", secondaryRole: "fast", breather: false, expectedTowerCount: 7, expectedDpsBand: [120, 158] },
+  { role: "elite", secondaryRole: "tank", breather: false, expectedTowerCount: 8, expectedDpsBand: [136, 180] },
+  { role: "swarm", breather: false, expectedTowerCount: 9, expectedDpsBand: [152, 200] },
+  { role: "elite", secondaryRole: "fast", breather: true, expectedTowerCount: 9, expectedDpsBand: [166, 220] },
 ];
 
 export const balanceRules = {
   ccUptimeCap: CC_UPTIME_CAP,
   ccWindowSeconds: CC_WINDOW_SECONDS,
   utilityDpsMin: 0.7,
-  utilityDpsMax: 0.85,
+  utilityDpsMax: 0.88,
   archerEfficiency: 1.0,
   maxChainTargets: MAX_CHAIN_TARGETS,
   maxVolleyArrows: MAX_VOLLEY_ARROWS,
@@ -746,8 +746,36 @@ export function getTowerEffectiveDps(towerType, damage, cooldownSeconds) {
 }
 
 export function getWaveBaseHp(waveIndex) {
-  return 50 * 1.16 ** Math.max(0, waveIndex - 1);
+  /** Softer per-wave growth (was 1.16) so late bosses stay in TD-scale vs tower DPS. */
+  return 50 * 1.105 ** Math.max(0, waveIndex - 1);
 }
+
+/** Tank/elite archetypes get full catalog HP from this wave onward (1-based index). */
+const HEAVY_ENEMY_EARLY_HP_RAMP_END_WAVE = 12;
+/** HP multiplier at wave 1 for tank/elite when dampening applies; ramps linearly to 1.0 at ramp end. */
+const HEAVY_ENEMY_EARLY_HP_MIN_MULTIPLIER = 0.88;
+
+/**
+ * Wave-ramped HP factor for tank- and elite-role enemies (call site applies only to those roles).
+ * Softer early campaign without changing late-game scaling.
+ * @param {number} waveIndex
+ * @returns {number}
+ */
+export function getHeavyEnemyEarlyHpMultiplier(waveIndex) {
+  const w = Math.max(1, Number(waveIndex) || 1);
+  if (w >= HEAVY_ENEMY_EARLY_HP_RAMP_END_WAVE) {
+    return 1;
+  }
+  const span = HEAVY_ENEMY_EARLY_HP_RAMP_END_WAVE - 1;
+  if (span <= 0) {
+    return 1;
+  }
+  const t = (w - 1) / span;
+  return HEAVY_ENEMY_EARLY_HP_MIN_MULTIPLIER + (1 - HEAVY_ENEMY_EARLY_HP_MIN_MULTIPLIER) * t;
+}
+
+/** Max HP scale for archetype (or procedural wave) role `tank` or `elite`; applied at spawn after early ramp. */
+export const TANK_ELITE_HP_SCALE = 0.5;
 
 /**
  * Multiplier applied to enemy sprite `visual.scale` from max HP at spawn.
