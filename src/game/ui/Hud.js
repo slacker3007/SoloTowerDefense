@@ -17,6 +17,8 @@ const DETAILS_CLOSE_ICON_KEY = "detailsCloseIcon09";
 /** Discrete pills for wave spawn/clear progress bar. */
 const WAVE_PROGRESS_SEGMENT_COUNT = 8;
 const WAVE_PROGRESS_SEGMENT_GAP = 3;
+/** Pixels below preview icon for role label (Normal, Tank, …). */
+const WAVE_PREVIEW_ROLE_GAP = 24;
 
 export class Hud {
   /**
@@ -1360,8 +1362,7 @@ export class Hud {
         );
         if (isWaveCtx) {
           const waveBodyTop = this.contextTitleText.y + this.contextTitleText.height + 8;
-          this.waveCountText.setPosition(this.contextTitleText.x, waveBodyTop);
-          this.waveEnemiesText.setPosition(this.contextTitleText.x, this.waveCountText.y + this.waveCountText.height + 6);
+          this.waveEnemiesText.setPosition(this.contextTitleText.x, waveBodyTop);
           const progressTrackY = this.waveEnemiesText.y + this.waveEnemiesText.height + 8;
           const progressTrackW = Math.max(90, contextPanelW - contextPad * 2);
           const progressTrackH = 14;
@@ -1400,7 +1401,7 @@ export class Hud {
           );
           this.upcomingCurrentRoleText.setPosition(
             this.upcomingCurrentIconBg.x,
-            this.upcomingCurrentIconBg.y + this.upcomingCurrentIconBg.height + 4,
+            this.upcomingCurrentIconBg.y + this.upcomingCurrentIconBg.height + WAVE_PREVIEW_ROLE_GAP,
           );
           const nextX = this.upcomingCurrentIconBg.x + this.upcomingCurrentIconBg.width + previewGap;
           this.upcomingNextIconBg.setPosition(nextX, chipTop);
@@ -1417,7 +1418,7 @@ export class Hud {
           );
           this.upcomingNextRoleText.setPosition(
             this.upcomingNextIconBg.x,
-            this.upcomingNextIconBg.y + this.upcomingNextIconBg.height + 4,
+            this.upcomingNextIconBg.y + this.upcomingNextIconBg.height + WAVE_PREVIEW_ROLE_GAP,
           );
           this.setWaveProgressVisual(this._waveInfo?.progress);
         } else if (isTowerCtx) {
@@ -1466,11 +1467,7 @@ export class Hud {
           this.contextTitleText.y + this.contextTitleText.height + 4,
         );
         const waveBodyTop = this.contextTitleText.y + this.contextTitleText.height + 8;
-        this.waveCountText.setPosition(this.contextTitleText.x, waveBodyTop);
-        this.waveEnemiesText.setPosition(
-          this.contextTitleText.x,
-          this.waveCountText.y + this.waveCountText.height + 4,
-        );
+        this.waveEnemiesText.setPosition(this.contextTitleText.x, waveBodyTop);
         const progressTrackY = this.waveEnemiesText.y + this.waveEnemiesText.height + 4;
         const progressTrackW = Math.max(70, contextPanelW - contextPad * 2);
         const progressTrackH = this.clamp(Math.round(wavePanelH * 0.1), 10, 14);
@@ -1509,7 +1506,7 @@ export class Hud {
         );
         this.upcomingCurrentRoleText.setPosition(
           this.upcomingCurrentIconBg.x,
-          this.upcomingCurrentIconBg.y + this.upcomingCurrentIconBg.height + 4,
+          this.upcomingCurrentIconBg.y + this.upcomingCurrentIconBg.height + WAVE_PREVIEW_ROLE_GAP,
         );
         const nextX =
           this.upcomingCurrentIconBg.x + this.upcomingCurrentIconBg.width + Math.max(10, Math.round(contextPad * 0.45));
@@ -1527,7 +1524,7 @@ export class Hud {
         );
         this.upcomingNextRoleText.setPosition(
           this.upcomingNextIconBg.x,
-          this.upcomingNextIconBg.y + this.upcomingNextIconBg.height + 4,
+          this.upcomingNextIconBg.y + this.upcomingNextIconBg.height + WAVE_PREVIEW_ROLE_GAP,
         );
         this.setWaveProgressVisual(this._waveInfo?.progress);
         yCursor += wavePanelH + gapSm;
@@ -1916,7 +1913,7 @@ export class Hud {
     this.contextResizeHandle.setVisible(this._bottomVisible && !this._panelWindows.context.locked);
     this.contextTitleText.setVisible(this._bottomVisible);
     this.contextSubtitleText.setVisible(subtitleVisible);
-    this.waveCountText.setVisible(showWavePanel);
+    this.waveCountText.setVisible(false);
     this.waveEnemiesText.setVisible(showWavePanel);
     this.waveProgressTrack.setVisible(showWavePanel);
     this.waveProgressSegments.setVisible(showWavePanel);
@@ -2131,7 +2128,7 @@ export class Hud {
       const compactSummary = `Wave ${waveNumber} • ${enemiesAlive} left`;
       this.contextTitleText.setText(compactSummary);
       this.contextSubtitleText.setText("");
-      this.waveCountText.setText(`Wave ${waveNumber}`);
+      this.waveCountText.setText("");
       this.waveEnemiesText.setText(`Enemies: ${enemiesAlive}  Spawned: ${totalSpawned}/${spawnTarget}`);
       this.upcomingCurrentNowText.setText("Now");
       this.upcomingCurrentRoleText.setText(this.formatRoleLabel(this._waveInfo?.upcoming?.current?.role));
