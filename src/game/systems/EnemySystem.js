@@ -2,7 +2,13 @@ import { buildDefaultPathMask, computeRouteFromPathMask } from "../maps/enemyPat
 import { ensurePathMaskGrid } from "../maps/mapUtils";
 import { cellToWorld, worldToCell } from "../maps/tileRules";
 import { createUnitHpBar } from "../ui/UnitHpBar";
-import { balanceRules, getEnemySpriteHpScaleMultiplier, getStatusColors, STATUS_PRIORITY } from "../balance";
+import {
+  balanceRules,
+  getEnemySpriteHpScaleMultiplier,
+  getHomeLeakDamage,
+  getStatusColors,
+  STATUS_PRIORITY,
+} from "../balance";
 
 const ENEMY_HP_BAR_Y_OFFSET = 52;
 const STATUS_RING_OFFSET_Y = 12;
@@ -314,15 +320,17 @@ export class EnemySystem {
     });
   }
 
-  consumeEscapedCount() {
+  consumeEscapedLeaks() {
     const escaped = this.enemies.filter((enemy) => enemy.escaped && enemy.alive);
+    let livesDamage = 0;
     for (const enemy of escaped) {
+      livesDamage += getHomeLeakDamage(enemy);
       enemy.alive = false;
       enemy.hpBar?.destroy();
       this._destroyStatusFx(enemy);
       enemy.sprite.destroy();
     }
-    return escaped.length;
+    return { leakEvents: escaped.length, livesDamage };
   }
 
   getActiveEnemies() {

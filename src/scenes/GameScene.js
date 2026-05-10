@@ -2115,10 +2115,10 @@ export class GameScene extends Phaser.Scene {
     this.combatSystem.update(deltaSeconds, this.gameState);
     this.gameState.lives = Math.max(0, Math.floor(Number(this.gameState.lives) || 0));
 
-    const escaped = this.enemySystem.consumeEscapedCount();
-    if (escaped > 0) {
-      this.gameState.lives = Math.max(0, this.gameState.lives - escaped);
-      this._performance.leaksInWave += escaped;
+    const { leakEvents, livesDamage } = this.enemySystem.consumeEscapedLeaks();
+    if (livesDamage > 0) {
+      this.gameState.lives = Math.max(0, this.gameState.lives - livesDamage);
+      this._performance.leaksInWave += leakEvents;
       if (this.gameState.lives <= 0) {
         this.endRun("defeat");
         return;

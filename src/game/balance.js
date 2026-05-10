@@ -145,6 +145,15 @@ export const economy = {
   },
 };
 
+export const HOME_LEAK_DAMAGE_DEFAULT = 1;
+export const HOME_LEAK_DAMAGE_BOSS = 5;
+
+/** @param {{ tags?: string[] } | null | undefined} enemy */
+export function getHomeLeakDamage(enemy) {
+  const tags = enemy?.tags;
+  return Array.isArray(tags) && tags.includes("boss") ? HOME_LEAK_DAMAGE_BOSS : HOME_LEAK_DAMAGE_DEFAULT;
+}
+
 const towerCostProfiles = {
   archer: { conversion: 120, tierCosts: { t1: 120, t2: 180, t3: 260 } },
   fire: { conversion: 130, tierCosts: { t1: 100, t2: 190, t3: 300 } },
