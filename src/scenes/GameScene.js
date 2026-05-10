@@ -84,6 +84,9 @@ const TOWER_DOUBLE_CLICK_MS = 300;
 const DEFAULT_CAMERA_ZOOM = 0.59;
 const DEFAULT_CAMERA_SCROLL_X = -12;
 const DEFAULT_CAMERA_SCROLL_Y = 228;
+/** World scrollY at game start before panning to `DEFAULT_CAMERA_SCROLL_Y` (enemy base in view). */
+const INTRO_CAMERA_SCROLL_Y = 514;
+const INTRO_CAMERA_PAN_MS = 3000;
 const CAMERA_VERTICAL_ONLY = true;
 
 /**
@@ -138,6 +141,9 @@ export class GameScene extends Phaser.Scene {
     this._orientationHintRoot = null;
     this._orientationHintText = null;
     this._dismissedOrientationHint = false;
+    /** @type {Phaser.Tweens.Tween | null} */
+    this._introCameraTween = null;
+    this._introCameraPanActive = false;
   }
 
   create() {
@@ -248,7 +254,7 @@ export class GameScene extends Phaser.Scene {
     this._boundResize = (size) => this.handleResize(size);
     this.scale.on(Phaser.Scale.Events.RESIZE, this._boundResize);
     this.handleResize({ width: this.scale.width, height: this.scale.height });
-    this._applyInitialCameraPose();
+    this._startIntroCameraPan();
 
     this.unbindInput();
     this.bindInput();
@@ -268,6 +274,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   shutdown() {
+    this._introCameraTween?.remove?.();
+    this._introCameraTween = null;
+    this._introCameraPanActive = false;
     this.unbindInput();
     if (this.uiCamera) {
       this.cameras.remove(this.uiCamera, true);
@@ -1273,6 +1282,42 @@ export class GameScene extends Phaser.Scene {
     this._syncHudCameraTelemetry();
   }
 
+  _startIntroCameraPan() {
+    if (this.editor?.enabled) {
+      this._applyInitialCameraPose();
+      return;
+    }
+    const cam = this.cameras.main;
+    cam.setZoom(DEFAULT_CAMERA_ZOOM);
+    cam.setScroll(DEFAULT_CAMERA_SCROLL_X, INTRO_CAMERA_SCROLL_Y);
+    this._syncHudCameraTelemetry();
+    this._introCameraPanActive = true;
+    this._introCameraTween?.remove?.();
+    this._introCameraTween = this.tweens.add({
+      targets: cam,
+      scrollY: DEFAULT_CAMERA_SCROLL_Y,
+      duration: INTRO_CAMERA_PAN_MS,
+      ease: "Sine.easeInOut",
+      onComplete: () => {
+        this._introCameraTween = null;
+        this._introCameraPanActive = false;
+        this._syncHudCameraTelemetry();
+        this._clampCameraScroll();
+      },
+    });
+  }
+
+  _cancelIntroCameraPan() {
+    if (!this._introCameraPanActive && !this._introCameraTween) {
+      return;
+    }
+    this._introCameraTween?.remove?.();
+    this._introCameraTween = null;
+    this._introCameraPanActive = false;
+    this._syncHudCameraTelemetry();
+    this._clampCameraScroll();
+  }
+
   handleResize(size) {
     const width = Math.max(1, Number(size?.width) || this.scale.width || GAME_WIDTH);
     const height = Math.max(1, Number(size?.height) || this.scale.height || GAME_HEIGHT);
@@ -1289,7 +1334,11 @@ export class GameScene extends Phaser.Scene {
     this.hud?.layout?.(width, height);
     this.layoutOrientationHint(width, height);
     this.updateOrientationHint(viewportProfile);
-    this._clampCameraScroll();
+    if (!this._introCameraPanActive) {
+      this._clampCameraScroll();
+    } else {
+      this._syncHudCameraTelemetry();
+    }
   }
 
   createOrientationHintOverlay() {
@@ -1417,6 +1466,7 @@ export class GameScene extends Phaser.Scene {
       if (this._isPanPointer(pointer)) {
         const ev = /** @type {MouseEvent | undefined} */ (pointer.event);
         ev?.preventDefault();
+        this._cancelIntroCameraPan();
         this._cameraPanning = true;
         this._lastPanX = pointer.x;
         this._lastPanY = pointer.y;
