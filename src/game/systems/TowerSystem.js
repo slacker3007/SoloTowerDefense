@@ -11,6 +11,35 @@ import {
   upgrades,
 } from "../balance";
 
+/** Base depth for tower sprites on `towersWorldLayer`. Placement ghost uses 19 — keep computed depths below that. */
+const TOWER_SPRITE_DEPTH_BASE = 18;
+const TOWER_SPRITE_DEPTH_PER_WORLD_Y = 1e-5;
+const TOWER_SPRITE_DEPTH_PER_WORLD_X = 1e-8;
+
+/**
+ * @param {number} worldX
+ * @param {number} worldY
+ * @returns {number}
+ */
+function towerSpriteDrawDepthFromWorld(worldX, worldY) {
+  return (
+    TOWER_SPRITE_DEPTH_BASE +
+    worldY * TOWER_SPRITE_DEPTH_PER_WORLD_Y +
+    worldX * TOWER_SPRITE_DEPTH_PER_WORLD_X
+  );
+}
+
+/**
+ * @param {{ x?: number, y?: number }} tower
+ * @returns {number}
+ */
+function towerSpriteDrawDepthForTower(tower) {
+  if (!tower || !Number.isFinite(tower.x) || !Number.isFinite(tower.y)) {
+    return TOWER_SPRITE_DEPTH_BASE;
+  }
+  return towerSpriteDrawDepthFromWorld(tower.x, tower.y);
+}
+
 export class TowerSystem {
   constructor(scene, map) {
     this.scene = scene;
@@ -18,6 +47,24 @@ export class TowerSystem {
     this.towers = [];
     this.cellOccupancy = new Set();
     this.towerCost = economy.baseTowerCost;
+  }
+
+  /** Recompute draw depth from `tower.x` / `tower.y` (Y-sort among siblings). */
+  refreshTowerSpriteDepths() {
+    for (const tower of this.towers) {
+      this._applyTowerSpriteDepth(tower);
+    }
+  }
+
+  /** @param {*} tower */
+  _applyTowerSpriteDepth(tower) {
+    const depth = towerSpriteDrawDepthForTower(tower);
+    tower?.sprite?.setDepth?.(depth);
+    // Phaser Container renders by internal list order, not child depth — reorder after depth changes.
+    const layer = this.scene.towersWorldLayer;
+    if (layer && typeof layer.sort === "function") {
+      layer.sort("depth");
+    }
   }
 
   /**
@@ -74,7 +121,6 @@ export class TowerSystem {
       sprite = this.scene.add.image(world.x, world.y + TILE_SIZE / 2, "blueTower");
       sprite.setOrigin(0.5, 1);
       sprite.setDisplaySize(TILE_SIZE, TILE_SIZE * 2);
-      sprite.setDepth(18);
     } else {
       sprite = this.scene.add.rectangle(world.x, world.y + TILE_SIZE / 2, TILE_SIZE, TILE_SIZE * 2, 0x3d69d6);
       sprite.setOrigin(0.5, 1);
@@ -104,6 +150,7 @@ export class TowerSystem {
       lifestealPool: 0,
     };
 
+    this._applyTowerSpriteDepth(tower);
     this.towers.push(tower);
     return true;
   }
@@ -235,8 +282,8 @@ export class TowerSystem {
         tower.sprite.setTexture(convertedTextureKey);
         tower.sprite.setOrigin(0.5, 1);
         tower.sprite.setDisplaySize(TILE_SIZE, TILE_SIZE * 2);
-        tower.sprite.setDepth(18);
       }
+      this._applyTowerSpriteDepth(tower);
       return true;
     }
     const typeUpgrades = upgrades[tower.type];
