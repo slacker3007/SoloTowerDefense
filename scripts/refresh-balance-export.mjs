@@ -14,7 +14,6 @@ import {
   getTowerEffectiveDps,
   getWaveBaseHp,
   getWaveBaseSpeed,
-  TANK_ELITE_HP_SCALE,
   toWorldRange,
   towerBaseEffects,
   towerCatalog,
@@ -37,7 +36,6 @@ function rebuildPackStats(waveIndex, pack) {
   const role = archetype.role ?? "normal";
   if (role === "tank" || role === "elite") {
     hp *= getHeavyEnemyEarlyHpMultiplier(waveIndex);
-    hp *= TANK_ELITE_HP_SCALE;
   }
   const speed =
     60 * getWaveBaseSpeed(waveIndex) * (archetype.speedMultiplier ?? 1) * packSpeedMult;
@@ -65,7 +63,6 @@ function rebuildPackStats(waveIndex, pack) {
     archetypeHpMultiplier: archetype.hpMultiplier ?? 1,
     packHpMultiplier: packHpMult,
     heavyHpEarlyMultiplier: role === "tank" || role === "elite" ? getHeavyEnemyEarlyHpMultiplier(waveIndex) : 1,
-    tankEliteHpScale: role === "tank" || role === "elite" ? TANK_ELITE_HP_SCALE : 1,
   };
   pack.speedFormulaParts = {
     waveBaseSpeed: round3(60 * getWaveBaseSpeed(waveIndex)),
@@ -160,6 +157,9 @@ const raw = readFileSync(EXPORT_PATH, "utf8");
 const data = JSON.parse(raw);
 
 data.rules.utilityDpsMax = balanceRules.utilityDpsMax;
+if (data.rules?.heavyEnemyEarlyHpRamp) {
+  delete data.rules.heavyEnemyEarlyHpRamp.tankEliteHpScale;
+}
 
 for (const wave of data.waves ?? []) {
   const wi = wave.wave;

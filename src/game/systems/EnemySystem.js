@@ -4,9 +4,11 @@ import { cellToWorld, worldToCell } from "../maps/tileRules";
 import { createUnitHpBar } from "../ui/UnitHpBar";
 import {
   balanceRules,
+  economy,
   getEnemySpriteHpScaleMultiplier,
   getHomeLeakDamage,
   getStatusColors,
+  getWaveGoldIncomeMultiplier,
   STATUS_PRIORITY,
 } from "../balance";
 
@@ -152,11 +154,20 @@ export class EnemySystem {
       hpBarYOffset,
       evasionChance: Math.max(0, Math.min(1, Number(definition.evasionChance) || 0)),
       flatDamageReduction: Math.max(0, Number(definition.flatDamageReduction) || 0),
+      waveIndex: Math.max(0, Number(definition.waveIndex) || 0),
       fireHitDamageMultiplier: Number.isFinite(definition.fireHitDamageMultiplier) ? definition.fireHitDamageMultiplier : 1,
       postShieldDamageMultiplier: Number.isFinite(definition.postShieldDamageMultiplier) ? definition.postShieldDamageMultiplier : 1,
       slowEffectivenessMultiplier: Number.isFinite(definition.slowEffectivenessMultiplier) ? definition.slowEffectivenessMultiplier : 1,
       chainVulnerabilityMultiplier: Number.isFinite(definition.chainVulnerabilityMultiplier) ? definition.chainVulnerabilityMultiplier : 1,
       damageTakenMultiplier: Number.isFinite(definition.damageTakenMultiplier) ? definition.damageTakenMultiplier : 1,
+      aoeDamageTakenMultiplier: Number.isFinite(definition.aoeDamageTakenMultiplier) ? definition.aoeDamageTakenMultiplier : 1,
+      burnDamageMultiplier: Number.isFinite(definition.burnDamageMultiplier)
+        ? definition.burnDamageMultiplier
+        : (definition.tags ?? []).includes("fireResist")
+          ? 0.35
+          : 1,
+      speedRampPerSecond: Math.max(0, Number(definition.speedRampPerSecond) || 0),
+      _berserkMult: 0,
       earlyKillHpThreshold: definition.earlyKillHpThreshold ?? null,
       earlyKillBonusGold: Math.max(0, Number(definition.earlyKillBonusGold) || 0),
       stompAuraRadiusTiles: Math.max(0, Number(definition.stompAuraRadiusTiles) || 0),
@@ -247,6 +258,10 @@ export class EnemySystem {
     if (damageOptions.fireHit && enemy.fireHitDamageMultiplier < 1) {
       incoming *= enemy.fireHitDamageMultiplier;
     }
+    if (damageOptions.aoe) {
+      const aoeM = Number.isFinite(enemy.aoeDamageTakenMultiplier) ? enemy.aoeDamageTakenMultiplier : 1;
+      incoming *= aoeM;
+    }
     const flatDr = Math.max(0, enemy.flatDamageReduction ?? 0);
     incoming = Math.max(0, incoming - flatDr);
     const takenMult = Number.isFinite(enemy.damageTakenMultiplier) ? enemy.damageTakenMultiplier : 1;
@@ -299,7 +314,10 @@ export class EnemySystem {
         bonus += enemy.goldBonusOnKill ?? 0;
       }
     }
-    return Math.max(0, (enemy.rewardGold ?? 0) + bonus);
+    const base = (enemy.rewardGold ?? 0) + bonus;
+    const waveGold = getWaveGoldIncomeMultiplier(enemy.waveIndex ?? 0);
+    const scale = Number.isFinite(economy.killGoldScale) ? economy.killGoldScale : 1;
+    return Math.max(0, Math.round(base * waveGold * scale));
   }
 
   applyStatus(enemy, status) {
@@ -337,40 +355,103 @@ export class EnemySystem {
     return this.enemies.filter((enemy) => enemy.alive && !enemy.escaped);
   }
 
+  /**
+   * Berserk ramps move speed over time; min speed floor only when not hard-CCed.
+   */
+  _applyBerserkAndSpeedFloor(enemy, immobilized, deltaSeconds) {
+    if (immobilized) {
+      enemy.speed = 0;
+      return;
+    }
+    if (enemy.speedRampPerSecond > 0) {
+      enemy._berserkMult = (enemy._berserkMult ?? 0) + enemy.speedRampPerSecond * deltaSeconds;
+      enemy.speed *= 1 + enemy._berserkMult;
+    }
+    enemy.speed = Math.max(enemy.baseSpeed * 0.35, enemy.speed);
+  }
+
   _tickStatuses(enemy, deltaSeconds) {
+    const clamp01 = (r) => Math.max(0, Math.min(1, Number(r) || 0));
     if (!Array.isArray(enemy.statuses) || enemy.statuses.length === 0) {
+      if (enemy.regenPerSecond > 0) {
+        enemy.hp = Math.min(enemy.maxHp, enemy.hp + enemy.regenPerSecond * deltaSeconds);
+      }
       enemy.speed = enemy.baseSpeed;
+      this._applyBerserkAndSpeedFloor(enemy, false, deltaSeconds);
       enemy.ccWindowTimer = Math.max(0, enemy.ccWindowTimer - deltaSeconds);
       this._updateStatusFx(enemy);
+      if (enemy.hp <= 0) {
+        enemy.alive = false;
+        enemy.hpBar?.destroy();
+        this._destroyStatusFx(enemy);
+        enemy.sprite.destroy();
+        this._triggerSplitSpawns(enemy);
+      }
       return;
     }
     if (enemy.regenPerSecond > 0) {
       enemy.hp = Math.min(enemy.maxHp, enemy.hp + enemy.regenPerSecond * deltaSeconds);
     }
-    let speedMultiplier = 1;
+    let slowFactor = 1;
+    let weakenFactor = 1;
     let immobilized = false;
     let ccInFrame = false;
+    const burnDpss = [];
     const nextStatuses = [];
     for (const status of enemy.statuses) {
       status.remaining -= deltaSeconds;
-      if (status.type === "burn" || status.type === "poison") {
-        const resistMultiplier = status.type === "burn" && enemy.tags.includes("fireResist") ? 0.35 : 1;
-        enemy.hp -= status.dps * deltaSeconds * resistMultiplier;
-      } else if (status.type === "slow") {
+      if (status.type === "burn") {
+        if (status.remaining > 0) {
+          nextStatuses.push(status);
+          if (Number.isFinite(status.dps) && status.dps > 0) {
+            burnDpss.push(status.dps);
+          }
+        }
+        continue;
+      }
+      if (status.type === "poison") {
+        enemy.hp -= (status.dps ?? 0) * deltaSeconds;
+        if (status.remaining > 0) {
+          nextStatuses.push(status);
+        }
+        continue;
+      }
+      if (status.type === "slow") {
         const slowEff = Number.isFinite(enemy.slowEffectivenessMultiplier) ? enemy.slowEffectivenessMultiplier : 1;
-        const effectiveRatio = (status.ratio ?? 0) * slowEff;
-        speedMultiplier = Math.min(speedMultiplier, 1 - effectiveRatio);
+        const effectiveRatio = clamp01((status.ratio ?? 0) * slowEff);
+        slowFactor *= 1 - effectiveRatio;
         ccInFrame = true;
-      } else if (status.type === "stun" || status.type === "freeze" || status.type === "root") {
+        if (status.remaining > 0) {
+          nextStatuses.push(status);
+        }
+        continue;
+      }
+      if (status.type === "stun" || status.type === "freeze" || status.type === "root") {
         immobilized = true;
         ccInFrame = true;
-      } else if (status.type === "weakening") {
-        speedMultiplier = Math.min(speedMultiplier, 1 - (status.ratio ?? 0));
+        if (status.remaining > 0) {
+          nextStatuses.push(status);
+        }
+        continue;
+      }
+      if (status.type === "weakening") {
+        weakenFactor *= 1 - clamp01(status.ratio ?? 0);
+        if (status.remaining > 0) {
+          nextStatuses.push(status);
+        }
+        continue;
       }
       if (status.remaining > 0) {
         nextStatuses.push(status);
       }
     }
+    burnDpss.sort((a, b) => b - a);
+    let burnTotal = 0;
+    for (let i = 0; i < Math.min(3, burnDpss.length); i += 1) {
+      burnTotal += burnDpss[i];
+    }
+    const burnMult = Number.isFinite(enemy.burnDamageMultiplier) ? enemy.burnDamageMultiplier : 1;
+    enemy.hp -= burnTotal * deltaSeconds * burnMult;
     enemy.statuses = nextStatuses;
     enemy.ccWindowTimer += deltaSeconds;
     if (ccInFrame) {
@@ -380,7 +461,9 @@ export class EnemySystem {
       enemy.ccWindowTimer = 0;
       enemy.ccSecondsWithinWindow = Math.max(0, enemy.ccSecondsWithinWindow - balanceRules.ccWindowSeconds);
     }
+    const speedMultiplier = slowFactor * weakenFactor;
     enemy.speed = immobilized ? 0 : enemy.baseSpeed * speedMultiplier;
+    this._applyBerserkAndSpeedFloor(enemy, immobilized, deltaSeconds);
     enemy.hpBar?.setRatio(enemy.hp / enemy.maxHp);
     this._updateStatusFx(enemy);
     if (enemy.hp <= 0) {

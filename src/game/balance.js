@@ -135,6 +135,8 @@ export function getStatusColors(statusType) {
 export const economy = {
   startingGold: 220,
   startingLives: 20,
+  /** Granted when wave 1 ends with no lives lost (all enemies stopped before home). */
+  wave1FullClearBonusGold: 8,
   baseTowerCost: 100,
   sellRefundRate: 0.5,
   conversionCost: 120,
@@ -143,6 +145,8 @@ export const economy = {
     t2: 180,
     t3: 260,
   },
+  /** Global multiplier on enemy kill gold (after wave income taper). Tuned via `npm run campaign:gold-sim`. */
+  killGoldScale: 0.67889,
 };
 
 export const HOME_LEAK_DAMAGE_DEFAULT = 1;
@@ -360,11 +364,11 @@ import { enemyArchetypes, enemyCatalog, getEnemyCatalogMeta } from "./enemyCatal
 export { enemyArchetypes, enemyCatalog, getEnemyCatalogMeta };
 
 export const scriptedWaveProgram = [
-  { phase: "early", name: "Warmup", role: "normal", packs: [{ type: "grunt", count: 8 }] },
-  { phase: "early", name: "More Targets", role: "normal", packs: [{ type: "grunt", count: 12 }] },
-  { phase: "early", name: "Fast Ones", role: "fast", packs: [{ type: "grunt", count: 8 }, { type: "runner", count: 4 }] },
-  { phase: "early", name: "Crowded Path", role: "normal", packs: [{ type: "grunt", count: 16 }] },
-  { phase: "early", name: "Swarm Intro", role: "swarm", packs: [{ type: "grunt", count: 12 }, { type: "swarm", count: 8 }] },
+  { phase: "early", name: "Warmup", role: "normal", packs: [{ type: "grunt", count: 12 }] },
+  { phase: "early", name: "More Targets", role: "normal", packs: [{ type: "grunt", count: 16 }] },
+  { phase: "early", name: "Fast Ones", role: "fast", packs: [{ type: "grunt", count: 10 }, { type: "runner", count: 6 }] },
+  { phase: "early", name: "Crowded Path", role: "normal", packs: [{ type: "grunt", count: 22 }] },
+  { phase: "early", name: "Swarm Intro", role: "swarm", packs: [{ type: "grunt", count: 14 }, { type: "swarm", count: 12 }] },
   { phase: "early", name: "Heavy Armor", role: "tank", packs: [{ type: "brute", count: 4 }, { type: "grunt", count: 6 }] },
   { phase: "early", name: "Need for Control", role: "fast", packs: [{ type: "runner", count: 10 }, { type: "grunt", count: 6 }] },
   { phase: "early", name: "Chain Value", role: "fast", packs: [{ type: "linked", count: 8 }, { type: "runner", count: 4 }] },
@@ -442,6 +446,8 @@ export const balanceRules = {
   archerEfficiency: 1.0,
   maxChainTargets: MAX_CHAIN_TARGETS,
   maxVolleyArrows: MAX_VOLLEY_ARROWS,
+  /** Basic tower hit damage vs swarm-role enemies (50% less damage taken = multiply by this). */
+  basicTowerSwarmDamageMultiplier: 0.5,
   adaptive: {
     enabled: false,
     dominateThresholdSeconds: 24,
@@ -754,9 +760,41 @@ export function getTowerEffectiveDps(towerType, damage, cooldownSeconds) {
   return { rawDps, effectiveDps, isUtilityLimited };
 }
 
+/**
+ * Staged HP pressure curve (1-based wave). Boosts early–mid vs flat exponential late.
+ * @param {number} waveIndex
+ * @returns {number}
+ */
+export function waveHpMultiplier(waveIndex) {
+  const w = Math.max(1, Number(waveIndex) || 1);
+  if (w <= 10) {
+    return 1 + w * 0.18;
+  }
+  if (w <= 20) {
+    return 2.8 + (w - 10) * 0.15;
+  }
+  if (w <= 35) {
+    return 4.3 + (w - 20) * 0.12;
+  }
+  return 6.1 + (w - 35) * 0.1;
+}
+
 export function getWaveBaseHp(waveIndex) {
-  /** Softer per-wave growth (was 1.16) so late bosses stay in TD-scale vs tower DPS. */
-  return 50 * 1.105 ** Math.max(0, waveIndex - 1);
+  return 50 * waveHpMultiplier(waveIndex);
+}
+
+/**
+ * Kill gold multiplier by wave: full income early, gentle taper from wave 20
+ * so mid/late waves do not snowball gold while keeping early pacing familiar.
+ * @param {number} waveIndex
+ * @returns {number}
+ */
+export function getWaveGoldIncomeMultiplier(waveIndex) {
+  const w = Math.max(1, Number(waveIndex) || 1);
+  if (w < 20) {
+    return 1;
+  }
+  return Math.max(0.32, 1 - (w - 19) * 0.018);
 }
 
 /** Tank/elite archetypes get full catalog HP from this wave onward (1-based index). */
@@ -783,9 +821,6 @@ export function getHeavyEnemyEarlyHpMultiplier(waveIndex) {
   return HEAVY_ENEMY_EARLY_HP_MIN_MULTIPLIER + (1 - HEAVY_ENEMY_EARLY_HP_MIN_MULTIPLIER) * t;
 }
 
-/** Max HP scale for archetype (or procedural wave) role `tank` or `elite`; applied at spawn after early ramp. */
-export const TANK_ELITE_HP_SCALE = 0.5;
-
 /**
  * Multiplier applied to enemy sprite `visual.scale` from max HP at spawn.
  * Baseline: wave 1 base HP (`getWaveBaseHp(1)`).
@@ -809,9 +844,15 @@ export function getWaveBaseSpeed(waveIndex) {
 }
 
 export function getGoldPerKill(waveIndex, isBreatherWave = false) {
-  const waveBonus = waveIndex >= 10 ? 10 : 0;
-  const value = 8 + waveIndex * 1.5 + waveBonus;
-  return Math.round(value * (isBreatherWave ? 1.5 : 1));
+  const w = Math.max(1, Number(waveIndex) || 1);
+  let waveBonus = 0;
+  if (w >= 10 && w <= 20) {
+    waveBonus = 2 + ((w - 10) / 10) * 4;
+  } else if (w > 20) {
+    waveBonus = 6;
+  }
+  const value = 8 + w * 1.32 + waveBonus;
+  return Math.round(value * (isBreatherWave ? 1.35 : 1));
 }
 
 export function getWaveStep(waveIndex) {

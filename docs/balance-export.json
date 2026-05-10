@@ -28,8 +28,7 @@
     "tileSizeWorldUnits": 64,
     "heavyEnemyEarlyHpRamp": {
       "rampEndWave": 12,
-      "minMultiplierWave1": 0.88,
-      "tankEliteHpScale": 0.5
+      "minMultiplierWave1": 0.88
     },
     "effectImplementation": {
       "aoeStun": {
@@ -234,9 +233,9 @@
   "goldByWave": [
     {
       "wave": 1,
-      "baseGoldPerKill": 10,
-      "guaranteedGoldIfAllKilled": 80,
-      "maxGoldBeforeTowerBonuses": 80,
+      "baseGoldPerKill": 9,
+      "guaranteedGoldIfAllKilled": 72,
+      "maxGoldBeforeTowerBonuses": 72,
       "notes": [
         "Scripted waves use getGoldPerKill(wave, false) as the base reward.",
         "Enemy reward multipliers and pack reward multipliers are included in guaranteed totals.",
@@ -256,9 +255,9 @@
     },
     {
       "wave": 3,
-      "baseGoldPerKill": 13,
-      "guaranteedGoldIfAllKilled": 172,
-      "maxGoldBeforeTowerBonuses": 172,
+      "baseGoldPerKill": 12,
+      "guaranteedGoldIfAllKilled": 160,
+      "maxGoldBeforeTowerBonuses": 160,
       "notes": [
         "Scripted waves use getGoldPerKill(wave, false) as the base reward.",
         "Enemy reward multipliers and pack reward multipliers are included in guaranteed totals.",
@@ -267,9 +266,9 @@
     },
     {
       "wave": 4,
-      "baseGoldPerKill": 14,
-      "guaranteedGoldIfAllKilled": 224,
-      "maxGoldBeforeTowerBonuses": 224,
+      "baseGoldPerKill": 13,
+      "guaranteedGoldIfAllKilled": 208,
+      "maxGoldBeforeTowerBonuses": 208,
       "notes": [
         "Scripted waves use getGoldPerKill(wave, false) as the base reward.",
         "Enemy reward multipliers and pack reward multipliers are included in guaranteed totals.",
@@ -278,9 +277,9 @@
     },
     {
       "wave": 5,
-      "baseGoldPerKill": 16,
-      "guaranteedGoldIfAllKilled": 232,
-      "maxGoldBeforeTowerBonuses": 232,
+      "baseGoldPerKill": 15,
+      "guaranteedGoldIfAllKilled": 220,
+      "maxGoldBeforeTowerBonuses": 220,
       "notes": [
         "Scripted waves use getGoldPerKill(wave, false) as the base reward.",
         "Enemy reward multipliers and pack reward multipliers are included in guaranteed totals.",
@@ -289,9 +288,9 @@
     },
     {
       "wave": 6,
-      "baseGoldPerKill": 17,
-      "guaranteedGoldIfAllKilled": 330,
-      "maxGoldBeforeTowerBonuses": 330,
+      "baseGoldPerKill": 16,
+      "guaranteedGoldIfAllKilled": 308,
+      "maxGoldBeforeTowerBonuses": 308,
       "notes": [
         "Scripted waves use getGoldPerKill(wave, false) as the base reward.",
         "Enemy reward multipliers and pack reward multipliers are included in guaranteed totals.",
@@ -300,29 +299,7 @@
     },
     {
       "wave": 7,
-      "baseGoldPerKill": 19,
-      "guaranteedGoldIfAllKilled": 364,
-      "maxGoldBeforeTowerBonuses": 364,
-      "notes": [
-        "Scripted waves use getGoldPerKill(wave, false) as the base reward.",
-        "Enemy reward multipliers and pack reward multipliers are included in guaranteed totals.",
-        "Nature tower bonus gold and conditional early/path bonuses are not guaranteed unless listed in maxGoldBeforeTowerBonuses."
-      ]
-    },
-    {
-      "wave": 8,
-      "baseGoldPerKill": 20,
-      "guaranteedGoldIfAllKilled": 372,
-      "maxGoldBeforeTowerBonuses": 372,
-      "notes": [
-        "Scripted waves use getGoldPerKill(wave, false) as the base reward.",
-        "Enemy reward multipliers and pack reward multipliers are included in guaranteed totals.",
-        "Nature tower bonus gold and conditional early/path bonuses are not guaranteed unless listed in maxGoldBeforeTowerBonuses."
-      ]
-    },
-    {
-      "wave": 9,
-      "baseGoldPerKill": 22,
+      "baseGoldPerKill": 17,
       "guaranteedGoldIfAllKilled": 332,
       "maxGoldBeforeTowerBonuses": 332,
       "notes": [
@@ -332,10 +309,32 @@
       ]
     },
     {
+      "wave": 8,
+      "baseGoldPerKill": 19,
+      "guaranteedGoldIfAllKilled": 356,
+      "maxGoldBeforeTowerBonuses": 356,
+      "notes": [
+        "Scripted waves use getGoldPerKill(wave, false) as the base reward.",
+        "Enemy reward multipliers and pack reward multipliers are included in guaranteed totals.",
+        "Nature tower bonus gold and conditional early/path bonuses are not guaranteed unless listed in maxGoldBeforeTowerBonuses."
+      ]
+    },
+    {
+      "wave": 9,
+      "baseGoldPerKill": 20,
+      "guaranteedGoldIfAllKilled": 312,
+      "maxGoldBeforeTowerBonuses": 312,
+      "notes": [
+        "Scripted waves use getGoldPerKill(wave, false) as the base reward.",
+        "Enemy reward multipliers and pack reward multipliers are included in guaranteed totals.",
+        "Nature tower bonus gold and conditional early/path bonuses are not guaranteed unless listed in maxGoldBeforeTowerBonuses."
+      ]
+    },
+    {
       "wave": 10,
-      "baseGoldPerKill": 33,
-      "guaranteedGoldIfAllKilled": 1056,
-      "maxGoldBeforeTowerBonuses": 1056,
+      "baseGoldPerKill": 23,
+      "guaranteedGoldIfAllKilled": 736,
+      "maxGoldBeforeTowerBonuses": 736,
       "notes": [
         "Scripted waves use getGoldPerKill(wave, false) as the base reward.",
         "Enemy reward multipliers and pack reward multipliers are included in guaranteed totals.",
@@ -344,9 +343,9 @@
     },
     {
       "wave": 11,
-      "baseGoldPerKill": 35,
-      "guaranteedGoldIfAllKilled": 768,
-      "maxGoldBeforeTowerBonuses": 768,
+      "baseGoldPerKill": 25,
+      "guaranteedGoldIfAllKilled": 552,
+      "maxGoldBeforeTowerBonuses": 552,
       "notes": [
         "Scripted waves use getGoldPerKill(wave, false) as the base reward.",
         "Enemy reward multipliers and pack reward multipliers are included in guaranteed totals.",
@@ -355,9 +354,9 @@
     },
     {
       "wave": 12,
-      "baseGoldPerKill": 36,
-      "guaranteedGoldIfAllKilled": 480,
-      "maxGoldBeforeTowerBonuses": 480,
+      "baseGoldPerKill": 27,
+      "guaranteedGoldIfAllKilled": 360,
+      "maxGoldBeforeTowerBonuses": 360,
       "notes": [
         "Scripted waves use getGoldPerKill(wave, false) as the base reward.",
         "Enemy reward multipliers and pack reward multipliers are included in guaranteed totals.",
@@ -366,9 +365,9 @@
     },
     {
       "wave": 13,
-      "baseGoldPerKill": 38,
-      "guaranteedGoldIfAllKilled": 762,
-      "maxGoldBeforeTowerBonuses": 762,
+      "baseGoldPerKill": 28,
+      "guaranteedGoldIfAllKilled": 558,
+      "maxGoldBeforeTowerBonuses": 558,
       "notes": [
         "Scripted waves use getGoldPerKill(wave, false) as the base reward.",
         "Enemy reward multipliers and pack reward multipliers are included in guaranteed totals.",
@@ -377,9 +376,9 @@
     },
     {
       "wave": 14,
-      "baseGoldPerKill": 39,
-      "guaranteedGoldIfAllKilled": 962,
-      "maxGoldBeforeTowerBonuses": 962,
+      "baseGoldPerKill": 30,
+      "guaranteedGoldIfAllKilled": 740,
+      "maxGoldBeforeTowerBonuses": 740,
       "notes": [
         "Scripted waves use getGoldPerKill(wave, false) as the base reward.",
         "Enemy reward multipliers and pack reward multipliers are included in guaranteed totals.",
@@ -388,9 +387,9 @@
     },
     {
       "wave": 15,
-      "baseGoldPerKill": 41,
-      "guaranteedGoldIfAllKilled": 1042,
-      "maxGoldBeforeTowerBonuses": 1042,
+      "baseGoldPerKill": 32,
+      "guaranteedGoldIfAllKilled": 814,
+      "maxGoldBeforeTowerBonuses": 814,
       "notes": [
         "Scripted waves use getGoldPerKill(wave, false) as the base reward.",
         "Enemy reward multipliers and pack reward multipliers are included in guaranteed totals.",
@@ -399,9 +398,9 @@
     },
     {
       "wave": 16,
-      "baseGoldPerKill": 42,
-      "guaranteedGoldIfAllKilled": 784,
-      "maxGoldBeforeTowerBonuses": 784,
+      "baseGoldPerKill": 34,
+      "guaranteedGoldIfAllKilled": 636,
+      "maxGoldBeforeTowerBonuses": 636,
       "notes": [
         "Scripted waves use getGoldPerKill(wave, false) as the base reward.",
         "Enemy reward multipliers and pack reward multipliers are included in guaranteed totals.",
@@ -410,9 +409,9 @@
     },
     {
       "wave": 17,
-      "baseGoldPerKill": 44,
-      "guaranteedGoldIfAllKilled": 1140,
-      "maxGoldBeforeTowerBonuses": 1140,
+      "baseGoldPerKill": 35,
+      "guaranteedGoldIfAllKilled": 906,
+      "maxGoldBeforeTowerBonuses": 906,
       "notes": [
         "Scripted waves use getGoldPerKill(wave, false) as the base reward.",
         "Enemy reward multipliers and pack reward multipliers are included in guaranteed totals.",
@@ -421,9 +420,9 @@
     },
     {
       "wave": 18,
-      "baseGoldPerKill": 45,
-      "guaranteedGoldIfAllKilled": 1980,
-      "maxGoldBeforeTowerBonuses": 1980,
+      "baseGoldPerKill": 37,
+      "guaranteedGoldIfAllKilled": 1628,
+      "maxGoldBeforeTowerBonuses": 1628,
       "notes": [
         "Scripted waves use getGoldPerKill(wave, false) as the base reward.",
         "Enemy reward multipliers and pack reward multipliers are included in guaranteed totals.",
@@ -432,9 +431,9 @@
     },
     {
       "wave": 19,
-      "baseGoldPerKill": 47,
-      "guaranteedGoldIfAllKilled": 1538,
-      "maxGoldBeforeTowerBonuses": 1538,
+      "baseGoldPerKill": 39,
+      "guaranteedGoldIfAllKilled": 1274,
+      "maxGoldBeforeTowerBonuses": 1274,
       "notes": [
         "Scripted waves use getGoldPerKill(wave, false) as the base reward.",
         "Enemy reward multipliers and pack reward multipliers are included in guaranteed totals.",
@@ -443,9 +442,9 @@
     },
     {
       "wave": 20,
-      "baseGoldPerKill": 48,
-      "guaranteedGoldIfAllKilled": 1120,
-      "maxGoldBeforeTowerBonuses": 1120,
+      "baseGoldPerKill": 40,
+      "guaranteedGoldIfAllKilled": 929,
+      "maxGoldBeforeTowerBonuses": 929,
       "notes": [
         "Scripted waves use getGoldPerKill(wave, false) as the base reward.",
         "Enemy reward multipliers and pack reward multipliers are included in guaranteed totals.",
@@ -454,9 +453,9 @@
     },
     {
       "wave": 21,
-      "baseGoldPerKill": 50,
-      "guaranteedGoldIfAllKilled": 1670,
-      "maxGoldBeforeTowerBonuses": 1670,
+      "baseGoldPerKill": 42,
+      "guaranteedGoldIfAllKilled": 1400,
+      "maxGoldBeforeTowerBonuses": 1400,
       "notes": [
         "Scripted waves use getGoldPerKill(wave, false) as the base reward.",
         "Enemy reward multipliers and pack reward multipliers are included in guaranteed totals.",
@@ -465,9 +464,9 @@
     },
     {
       "wave": 22,
-      "baseGoldPerKill": 51,
-      "guaranteedGoldIfAllKilled": 1360,
-      "maxGoldBeforeTowerBonuses": 1360,
+      "baseGoldPerKill": 43,
+      "guaranteedGoldIfAllKilled": 1144,
+      "maxGoldBeforeTowerBonuses": 1144,
       "notes": [
         "Scripted waves use getGoldPerKill(wave, false) as the base reward.",
         "Enemy reward multipliers and pack reward multipliers are included in guaranteed totals.",
@@ -476,9 +475,9 @@
     },
     {
       "wave": 23,
-      "baseGoldPerKill": 53,
-      "guaranteedGoldIfAllKilled": 1588,
-      "maxGoldBeforeTowerBonuses": 1588,
+      "baseGoldPerKill": 44,
+      "guaranteedGoldIfAllKilled": 1318,
+      "maxGoldBeforeTowerBonuses": 1318,
       "notes": [
         "Scripted waves use getGoldPerKill(wave, false) as the base reward.",
         "Enemy reward multipliers and pack reward multipliers are included in guaranteed totals.",
@@ -487,9 +486,9 @@
     },
     {
       "wave": 24,
-      "baseGoldPerKill": 54,
-      "guaranteedGoldIfAllKilled": 1548,
-      "maxGoldBeforeTowerBonuses": 1548,
+      "baseGoldPerKill": 46,
+      "guaranteedGoldIfAllKilled": 1316,
+      "maxGoldBeforeTowerBonuses": 1316,
       "notes": [
         "Scripted waves use getGoldPerKill(wave, false) as the base reward.",
         "Enemy reward multipliers and pack reward multipliers are included in guaranteed totals.",
@@ -498,9 +497,9 @@
     },
     {
       "wave": 25,
-      "baseGoldPerKill": 56,
-      "guaranteedGoldIfAllKilled": 2384,
-      "maxGoldBeforeTowerBonuses": 2384,
+      "baseGoldPerKill": 47,
+      "guaranteedGoldIfAllKilled": 2000,
+      "maxGoldBeforeTowerBonuses": 2000,
       "notes": [
         "Scripted waves use getGoldPerKill(wave, false) as the base reward.",
         "Enemy reward multipliers and pack reward multipliers are included in guaranteed totals.",
@@ -509,9 +508,9 @@
     },
     {
       "wave": 26,
-      "baseGoldPerKill": 57,
-      "guaranteedGoldIfAllKilled": 3800,
-      "maxGoldBeforeTowerBonuses": 3800,
+      "baseGoldPerKill": 48,
+      "guaranteedGoldIfAllKilled": 3200,
+      "maxGoldBeforeTowerBonuses": 3200,
       "notes": [
         "Scripted waves use getGoldPerKill(wave, false) as the base reward.",
         "Enemy reward multipliers and pack reward multipliers are included in guaranteed totals.",
@@ -520,9 +519,9 @@
     },
     {
       "wave": 27,
-      "baseGoldPerKill": 59,
-      "guaranteedGoldIfAllKilled": 1424,
-      "maxGoldBeforeTowerBonuses": 1424,
+      "baseGoldPerKill": 50,
+      "guaranteedGoldIfAllKilled": 1208,
+      "maxGoldBeforeTowerBonuses": 1208,
       "notes": [
         "Scripted waves use getGoldPerKill(wave, false) as the base reward.",
         "Enemy reward multipliers and pack reward multipliers are included in guaranteed totals.",
@@ -531,9 +530,9 @@
     },
     {
       "wave": 28,
-      "baseGoldPerKill": 60,
-      "guaranteedGoldIfAllKilled": 2960,
-      "maxGoldBeforeTowerBonuses": 2960,
+      "baseGoldPerKill": 51,
+      "guaranteedGoldIfAllKilled": 2516,
+      "maxGoldBeforeTowerBonuses": 2516,
       "notes": [
         "Scripted waves use getGoldPerKill(wave, false) as the base reward.",
         "Enemy reward multipliers and pack reward multipliers are included in guaranteed totals.",
@@ -542,9 +541,9 @@
     },
     {
       "wave": 29,
-      "baseGoldPerKill": 62,
-      "guaranteedGoldIfAllKilled": 2224,
-      "maxGoldBeforeTowerBonuses": 2224,
+      "baseGoldPerKill": 52,
+      "guaranteedGoldIfAllKilled": 1880,
+      "maxGoldBeforeTowerBonuses": 1880,
       "notes": [
         "Scripted waves use getGoldPerKill(wave, false) as the base reward.",
         "Enemy reward multipliers and pack reward multipliers are included in guaranteed totals.",
@@ -553,9 +552,9 @@
     },
     {
       "wave": 30,
-      "baseGoldPerKill": 63,
-      "guaranteedGoldIfAllKilled": 2184,
-      "maxGoldBeforeTowerBonuses": 2184,
+      "baseGoldPerKill": 54,
+      "guaranteedGoldIfAllKilled": 1872,
+      "maxGoldBeforeTowerBonuses": 1872,
       "notes": [
         "Scripted waves use getGoldPerKill(wave, false) as the base reward.",
         "Enemy reward multipliers and pack reward multipliers are included in guaranteed totals.",
@@ -564,9 +563,9 @@
     },
     {
       "wave": 31,
-      "baseGoldPerKill": 65,
-      "guaranteedGoldIfAllKilled": 3602,
-      "maxGoldBeforeTowerBonuses": 3602,
+      "baseGoldPerKill": 55,
+      "guaranteedGoldIfAllKilled": 3038,
+      "maxGoldBeforeTowerBonuses": 3038,
       "notes": [
         "Scripted waves use getGoldPerKill(wave, false) as the base reward.",
         "Enemy reward multipliers and pack reward multipliers are included in guaranteed totals.",
@@ -575,9 +574,9 @@
     },
     {
       "wave": 32,
-      "baseGoldPerKill": 66,
-      "guaranteedGoldIfAllKilled": 2420,
-      "maxGoldBeforeTowerBonuses": 2420,
+      "baseGoldPerKill": 56,
+      "guaranteedGoldIfAllKilled": 2046,
+      "maxGoldBeforeTowerBonuses": 2046,
       "notes": [
         "Scripted waves use getGoldPerKill(wave, false) as the base reward.",
         "Enemy reward multipliers and pack reward multipliers are included in guaranteed totals.",
@@ -586,9 +585,9 @@
     },
     {
       "wave": 33,
-      "baseGoldPerKill": 68,
-      "guaranteedGoldIfAllKilled": 3258,
-      "maxGoldBeforeTowerBonuses": 3258,
+      "baseGoldPerKill": 58,
+      "guaranteedGoldIfAllKilled": 2790,
+      "maxGoldBeforeTowerBonuses": 2790,
       "notes": [
         "Scripted waves use getGoldPerKill(wave, false) as the base reward.",
         "Enemy reward multipliers and pack reward multipliers are included in guaranteed totals.",
@@ -597,9 +596,9 @@
     },
     {
       "wave": 34,
-      "baseGoldPerKill": 69,
-      "guaranteedGoldIfAllKilled": 2346,
-      "maxGoldBeforeTowerBonuses": 2346,
+      "baseGoldPerKill": 59,
+      "guaranteedGoldIfAllKilled": 2016,
+      "maxGoldBeforeTowerBonuses": 2016,
       "notes": [
         "Scripted waves use getGoldPerKill(wave, false) as the base reward.",
         "Enemy reward multipliers and pack reward multipliers are included in guaranteed totals.",
@@ -608,9 +607,9 @@
     },
     {
       "wave": 35,
-      "baseGoldPerKill": 71,
-      "guaranteedGoldIfAllKilled": 3318,
-      "maxGoldBeforeTowerBonuses": 3318,
+      "baseGoldPerKill": 60,
+      "guaranteedGoldIfAllKilled": 2800,
+      "maxGoldBeforeTowerBonuses": 2800,
       "notes": [
         "Scripted waves use getGoldPerKill(wave, false) as the base reward.",
         "Enemy reward multipliers and pack reward multipliers are included in guaranteed totals.",
@@ -619,9 +618,9 @@
     },
     {
       "wave": 36,
-      "baseGoldPerKill": 72,
-      "guaranteedGoldIfAllKilled": 3072,
-      "maxGoldBeforeTowerBonuses": 3072,
+      "baseGoldPerKill": 62,
+      "guaranteedGoldIfAllKilled": 2652,
+      "maxGoldBeforeTowerBonuses": 2652,
       "notes": [
         "Scripted waves use getGoldPerKill(wave, false) as the base reward.",
         "Enemy reward multipliers and pack reward multipliers are included in guaranteed totals.",
@@ -630,9 +629,9 @@
     },
     {
       "wave": 37,
-      "baseGoldPerKill": 74,
-      "guaranteedGoldIfAllKilled": 3840,
-      "maxGoldBeforeTowerBonuses": 3840,
+      "baseGoldPerKill": 63,
+      "guaranteedGoldIfAllKilled": 3276,
+      "maxGoldBeforeTowerBonuses": 3276,
       "notes": [
         "Scripted waves use getGoldPerKill(wave, false) as the base reward.",
         "Enemy reward multipliers and pack reward multipliers are included in guaranteed totals.",
@@ -641,9 +640,9 @@
     },
     {
       "wave": 38,
-      "baseGoldPerKill": 75,
-      "guaranteedGoldIfAllKilled": 2500,
-      "maxGoldBeforeTowerBonuses": 2500,
+      "baseGoldPerKill": 64,
+      "guaranteedGoldIfAllKilled": 2130,
+      "maxGoldBeforeTowerBonuses": 2130,
       "notes": [
         "Scripted waves use getGoldPerKill(wave, false) as the base reward.",
         "Enemy reward multipliers and pack reward multipliers are included in guaranteed totals.",
@@ -652,9 +651,9 @@
     },
     {
       "wave": 39,
-      "baseGoldPerKill": 77,
-      "guaranteedGoldIfAllKilled": 3700,
-      "maxGoldBeforeTowerBonuses": 3700,
+      "baseGoldPerKill": 65,
+      "guaranteedGoldIfAllKilled": 3124,
+      "maxGoldBeforeTowerBonuses": 3124,
       "notes": [
         "Scripted waves use getGoldPerKill(wave, false) as the base reward.",
         "Enemy reward multipliers and pack reward multipliers are included in guaranteed totals.",
@@ -663,9 +662,9 @@
     },
     {
       "wave": 40,
-      "baseGoldPerKill": 78,
-      "guaranteedGoldIfAllKilled": 5096,
-      "maxGoldBeforeTowerBonuses": 5096,
+      "baseGoldPerKill": 67,
+      "guaranteedGoldIfAllKilled": 4369,
+      "maxGoldBeforeTowerBonuses": 4369,
       "notes": [
         "Scripted waves use getGoldPerKill(wave, false) as the base reward.",
         "Enemy reward multipliers and pack reward multipliers are included in guaranteed totals.",
@@ -674,9 +673,9 @@
     },
     {
       "wave": 41,
-      "baseGoldPerKill": 80,
-      "guaranteedGoldIfAllKilled": 6504,
-      "maxGoldBeforeTowerBonuses": 6504,
+      "baseGoldPerKill": 68,
+      "guaranteedGoldIfAllKilled": 5528,
+      "maxGoldBeforeTowerBonuses": 5528,
       "notes": [
         "Scripted waves use getGoldPerKill(wave, false) as the base reward.",
         "Enemy reward multipliers and pack reward multipliers are included in guaranteed totals.",
@@ -685,9 +684,9 @@
     },
     {
       "wave": 42,
-      "baseGoldPerKill": 81,
-      "guaranteedGoldIfAllKilled": 2592,
-      "maxGoldBeforeTowerBonuses": 2592,
+      "baseGoldPerKill": 69,
+      "guaranteedGoldIfAllKilled": 2208,
+      "maxGoldBeforeTowerBonuses": 2208,
       "notes": [
         "Scripted waves use getGoldPerKill(wave, false) as the base reward.",
         "Enemy reward multipliers and pack reward multipliers are included in guaranteed totals.",
@@ -696,9 +695,9 @@
     },
     {
       "wave": 43,
-      "baseGoldPerKill": 83,
-      "guaranteedGoldIfAllKilled": 3864,
-      "maxGoldBeforeTowerBonuses": 3864,
+      "baseGoldPerKill": 71,
+      "guaranteedGoldIfAllKilled": 3304,
+      "maxGoldBeforeTowerBonuses": 3304,
       "notes": [
         "Scripted waves use getGoldPerKill(wave, false) as the base reward.",
         "Enemy reward multipliers and pack reward multipliers are included in guaranteed totals.",
@@ -707,9 +706,9 @@
     },
     {
       "wave": 44,
-      "baseGoldPerKill": 84,
-      "guaranteedGoldIfAllKilled": 8960,
-      "maxGoldBeforeTowerBonuses": 8960,
+      "baseGoldPerKill": 72,
+      "guaranteedGoldIfAllKilled": 7680,
+      "maxGoldBeforeTowerBonuses": 7680,
       "notes": [
         "Scripted waves use getGoldPerKill(wave, false) as the base reward.",
         "Enemy reward multipliers and pack reward multipliers are included in guaranteed totals.",
@@ -718,9 +717,9 @@
     },
     {
       "wave": 45,
-      "baseGoldPerKill": 86,
-      "guaranteedGoldIfAllKilled": 6776,
-      "maxGoldBeforeTowerBonuses": 6776,
+      "baseGoldPerKill": 73,
+      "guaranteedGoldIfAllKilled": 5732,
+      "maxGoldBeforeTowerBonuses": 5732,
       "notes": [
         "Scripted waves use getGoldPerKill(wave, false) as the base reward.",
         "Enemy reward multipliers and pack reward multipliers are included in guaranteed totals.",
@@ -729,9 +728,9 @@
     },
     {
       "wave": 46,
-      "baseGoldPerKill": 87,
-      "guaranteedGoldIfAllKilled": 8700,
-      "maxGoldBeforeTowerBonuses": 8700,
+      "baseGoldPerKill": 75,
+      "guaranteedGoldIfAllKilled": 7500,
+      "maxGoldBeforeTowerBonuses": 7500,
       "notes": [
         "Scripted waves use getGoldPerKill(wave, false) as the base reward.",
         "Enemy reward multipliers and pack reward multipliers are included in guaranteed totals.",
@@ -740,9 +739,9 @@
     },
     {
       "wave": 47,
-      "baseGoldPerKill": 89,
-      "guaranteedGoldIfAllKilled": 7596,
-      "maxGoldBeforeTowerBonuses": 7596,
+      "baseGoldPerKill": 76,
+      "guaranteedGoldIfAllKilled": 6484,
+      "maxGoldBeforeTowerBonuses": 6484,
       "notes": [
         "Scripted waves use getGoldPerKill(wave, false) as the base reward.",
         "Enemy reward multipliers and pack reward multipliers are included in guaranteed totals.",
@@ -751,9 +750,9 @@
     },
     {
       "wave": 48,
-      "baseGoldPerKill": 90,
-      "guaranteedGoldIfAllKilled": 8040,
-      "maxGoldBeforeTowerBonuses": 8040,
+      "baseGoldPerKill": 77,
+      "guaranteedGoldIfAllKilled": 6868,
+      "maxGoldBeforeTowerBonuses": 6868,
       "notes": [
         "Scripted waves use getGoldPerKill(wave, false) as the base reward.",
         "Enemy reward multipliers and pack reward multipliers are included in guaranteed totals.",
@@ -762,9 +761,9 @@
     },
     {
       "wave": 49,
-      "baseGoldPerKill": 92,
-      "guaranteedGoldIfAllKilled": 11662,
-      "maxGoldBeforeTowerBonuses": 11662,
+      "baseGoldPerKill": 79,
+      "guaranteedGoldIfAllKilled": 9998,
+      "maxGoldBeforeTowerBonuses": 9998,
       "notes": [
         "Scripted waves use getGoldPerKill(wave, false) as the base reward.",
         "Enemy reward multipliers and pack reward multipliers are included in guaranteed totals.",
@@ -773,9 +772,9 @@
     },
     {
       "wave": 50,
-      "baseGoldPerKill": 93,
-      "guaranteedGoldIfAllKilled": 19840,
-      "maxGoldBeforeTowerBonuses": 19840,
+      "baseGoldPerKill": 80,
+      "guaranteedGoldIfAllKilled": 17079,
+      "maxGoldBeforeTowerBonuses": 17079,
       "notes": [
         "Scripted waves use getGoldPerKill(wave, false) as the base reward.",
         "Enemy reward multipliers and pack reward multipliers are included in guaranteed totals.",
@@ -1557,29 +1556,28 @@
         24,
         37
       ],
-      "rewardBaseGoldPerKill": 10,
+      "rewardBaseGoldPerKill": 9,
       "totalSpawnCount": 8,
-      "guaranteedGoldIfAllKilled": 80,
-      "maxGoldBeforeTowerBonuses": 80,
+      "guaranteedGoldIfAllKilled": 72,
+      "maxGoldBeforeTowerBonuses": 72,
       "packs": [
         {
           "type": "grunt",
           "name": "Grunt",
           "role": "normal",
           "count": 8,
-          "hp": 50,
+          "hp": 59,
           "speed": 61.2,
-          "rewardGold": 10,
-          "rewardFormula": "round(10 * 1 * 1)",
-          "rewardBase": 10,
+          "rewardGold": 9,
+          "rewardFormula": "round(9 * 1 * 1)",
+          "rewardBase": 9,
           "rewardMultiplier": 1,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 50,
+            "waveBaseHp": 59,
             "archetypeHpMultiplier": 1,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 61.2,
@@ -1618,7 +1616,7 @@
           "name": "Grunt",
           "role": "normal",
           "count": 12,
-          "hp": 55.25,
+          "hp": 68,
           "speed": 62.4,
           "rewardGold": 11,
           "rewardFormula": "round(11 * 1 * 1)",
@@ -1626,11 +1624,10 @@
           "rewardMultiplier": 1,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 55.25,
+            "waveBaseHp": 68,
             "archetypeHpMultiplier": 1,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 62.4,
@@ -1659,29 +1656,28 @@
         40,
         59
       ],
-      "rewardBaseGoldPerKill": 13,
+      "rewardBaseGoldPerKill": 12,
       "totalSpawnCount": 12,
-      "guaranteedGoldIfAllKilled": 172,
-      "maxGoldBeforeTowerBonuses": 172,
+      "guaranteedGoldIfAllKilled": 160,
+      "maxGoldBeforeTowerBonuses": 160,
       "packs": [
         {
           "type": "grunt",
           "name": "Grunt",
           "role": "normal",
           "count": 8,
-          "hp": 61.051,
+          "hp": 77,
           "speed": 63.6,
-          "rewardGold": 13,
-          "rewardFormula": "round(13 * 1 * 1)",
-          "rewardBase": 13,
+          "rewardGold": 12,
+          "rewardFormula": "round(12 * 1 * 1)",
+          "rewardBase": 12,
           "rewardMultiplier": 1,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 61.051,
+            "waveBaseHp": 77,
             "archetypeHpMultiplier": 1,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 63.6,
@@ -1700,19 +1696,18 @@
           "name": "Runner",
           "role": "fast",
           "count": 4,
-          "hp": 33.578,
+          "hp": 42.35,
           "speed": 139.92,
-          "rewardGold": 17,
-          "rewardFormula": "round(13 * 1.333 * 1)",
-          "rewardBase": 13,
+          "rewardGold": 16,
+          "rewardFormula": "round(12 * 1.333 * 1)",
+          "rewardBase": 12,
           "rewardMultiplier": 1.333,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 61.051,
+            "waveBaseHp": 77,
             "archetypeHpMultiplier": 0.55,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 63.6,
@@ -1741,29 +1736,28 @@
         48,
         70
       ],
-      "rewardBaseGoldPerKill": 14,
+      "rewardBaseGoldPerKill": 13,
       "totalSpawnCount": 16,
-      "guaranteedGoldIfAllKilled": 224,
-      "maxGoldBeforeTowerBonuses": 224,
+      "guaranteedGoldIfAllKilled": 208,
+      "maxGoldBeforeTowerBonuses": 208,
       "packs": [
         {
           "type": "grunt",
           "name": "Grunt",
           "role": "normal",
           "count": 16,
-          "hp": 67.462,
+          "hp": 86,
           "speed": 64.8,
-          "rewardGold": 14,
-          "rewardFormula": "round(14 * 1 * 1)",
-          "rewardBase": 14,
+          "rewardGold": 13,
+          "rewardFormula": "round(13 * 1 * 1)",
+          "rewardBase": 13,
           "rewardMultiplier": 1,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 67.462,
+            "waveBaseHp": 86,
             "archetypeHpMultiplier": 1,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 64.8,
@@ -1792,29 +1786,28 @@
         56,
         81
       ],
-      "rewardBaseGoldPerKill": 16,
+      "rewardBaseGoldPerKill": 15,
       "totalSpawnCount": 20,
-      "guaranteedGoldIfAllKilled": 232,
-      "maxGoldBeforeTowerBonuses": 232,
+      "guaranteedGoldIfAllKilled": 220,
+      "maxGoldBeforeTowerBonuses": 220,
       "packs": [
         {
           "type": "grunt",
           "name": "Grunt",
           "role": "normal",
           "count": 12,
-          "hp": 74.545,
+          "hp": 95,
           "speed": 66,
-          "rewardGold": 16,
-          "rewardFormula": "round(16 * 1 * 1)",
-          "rewardBase": 16,
+          "rewardGold": 15,
+          "rewardFormula": "round(15 * 1 * 1)",
+          "rewardBase": 15,
           "rewardMultiplier": 1,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 74.545,
+            "waveBaseHp": 95,
             "archetypeHpMultiplier": 1,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 66,
@@ -1833,19 +1826,18 @@
           "name": "Swarmling",
           "role": "swarm",
           "count": 8,
-          "hp": 20.873,
+          "hp": 26.6,
           "speed": 92.4,
           "rewardGold": 5,
-          "rewardFormula": "round(16 * 0.333 * 1)",
-          "rewardBase": 16,
+          "rewardFormula": "round(15 * 0.333 * 1)",
+          "rewardBase": 15,
           "rewardMultiplier": 0.333,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 74.545,
+            "waveBaseHp": 95,
             "archetypeHpMultiplier": 0.28,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 66,
@@ -1874,29 +1866,28 @@
         64,
         92
       ],
-      "rewardBaseGoldPerKill": 17,
+      "rewardBaseGoldPerKill": 16,
       "totalSpawnCount": 10,
-      "guaranteedGoldIfAllKilled": 330,
-      "maxGoldBeforeTowerBonuses": 330,
+      "guaranteedGoldIfAllKilled": 308,
+      "maxGoldBeforeTowerBonuses": 308,
       "packs": [
         {
           "type": "brute",
           "name": "Brute",
           "role": "tank",
           "count": 4,
-          "hp": 211.697,
+          "hp": 534.56,
           "speed": 36.96,
-          "rewardGold": 57,
-          "rewardFormula": "round(17 * 3.333 * 1)",
-          "rewardBase": 17,
+          "rewardGold": 53,
+          "rewardFormula": "round(16 * 3.333 * 1)",
+          "rewardBase": 16,
           "rewardMultiplier": 3.333,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 82.372,
+            "waveBaseHp": 104,
             "archetypeHpMultiplier": 5.5,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 0.9345454545454546,
-            "tankEliteHpScale": 0.5
+            "heavyHpEarlyMultiplier": 0.9345454545454546
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 67.2,
@@ -1916,19 +1907,18 @@
           "name": "Grunt",
           "role": "normal",
           "count": 6,
-          "hp": 82.372,
+          "hp": 104,
           "speed": 67.2,
-          "rewardGold": 17,
-          "rewardFormula": "round(17 * 1 * 1)",
-          "rewardBase": 17,
+          "rewardGold": 16,
+          "rewardFormula": "round(16 * 1 * 1)",
+          "rewardBase": 16,
           "rewardMultiplier": 1,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 82.372,
+            "waveBaseHp": 104,
             "archetypeHpMultiplier": 1,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 67.2,
@@ -1957,29 +1947,28 @@
         72,
         103
       ],
-      "rewardBaseGoldPerKill": 19,
+      "rewardBaseGoldPerKill": 17,
       "totalSpawnCount": 16,
-      "guaranteedGoldIfAllKilled": 364,
-      "maxGoldBeforeTowerBonuses": 364,
+      "guaranteedGoldIfAllKilled": 332,
+      "maxGoldBeforeTowerBonuses": 332,
       "packs": [
         {
           "type": "runner",
           "name": "Runner",
           "role": "fast",
           "count": 10,
-          "hp": 50.062,
+          "hp": 62.15,
           "speed": 150.48,
-          "rewardGold": 25,
-          "rewardFormula": "round(19 * 1.333 * 1)",
-          "rewardBase": 19,
+          "rewardGold": 23,
+          "rewardFormula": "round(17 * 1.333 * 1)",
+          "rewardBase": 17,
           "rewardMultiplier": 1.333,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 91.021,
+            "waveBaseHp": 113,
             "archetypeHpMultiplier": 0.55,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 68.4,
@@ -1998,19 +1987,18 @@
           "name": "Grunt",
           "role": "normal",
           "count": 6,
-          "hp": 91.021,
+          "hp": 113,
           "speed": 68.4,
-          "rewardGold": 19,
-          "rewardFormula": "round(19 * 1 * 1)",
-          "rewardBase": 19,
+          "rewardGold": 17,
+          "rewardFormula": "round(17 * 1 * 1)",
+          "rewardBase": 17,
           "rewardMultiplier": 1,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 91.021,
+            "waveBaseHp": 113,
             "archetypeHpMultiplier": 1,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 68.4,
@@ -2039,29 +2027,28 @@
         80,
         114
       ],
-      "rewardBaseGoldPerKill": 20,
+      "rewardBaseGoldPerKill": 19,
       "totalSpawnCount": 12,
-      "guaranteedGoldIfAllKilled": 372,
-      "maxGoldBeforeTowerBonuses": 372,
+      "guaranteedGoldIfAllKilled": 356,
+      "maxGoldBeforeTowerBonuses": 356,
       "packs": [
         {
           "type": "linked",
           "name": "Linked Construct",
           "role": "fast",
           "count": 8,
-          "hp": 181.042,
+          "hp": 219.6,
           "speed": 69.6,
-          "rewardGold": 33,
-          "rewardFormula": "round(20 * 1.667 * 1)",
-          "rewardBase": 20,
+          "rewardGold": 32,
+          "rewardFormula": "round(19 * 1.667 * 1)",
+          "rewardBase": 19,
           "rewardMultiplier": 1.667,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 100.579,
+            "waveBaseHp": 122,
             "archetypeHpMultiplier": 1.8,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 69.6,
@@ -2081,19 +2068,18 @@
           "name": "Runner",
           "role": "fast",
           "count": 4,
-          "hp": 55.318,
+          "hp": 67.1,
           "speed": 153.12,
-          "rewardGold": 27,
-          "rewardFormula": "round(20 * 1.333 * 1)",
-          "rewardBase": 20,
+          "rewardGold": 25,
+          "rewardFormula": "round(19 * 1.333 * 1)",
+          "rewardBase": 19,
           "rewardMultiplier": 1.333,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 100.579,
+            "waveBaseHp": 122,
             "archetypeHpMultiplier": 0.55,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 69.6,
@@ -2122,29 +2108,28 @@
         88,
         125
       ],
-      "rewardBaseGoldPerKill": 22,
+      "rewardBaseGoldPerKill": 20,
       "totalSpawnCount": 16,
-      "guaranteedGoldIfAllKilled": 332,
-      "maxGoldBeforeTowerBonuses": 332,
+      "guaranteedGoldIfAllKilled": 312,
+      "maxGoldBeforeTowerBonuses": 312,
       "packs": [
         {
           "type": "brute",
           "name": "Brute",
           "role": "tank",
           "count": 2,
-          "hp": 295.631,
+          "hp": 696.92,
           "speed": 38.94,
-          "rewardGold": 73,
-          "rewardFormula": "round(22 * 3.333 * 1)",
-          "rewardBase": 22,
+          "rewardGold": 67,
+          "rewardFormula": "round(20 * 3.333 * 1)",
+          "rewardBase": 20,
           "rewardMultiplier": 3.333,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 111.139,
+            "waveBaseHp": 131,
             "archetypeHpMultiplier": 5.5,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 0.9672727272727273,
-            "tankEliteHpScale": 0.5
+            "heavyHpEarlyMultiplier": 0.9672727272727273
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 70.8,
@@ -2164,19 +2149,18 @@
           "name": "Swarmling",
           "role": "swarm",
           "count": 10,
-          "hp": 31.119,
+          "hp": 36.68,
           "speed": 99.12,
           "rewardGold": 7,
-          "rewardFormula": "round(22 * 0.333 * 1)",
-          "rewardBase": 22,
+          "rewardFormula": "round(20 * 0.333 * 1)",
+          "rewardBase": 20,
           "rewardMultiplier": 0.333,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 111.139,
+            "waveBaseHp": 131,
             "archetypeHpMultiplier": 0.28,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 70.8,
@@ -2195,19 +2179,18 @@
           "name": "Runner",
           "role": "fast",
           "count": 4,
-          "hp": 61.127,
+          "hp": 72.05,
           "speed": 155.76,
-          "rewardGold": 29,
-          "rewardFormula": "round(22 * 1.333 * 1)",
-          "rewardBase": 22,
+          "rewardGold": 27,
+          "rewardFormula": "round(20 * 1.333 * 1)",
+          "rewardBase": 20,
           "rewardMultiplier": 1.333,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 111.139,
+            "waveBaseHp": 131,
             "archetypeHpMultiplier": 0.55,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 70.8,
@@ -2236,29 +2219,28 @@
         96,
         136
       ],
-      "rewardBaseGoldPerKill": 33,
+      "rewardBaseGoldPerKill": 23,
       "totalSpawnCount": 14,
-      "guaranteedGoldIfAllKilled": 1056,
-      "maxGoldBeforeTowerBonuses": 1056,
+      "guaranteedGoldIfAllKilled": 736,
+      "maxGoldBeforeTowerBonuses": 736,
       "packs": [
         {
           "type": "hoarder",
           "name": "Hoarder",
           "role": "normal",
           "count": 6,
-          "hp": 147.371,
+          "hp": 168,
           "speed": 100.8,
-          "rewardGold": 132,
-          "rewardFormula": "round(33 * 4 * 1)",
-          "rewardBase": 33,
+          "rewardGold": 92,
+          "rewardFormula": "round(23 * 4 * 1)",
+          "rewardBase": 23,
           "rewardMultiplier": 4,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 122.809,
+            "waveBaseHp": 140,
             "archetypeHpMultiplier": 1.2,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 72,
@@ -2284,19 +2266,18 @@
           "name": "Grunt",
           "role": "normal",
           "count": 8,
-          "hp": 122.809,
+          "hp": 140,
           "speed": 72,
-          "rewardGold": 33,
-          "rewardFormula": "round(33 * 1 * 1)",
-          "rewardBase": 33,
+          "rewardGold": 23,
+          "rewardFormula": "round(23 * 1 * 1)",
+          "rewardBase": 23,
           "rewardMultiplier": 1,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 122.809,
+            "waveBaseHp": 140,
             "archetypeHpMultiplier": 1,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 72,
@@ -2325,29 +2306,28 @@
         104,
         147
       ],
-      "rewardBaseGoldPerKill": 35,
+      "rewardBaseGoldPerKill": 25,
       "totalSpawnCount": 12,
-      "guaranteedGoldIfAllKilled": 768,
-      "maxGoldBeforeTowerBonuses": 768,
+      "guaranteedGoldIfAllKilled": 552,
+      "maxGoldBeforeTowerBonuses": 552,
       "packs": [
         {
           "type": "shielded",
           "name": "Shielded Mage",
           "role": "elite",
           "count": 6,
-          "hp": 161.068,
+          "hp": 350.138,
           "speed": 65.88,
-          "rewardGold": 93,
-          "rewardFormula": "round(35 * 2.667 * 1)",
-          "rewardBase": 35,
+          "rewardGold": 67,
+          "rewardFormula": "round(25 * 2.667 * 1)",
+          "rewardBase": 25,
           "rewardMultiplier": 2.667,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 135.704,
+            "waveBaseHp": 147.5,
             "archetypeHpMultiplier": 2.4,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 0.9890909090909091,
-            "tankEliteHpScale": 0.5
+            "heavyHpEarlyMultiplier": 0.9890909090909091
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 73.2,
@@ -2358,7 +2338,7 @@
             "elite",
             "shielded"
           ],
-          "shieldHp": 56.374,
+          "shieldHp": 122.548,
           "bossPhaseBands": null,
           "conditionalGold": [],
           "maxGoldPerKillBeforeTowerBonuses": 93
@@ -2368,19 +2348,18 @@
           "name": "Grunt",
           "role": "normal",
           "count": 6,
-          "hp": 135.704,
+          "hp": 147.5,
           "speed": 73.2,
-          "rewardGold": 35,
-          "rewardFormula": "round(35 * 1 * 1)",
-          "rewardBase": 35,
+          "rewardGold": 25,
+          "rewardFormula": "round(25 * 1 * 1)",
+          "rewardBase": 25,
           "rewardMultiplier": 1,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 135.704,
+            "waveBaseHp": 147.5,
             "archetypeHpMultiplier": 1,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 73.2,
@@ -2409,29 +2388,28 @@
         112,
         158
       ],
-      "rewardBaseGoldPerKill": 36,
+      "rewardBaseGoldPerKill": 27,
       "totalSpawnCount": 12,
-      "guaranteedGoldIfAllKilled": 480,
-      "maxGoldBeforeTowerBonuses": 480,
+      "guaranteedGoldIfAllKilled": 360,
+      "maxGoldBeforeTowerBonuses": 360,
       "packs": [
         {
           "type": "regenerator",
           "name": "Regenerator",
           "role": "tank",
           "count": 4,
-          "hp": 224.929,
+          "hp": 465,
           "speed": 59.52,
-          "rewardGold": 96,
-          "rewardFormula": "round(36 * 2.667 * 1)",
-          "rewardBase": 36,
+          "rewardGold": 72,
+          "rewardFormula": "round(27 * 2.667 * 1)",
+          "rewardBase": 27,
           "rewardMultiplier": 2.667,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 149.953,
+            "waveBaseHp": 155,
             "archetypeHpMultiplier": 3,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 0.5
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 74.4,
@@ -2452,19 +2430,18 @@
           "name": "Swarmling",
           "role": "swarm",
           "count": 8,
-          "hp": 41.987,
+          "hp": 43.4,
           "speed": 104.16,
-          "rewardGold": 12,
-          "rewardFormula": "round(36 * 0.333 * 1)",
-          "rewardBase": 36,
+          "rewardGold": 9,
+          "rewardFormula": "round(27 * 0.333 * 1)",
+          "rewardBase": 27,
           "rewardMultiplier": 0.333,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 149.953,
+            "waveBaseHp": 155,
             "archetypeHpMultiplier": 0.28,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 74.4,
@@ -2493,29 +2470,28 @@
         120,
         169
       ],
-      "rewardBaseGoldPerKill": 38,
+      "rewardBaseGoldPerKill": 28,
       "totalSpawnCount": 12,
-      "guaranteedGoldIfAllKilled": 762,
-      "maxGoldBeforeTowerBonuses": 762,
+      "guaranteedGoldIfAllKilled": 558,
+      "maxGoldBeforeTowerBonuses": 558,
       "packs": [
         {
           "type": "splitter",
           "name": "Splitter",
           "role": "normal",
           "count": 6,
-          "hp": 430.815,
+          "hp": 422.5,
           "speed": 75.6,
-          "rewardGold": 76,
-          "rewardFormula": "round(38 * 2 * 1)",
-          "rewardBase": 38,
+          "rewardGold": 56,
+          "rewardFormula": "round(28 * 2 * 1)",
+          "rewardBase": 28,
           "rewardMultiplier": 2,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 165.698,
+            "waveBaseHp": 162.5,
             "archetypeHpMultiplier": 2.6,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 75.6,
@@ -2539,19 +2515,18 @@
           "name": "Runner",
           "role": "fast",
           "count": 6,
-          "hp": 91.134,
+          "hp": 89.375,
           "speed": 166.32,
-          "rewardGold": 51,
-          "rewardFormula": "round(38 * 1.333 * 1)",
-          "rewardBase": 38,
+          "rewardGold": 37,
+          "rewardFormula": "round(28 * 1.333 * 1)",
+          "rewardBase": 28,
           "rewardMultiplier": 1.333,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 165.698,
+            "waveBaseHp": 162.5,
             "archetypeHpMultiplier": 0.55,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 75.6,
@@ -2580,29 +2555,28 @@
         128,
         180
       ],
-      "rewardBaseGoldPerKill": 39,
+      "rewardBaseGoldPerKill": 30,
       "totalSpawnCount": 16,
-      "guaranteedGoldIfAllKilled": 962,
-      "maxGoldBeforeTowerBonuses": 962,
+      "guaranteedGoldIfAllKilled": 740,
+      "maxGoldBeforeTowerBonuses": 740,
       "packs": [
         {
           "type": "brute",
           "name": "Brute",
           "role": "tank",
           "count": 2,
-          "hp": 503.515,
+          "hp": 935,
           "speed": 42.24,
-          "rewardGold": 130,
-          "rewardFormula": "round(39 * 3.333 * 1)",
-          "rewardBase": 39,
+          "rewardGold": 100,
+          "rewardFormula": "round(30 * 3.333 * 1)",
+          "rewardBase": 30,
           "rewardMultiplier": 3.333,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 183.096,
+            "waveBaseHp": 170,
             "archetypeHpMultiplier": 5.5,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 0.5
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 76.8,
@@ -2622,19 +2596,18 @@
           "name": "Swarmling",
           "role": "swarm",
           "count": 6,
-          "hp": 51.267,
+          "hp": 47.6,
           "speed": 107.52,
-          "rewardGold": 13,
-          "rewardFormula": "round(39 * 0.333 * 1)",
-          "rewardBase": 39,
+          "rewardGold": 10,
+          "rewardFormula": "round(30 * 0.333 * 1)",
+          "rewardBase": 30,
           "rewardMultiplier": 0.333,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 183.096,
+            "waveBaseHp": 170,
             "archetypeHpMultiplier": 0.28,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 76.8,
@@ -2653,19 +2626,18 @@
           "name": "Shielded Mage",
           "role": "elite",
           "count": 4,
-          "hp": 219.716,
+          "hp": 408,
           "speed": 69.12,
-          "rewardGold": 104,
-          "rewardFormula": "round(39 * 2.667 * 1)",
-          "rewardBase": 39,
+          "rewardGold": 80,
+          "rewardFormula": "round(30 * 2.667 * 1)",
+          "rewardBase": 30,
           "rewardMultiplier": 2.667,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 183.096,
+            "waveBaseHp": 170,
             "archetypeHpMultiplier": 2.4,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 0.5
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 76.8,
@@ -2676,7 +2648,7 @@
             "elite",
             "shielded"
           ],
-          "shieldHp": 76.9,
+          "shieldHp": 142.8,
           "bossPhaseBands": null,
           "conditionalGold": [],
           "maxGoldPerKillBeforeTowerBonuses": 104
@@ -2686,19 +2658,18 @@
           "name": "Runner",
           "role": "fast",
           "count": 4,
-          "hp": 100.703,
+          "hp": 93.5,
           "speed": 168.96,
-          "rewardGold": 52,
-          "rewardFormula": "round(39 * 1.333 * 1)",
-          "rewardBase": 39,
+          "rewardGold": 40,
+          "rewardFormula": "round(30 * 1.333 * 1)",
+          "rewardBase": 30,
           "rewardMultiplier": 1.333,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 183.096,
+            "waveBaseHp": 170,
             "archetypeHpMultiplier": 0.55,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 76.8,
@@ -2727,29 +2698,28 @@
         136,
         191
       ],
-      "rewardBaseGoldPerKill": 41,
+      "rewardBaseGoldPerKill": 32,
       "totalSpawnCount": 16,
-      "guaranteedGoldIfAllKilled": 1042,
-      "maxGoldBeforeTowerBonuses": 1042,
+      "guaranteedGoldIfAllKilled": 814,
+      "maxGoldBeforeTowerBonuses": 814,
       "packs": [
         {
           "type": "brute",
           "name": "Brute",
           "role": "tank",
           "count": 3,
-          "hp": 556.384,
+          "hp": 976.25,
           "speed": 42.9,
-          "rewardGold": 137,
-          "rewardFormula": "round(41 * 3.333 * 1)",
-          "rewardBase": 41,
+          "rewardGold": 107,
+          "rewardFormula": "round(32 * 3.333 * 1)",
+          "rewardBase": 32,
           "rewardMultiplier": 3.333,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 202.321,
+            "waveBaseHp": 177.5,
             "archetypeHpMultiplier": 5.5,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 0.5
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 78,
@@ -2769,19 +2739,18 @@
           "name": "Shielded Mage",
           "role": "elite",
           "count": 3,
-          "hp": 242.786,
+          "hp": 426,
           "speed": 70.2,
-          "rewardGold": 109,
-          "rewardFormula": "round(41 * 2.667 * 1)",
-          "rewardBase": 41,
+          "rewardGold": 85,
+          "rewardFormula": "round(32 * 2.667 * 1)",
+          "rewardBase": 32,
           "rewardMultiplier": 2.667,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 202.321,
+            "waveBaseHp": 177.5,
             "archetypeHpMultiplier": 2.4,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 0.5
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 78,
@@ -2792,7 +2761,7 @@
             "elite",
             "shielded"
           ],
-          "shieldHp": 84.975,
+          "shieldHp": 149.1,
           "bossPhaseBands": null,
           "conditionalGold": [],
           "maxGoldPerKillBeforeTowerBonuses": 109
@@ -2802,19 +2771,18 @@
           "name": "Swarmling",
           "role": "swarm",
           "count": 6,
-          "hp": 56.65,
+          "hp": 49.7,
           "speed": 109.2,
-          "rewardGold": 14,
-          "rewardFormula": "round(41 * 0.333 * 1)",
-          "rewardBase": 41,
+          "rewardGold": 11,
+          "rewardFormula": "round(32 * 0.333 * 1)",
+          "rewardBase": 32,
           "rewardMultiplier": 0.333,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 202.321,
+            "waveBaseHp": 177.5,
             "archetypeHpMultiplier": 0.28,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 78,
@@ -2833,19 +2801,18 @@
           "name": "Runner",
           "role": "fast",
           "count": 4,
-          "hp": 111.277,
+          "hp": 97.625,
           "speed": 171.6,
-          "rewardGold": 55,
-          "rewardFormula": "round(41 * 1.333 * 1)",
-          "rewardBase": 41,
+          "rewardGold": 43,
+          "rewardFormula": "round(32 * 1.333 * 1)",
+          "rewardBase": 32,
           "rewardMultiplier": 1.333,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 202.321,
+            "waveBaseHp": 177.5,
             "archetypeHpMultiplier": 0.55,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 78,
@@ -2874,29 +2841,28 @@
         144,
         202
       ],
-      "rewardBaseGoldPerKill": 42,
+      "rewardBaseGoldPerKill": 34,
       "totalSpawnCount": 12,
-      "guaranteedGoldIfAllKilled": 784,
-      "maxGoldBeforeTowerBonuses": 784,
+      "guaranteedGoldIfAllKilled": 636,
+      "maxGoldBeforeTowerBonuses": 636,
       "packs": [
         {
           "type": "fire_swarm",
           "name": "Ember Swarm",
           "role": "swarm",
           "count": 8,
-          "hp": 89.426,
+          "hp": 74,
           "speed": 118.8,
-          "rewardGold": 28,
-          "rewardFormula": "round(42 * 0.667 * 1)",
-          "rewardBase": 42,
+          "rewardGold": 23,
+          "rewardFormula": "round(34 * 0.667 * 1)",
+          "rewardBase": 34,
           "rewardMultiplier": 0.667,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 223.565,
+            "waveBaseHp": 185,
             "archetypeHpMultiplier": 0.4,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 79.2,
@@ -2916,19 +2882,18 @@
           "name": "Brute",
           "role": "tank",
           "count": 4,
-          "hp": 614.804,
+          "hp": 1017.5,
           "speed": 43.56,
-          "rewardGold": 140,
-          "rewardFormula": "round(42 * 3.333 * 1)",
-          "rewardBase": 42,
+          "rewardGold": 113,
+          "rewardFormula": "round(34 * 3.333 * 1)",
+          "rewardBase": 34,
           "rewardMultiplier": 3.333,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 223.565,
+            "waveBaseHp": 185,
             "archetypeHpMultiplier": 5.5,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 0.5
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 79.2,
@@ -2958,29 +2923,28 @@
         152,
         213
       ],
-      "rewardBaseGoldPerKill": 44,
+      "rewardBaseGoldPerKill": 35,
       "totalSpawnCount": 12,
-      "guaranteedGoldIfAllKilled": 1140,
-      "maxGoldBeforeTowerBonuses": 1140,
+      "guaranteedGoldIfAllKilled": 906,
+      "maxGoldBeforeTowerBonuses": 906,
       "packs": [
         {
           "type": "swift_runner",
           "name": "Swift Runner",
           "role": "fast",
           "count": 6,
-          "hp": 197.632,
+          "hp": 154,
           "speed": 225.12,
-          "rewardGold": 73,
-          "rewardFormula": "round(44 * 1.667 * 1)",
-          "rewardBase": 44,
+          "rewardGold": 58,
+          "rewardFormula": "round(35 * 1.667 * 1)",
+          "rewardBase": 35,
           "rewardMultiplier": 1.667,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 247.04,
+            "waveBaseHp": 192.5,
             "archetypeHpMultiplier": 0.8,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 80.4,
@@ -3000,19 +2964,18 @@
           "name": "Shielded Mage",
           "role": "elite",
           "count": 6,
-          "hp": 296.447,
+          "hp": 462,
           "speed": 72.36,
-          "rewardGold": 117,
-          "rewardFormula": "round(44 * 2.667 * 1)",
-          "rewardBase": 44,
+          "rewardGold": 93,
+          "rewardFormula": "round(35 * 2.667 * 1)",
+          "rewardBase": 35,
           "rewardMultiplier": 2.667,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 247.04,
+            "waveBaseHp": 192.5,
             "archetypeHpMultiplier": 2.4,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 0.5
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 80.4,
@@ -3023,7 +2986,7 @@
             "elite",
             "shielded"
           ],
-          "shieldHp": 103.757,
+          "shieldHp": 161.7,
           "bossPhaseBands": null,
           "conditionalGold": [],
           "maxGoldPerKillBeforeTowerBonuses": 117
@@ -3043,29 +3006,28 @@
         160,
         224
       ],
-      "rewardBaseGoldPerKill": 45,
+      "rewardBaseGoldPerKill": 37,
       "totalSpawnCount": 14,
-      "guaranteedGoldIfAllKilled": 1980,
-      "maxGoldBeforeTowerBonuses": 1980,
+      "guaranteedGoldIfAllKilled": 1628,
+      "maxGoldBeforeTowerBonuses": 1628,
       "packs": [
         {
           "type": "hoarder",
           "name": "Hoarder",
           "role": "normal",
           "count": 8,
-          "hp": 327.574,
+          "hp": 240,
           "speed": 114.24,
-          "rewardGold": 180,
-          "rewardFormula": "round(45 * 4 * 1)",
-          "rewardBase": 45,
+          "rewardGold": 148,
+          "rewardFormula": "round(37 * 4 * 1)",
+          "rewardBase": 37,
           "rewardMultiplier": 4,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 272.979,
+            "waveBaseHp": 200,
             "archetypeHpMultiplier": 1.2,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 81.6,
@@ -3091,19 +3053,18 @@
           "name": "Splitter",
           "role": "normal",
           "count": 6,
-          "hp": 709.745,
+          "hp": 520,
           "speed": 81.6,
-          "rewardGold": 90,
-          "rewardFormula": "round(45 * 2 * 1)",
-          "rewardBase": 45,
+          "rewardGold": 74,
+          "rewardFormula": "round(37 * 2 * 1)",
+          "rewardBase": 37,
           "rewardMultiplier": 2,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 272.979,
+            "waveBaseHp": 200,
             "archetypeHpMultiplier": 2.6,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 81.6,
@@ -3137,29 +3098,28 @@
         168,
         235
       ],
-      "rewardBaseGoldPerKill": 47,
+      "rewardBaseGoldPerKill": 39,
       "totalSpawnCount": 20,
-      "guaranteedGoldIfAllKilled": 1538,
-      "maxGoldBeforeTowerBonuses": 1538,
+      "guaranteedGoldIfAllKilled": 1274,
+      "maxGoldBeforeTowerBonuses": 1274,
       "packs": [
         {
           "type": "brute",
           "name": "Brute",
           "role": "tank",
           "count": 2,
-          "hp": 829.514,
+          "hp": 1141.25,
           "speed": 45.54,
-          "rewardGold": 157,
-          "rewardFormula": "round(47 * 3.333 * 1)",
-          "rewardBase": 47,
+          "rewardGold": 130,
+          "rewardFormula": "round(39 * 3.333 * 1)",
+          "rewardBase": 39,
           "rewardMultiplier": 3.333,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 301.641,
+            "waveBaseHp": 207.5,
             "archetypeHpMultiplier": 5.5,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 0.5
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 82.8,
@@ -3179,19 +3139,18 @@
           "name": "Runner",
           "role": "fast",
           "count": 6,
-          "hp": 165.903,
+          "hp": 114.125,
           "speed": 182.16,
-          "rewardGold": 63,
-          "rewardFormula": "round(47 * 1.333 * 1)",
-          "rewardBase": 47,
+          "rewardGold": 52,
+          "rewardFormula": "round(39 * 1.333 * 1)",
+          "rewardBase": 39,
           "rewardMultiplier": 1.333,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 301.641,
+            "waveBaseHp": 207.5,
             "archetypeHpMultiplier": 0.55,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 82.8,
@@ -3210,19 +3169,18 @@
           "name": "Swarmling",
           "role": "swarm",
           "count": 6,
-          "hp": 84.46,
+          "hp": 58.1,
           "speed": 115.92,
-          "rewardGold": 16,
-          "rewardFormula": "round(47 * 0.333 * 1)",
-          "rewardBase": 47,
+          "rewardGold": 13,
+          "rewardFormula": "round(39 * 0.333 * 1)",
+          "rewardBase": 39,
           "rewardMultiplier": 0.333,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 301.641,
+            "waveBaseHp": 207.5,
             "archetypeHpMultiplier": 0.28,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 82.8,
@@ -3241,19 +3199,18 @@
           "name": "Shielded Mage",
           "role": "elite",
           "count": 4,
-          "hp": 361.97,
+          "hp": 498,
           "speed": 74.52,
-          "rewardGold": 125,
-          "rewardFormula": "round(47 * 2.667 * 1)",
-          "rewardBase": 47,
+          "rewardGold": 104,
+          "rewardFormula": "round(39 * 2.667 * 1)",
+          "rewardBase": 39,
           "rewardMultiplier": 2.667,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 301.641,
+            "waveBaseHp": 207.5,
             "archetypeHpMultiplier": 2.4,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 0.5
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 82.8,
@@ -3264,7 +3221,7 @@
             "elite",
             "shielded"
           ],
-          "shieldHp": 126.689,
+          "shieldHp": 174.3,
           "bossPhaseBands": null,
           "conditionalGold": [],
           "maxGoldPerKillBeforeTowerBonuses": 125
@@ -3274,19 +3231,18 @@
           "name": "Regenerator",
           "role": "tank",
           "count": 2,
-          "hp": 452.462,
+          "hp": 622.5,
           "speed": 66.24,
-          "rewardGold": 125,
-          "rewardFormula": "round(47 * 2.667 * 1)",
-          "rewardBase": 47,
+          "rewardGold": 104,
+          "rewardFormula": "round(39 * 2.667 * 1)",
+          "rewardBase": 39,
           "rewardMultiplier": 2.667,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 301.641,
+            "waveBaseHp": 207.5,
             "archetypeHpMultiplier": 3,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 0.5
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 82.8,
@@ -3317,29 +3273,28 @@
         176,
         246
       ],
-      "rewardBaseGoldPerKill": 48,
+      "rewardBaseGoldPerKill": 40,
       "totalSpawnCount": 13,
-      "guaranteedGoldIfAllKilled": 1120,
-      "maxGoldBeforeTowerBonuses": 1120,
+      "guaranteedGoldIfAllKilled": 929,
+      "maxGoldBeforeTowerBonuses": 929,
       "packs": [
         {
           "type": "siege_golem",
           "name": "Siege Golem",
           "role": "elite",
           "count": 1,
-          "hp": 7499.56,
+          "hp": 9675,
           "speed": 29.4,
-          "rewardGold": 640,
-          "rewardFormula": "round(48 * 13.333 * 1)",
-          "rewardBase": 48,
+          "rewardGold": 533,
+          "rewardFormula": "round(40 * 13.333 * 1)",
+          "rewardBase": 40,
           "rewardMultiplier": 13.333,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 333.314,
+            "waveBaseHp": 215,
             "archetypeHpMultiplier": 45,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 0.5
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 84,
@@ -3378,19 +3333,18 @@
           "name": "Runner",
           "role": "fast",
           "count": 6,
-          "hp": 183.323,
+          "hp": 118.25,
           "speed": 184.8,
-          "rewardGold": 64,
-          "rewardFormula": "round(48 * 1.333 * 1)",
-          "rewardBase": 48,
+          "rewardGold": 53,
+          "rewardFormula": "round(40 * 1.333 * 1)",
+          "rewardBase": 40,
           "rewardMultiplier": 1.333,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 333.314,
+            "waveBaseHp": 215,
             "archetypeHpMultiplier": 0.55,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 84,
@@ -3409,19 +3363,18 @@
           "name": "Swarmling",
           "role": "swarm",
           "count": 6,
-          "hp": 93.328,
+          "hp": 60.2,
           "speed": 117.6,
-          "rewardGold": 16,
-          "rewardFormula": "round(48 * 0.333 * 1)",
-          "rewardBase": 48,
+          "rewardGold": 13,
+          "rewardFormula": "round(40 * 0.333 * 1)",
+          "rewardBase": 40,
           "rewardMultiplier": 0.333,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 333.314,
+            "waveBaseHp": 215,
             "archetypeHpMultiplier": 0.28,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 84,
@@ -3450,29 +3403,28 @@
         184,
         257
       ],
-      "rewardBaseGoldPerKill": 50,
+      "rewardBaseGoldPerKill": 42,
       "totalSpawnCount": 30,
-      "guaranteedGoldIfAllKilled": 1670,
-      "maxGoldBeforeTowerBonuses": 1670,
+      "guaranteedGoldIfAllKilled": 1400,
+      "maxGoldBeforeTowerBonuses": 1400,
       "packs": [
         {
           "type": "grunt",
           "name": "Grunt",
           "role": "normal",
           "count": 20,
-          "hp": 368.312,
+          "hp": 221,
           "speed": 85.2,
-          "rewardGold": 50,
-          "rewardFormula": "round(50 * 1 * 1)",
-          "rewardBase": 50,
+          "rewardGold": 42,
+          "rewardFormula": "round(42 * 1 * 1)",
+          "rewardBase": 42,
           "rewardMultiplier": 1,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 368.312,
+            "waveBaseHp": 221,
             "archetypeHpMultiplier": 1,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 85.2,
@@ -3491,19 +3443,18 @@
           "name": "Runner",
           "role": "fast",
           "count": 10,
-          "hp": 202.571,
+          "hp": 121.55,
           "speed": 187.44,
-          "rewardGold": 67,
-          "rewardFormula": "round(50 * 1.333 * 1)",
-          "rewardBase": 50,
+          "rewardGold": 56,
+          "rewardFormula": "round(42 * 1.333 * 1)",
+          "rewardBase": 42,
           "rewardMultiplier": 1.333,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 368.312,
+            "waveBaseHp": 221,
             "archetypeHpMultiplier": 0.55,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 85.2,
@@ -3532,29 +3483,28 @@
         192,
         268
       ],
-      "rewardBaseGoldPerKill": 51,
+      "rewardBaseGoldPerKill": 43,
       "totalSpawnCount": 8,
-      "guaranteedGoldIfAllKilled": 1360,
-      "maxGoldBeforeTowerBonuses": 1360,
+      "guaranteedGoldIfAllKilled": 1144,
+      "maxGoldBeforeTowerBonuses": 1144,
       "packs": [
         {
           "type": "brute",
           "name": "Brute",
           "role": "tank",
           "count": 8,
-          "hp": 1119.207,
+          "hp": 1248.5,
           "speed": 47.52,
-          "rewardGold": 170,
-          "rewardFormula": "round(51 * 3.333 * 1)",
-          "rewardBase": 51,
+          "rewardGold": 143,
+          "rewardFormula": "round(43 * 3.333 * 1)",
+          "rewardBase": 43,
           "rewardMultiplier": 3.333,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 406.984,
+            "waveBaseHp": 227,
             "archetypeHpMultiplier": 5.5,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 0.5
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 86.4,
@@ -3584,29 +3534,28 @@
         200,
         279
       ],
-      "rewardBaseGoldPerKill": 53,
+      "rewardBaseGoldPerKill": 44,
       "totalSpawnCount": 26,
-      "guaranteedGoldIfAllKilled": 1588,
-      "maxGoldBeforeTowerBonuses": 1588,
+      "guaranteedGoldIfAllKilled": 1318,
+      "maxGoldBeforeTowerBonuses": 1318,
       "packs": [
         {
           "type": "linked",
           "name": "Linked Construct",
           "role": "fast",
           "count": 16,
-          "hp": 809.492,
+          "hp": 419.4,
           "speed": 87.6,
-          "rewardGold": 88,
-          "rewardFormula": "round(53 * 1.667 * 1)",
-          "rewardBase": 53,
+          "rewardGold": 73,
+          "rewardFormula": "round(44 * 1.667 * 1)",
+          "rewardBase": 44,
           "rewardMultiplier": 1.667,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 449.718,
+            "waveBaseHp": 233,
             "archetypeHpMultiplier": 1.8,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 87.6,
@@ -3626,19 +3575,18 @@
           "name": "Swarmling",
           "role": "swarm",
           "count": 10,
-          "hp": 125.921,
+          "hp": 65.24,
           "speed": 122.64,
-          "rewardGold": 18,
-          "rewardFormula": "round(53 * 0.333 * 1)",
-          "rewardBase": 53,
+          "rewardGold": 15,
+          "rewardFormula": "round(44 * 0.333 * 1)",
+          "rewardBase": 44,
           "rewardMultiplier": 0.333,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 449.718,
+            "waveBaseHp": 233,
             "archetypeHpMultiplier": 0.28,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 87.6,
@@ -3667,29 +3615,28 @@
         208,
         290
       ],
-      "rewardBaseGoldPerKill": 54,
+      "rewardBaseGoldPerKill": 46,
       "totalSpawnCount": 20,
-      "guaranteedGoldIfAllKilled": 1548,
-      "maxGoldBeforeTowerBonuses": 1548,
+      "guaranteedGoldIfAllKilled": 1316,
+      "maxGoldBeforeTowerBonuses": 1316,
       "packs": [
         {
           "type": "runner",
           "name": "Runner",
           "role": "fast",
           "count": 14,
-          "hp": 273.316,
+          "hp": 131.45,
           "speed": 195.36,
-          "rewardGold": 72,
-          "rewardFormula": "round(54 * 1.333 * 1)",
-          "rewardBase": 54,
+          "rewardGold": 61,
+          "rewardFormula": "round(46 * 1.333 * 1)",
+          "rewardBase": 46,
           "rewardMultiplier": 1.333,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 496.938,
+            "waveBaseHp": 239,
             "archetypeHpMultiplier": 0.55,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 88.8,
@@ -3708,19 +3655,18 @@
           "name": "Swift Runner",
           "role": "fast",
           "count": 6,
-          "hp": 397.551,
+          "hp": 191.2,
           "speed": 248.64,
-          "rewardGold": 90,
-          "rewardFormula": "round(54 * 1.667 * 1)",
-          "rewardBase": 54,
+          "rewardGold": 77,
+          "rewardFormula": "round(46 * 1.667 * 1)",
+          "rewardBase": 46,
           "rewardMultiplier": 1.667,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 496.938,
+            "waveBaseHp": 239,
             "archetypeHpMultiplier": 0.8,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 88.8,
@@ -3750,29 +3696,28 @@
         216,
         301
       ],
-      "rewardBaseGoldPerKill": 56,
+      "rewardBaseGoldPerKill": 47,
       "totalSpawnCount": 16,
-      "guaranteedGoldIfAllKilled": 2384,
-      "maxGoldBeforeTowerBonuses": 2384,
+      "guaranteedGoldIfAllKilled": 2000,
+      "maxGoldBeforeTowerBonuses": 2000,
       "packs": [
         {
           "type": "shielded",
           "name": "Shielded Mage",
           "role": "elite",
           "count": 10,
-          "hp": 658.94,
+          "hp": 588,
           "speed": 81,
-          "rewardGold": 149,
-          "rewardFormula": "round(56 * 2.667 * 1)",
-          "rewardBase": 56,
+          "rewardGold": 125,
+          "rewardFormula": "round(47 * 2.667 * 1)",
+          "rewardBase": 47,
           "rewardMultiplier": 2.667,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 549.117,
+            "waveBaseHp": 245,
             "archetypeHpMultiplier": 2.4,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 0.5
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 90,
@@ -3783,7 +3728,7 @@
             "elite",
             "shielded"
           ],
-          "shieldHp": 230.629,
+          "shieldHp": 205.8,
           "bossPhaseBands": null,
           "conditionalGold": [],
           "maxGoldPerKillBeforeTowerBonuses": 149
@@ -3793,19 +3738,18 @@
           "name": "Regenerator",
           "role": "tank",
           "count": 6,
-          "hp": 823.675,
+          "hp": 735,
           "speed": 72,
-          "rewardGold": 149,
-          "rewardFormula": "round(56 * 2.667 * 1)",
-          "rewardBase": 56,
+          "rewardGold": 125,
+          "rewardFormula": "round(47 * 2.667 * 1)",
+          "rewardBase": 47,
           "rewardMultiplier": 2.667,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 549.117,
+            "waveBaseHp": 245,
             "archetypeHpMultiplier": 3,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 0.5
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 90,
@@ -3836,29 +3780,28 @@
         224,
         312
       ],
-      "rewardBaseGoldPerKill": 57,
+      "rewardBaseGoldPerKill": 48,
       "totalSpawnCount": 22,
-      "guaranteedGoldIfAllKilled": 3800,
-      "maxGoldBeforeTowerBonuses": 3800,
+      "guaranteedGoldIfAllKilled": 3200,
+      "maxGoldBeforeTowerBonuses": 3200,
       "packs": [
         {
           "type": "hoarder",
           "name": "Hoarder",
           "role": "normal",
           "count": 14,
-          "hp": 728.129,
+          "hp": 301.2,
           "speed": 127.68,
-          "rewardGold": 228,
-          "rewardFormula": "round(57 * 4 * 1)",
-          "rewardBase": 57,
+          "rewardGold": 192,
+          "rewardFormula": "round(48 * 4 * 1)",
+          "rewardBase": 48,
           "rewardMultiplier": 4,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 606.774,
+            "waveBaseHp": 251,
             "archetypeHpMultiplier": 1.2,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 91.2,
@@ -3884,19 +3827,18 @@
           "name": "Runner",
           "role": "fast",
           "count": 8,
-          "hp": 333.726,
+          "hp": 138.05,
           "speed": 200.64,
-          "rewardGold": 76,
-          "rewardFormula": "round(57 * 1.333 * 1)",
-          "rewardBase": 57,
+          "rewardGold": 64,
+          "rewardFormula": "round(48 * 1.333 * 1)",
+          "rewardBase": 48,
           "rewardMultiplier": 1.333,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 606.774,
+            "waveBaseHp": 251,
             "archetypeHpMultiplier": 0.55,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 91.2,
@@ -3925,29 +3867,28 @@
         232,
         323
       ],
-      "rewardBaseGoldPerKill": 59,
+      "rewardBaseGoldPerKill": 50,
       "totalSpawnCount": 32,
-      "guaranteedGoldIfAllKilled": 1424,
-      "maxGoldBeforeTowerBonuses": 1424,
+      "guaranteedGoldIfAllKilled": 1208,
+      "maxGoldBeforeTowerBonuses": 1208,
       "packs": [
         {
           "type": "swarm",
           "name": "Swarmling",
           "role": "swarm",
           "count": 24,
-          "hp": 187.736,
+          "hp": 71.96,
           "speed": 129.36,
-          "rewardGold": 20,
-          "rewardFormula": "round(59 * 0.333 * 1)",
-          "rewardBase": 59,
+          "rewardGold": 17,
+          "rewardFormula": "round(50 * 0.333 * 1)",
+          "rewardBase": 50,
           "rewardMultiplier": 0.333,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 670.485,
+            "waveBaseHp": 257,
             "archetypeHpMultiplier": 0.28,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 92.4,
@@ -3966,19 +3907,18 @@
           "name": "Splitter",
           "role": "normal",
           "count": 8,
-          "hp": 1743.262,
+          "hp": 668.2,
           "speed": 92.4,
-          "rewardGold": 118,
-          "rewardFormula": "round(59 * 2 * 1)",
-          "rewardBase": 59,
+          "rewardGold": 100,
+          "rewardFormula": "round(50 * 2 * 1)",
+          "rewardBase": 50,
           "rewardMultiplier": 2,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 670.485,
+            "waveBaseHp": 257,
             "archetypeHpMultiplier": 2.6,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 92.4,
@@ -4012,29 +3952,28 @@
         240,
         334
       ],
-      "rewardBaseGoldPerKill": 60,
+      "rewardBaseGoldPerKill": 51,
       "totalSpawnCount": 16,
-      "guaranteedGoldIfAllKilled": 2960,
-      "maxGoldBeforeTowerBonuses": 2960,
+      "guaranteedGoldIfAllKilled": 2516,
+      "maxGoldBeforeTowerBonuses": 2516,
       "packs": [
         {
           "type": "brute",
           "name": "Brute",
           "role": "tank",
           "count": 10,
-          "hp": 2037.437,
+          "hp": 1446.5,
           "speed": 51.48,
-          "rewardGold": 200,
-          "rewardFormula": "round(60 * 3.333 * 1)",
-          "rewardBase": 60,
+          "rewardGold": 170,
+          "rewardFormula": "round(51 * 3.333 * 1)",
+          "rewardBase": 51,
           "rewardMultiplier": 3.333,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 740.886,
+            "waveBaseHp": 263,
             "archetypeHpMultiplier": 5.5,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 0.5
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 93.6,
@@ -4054,19 +3993,18 @@
           "name": "Shielded Mage",
           "role": "elite",
           "count": 6,
-          "hp": 889.063,
+          "hp": 631.2,
           "speed": 84.24,
-          "rewardGold": 160,
-          "rewardFormula": "round(60 * 2.667 * 1)",
-          "rewardBase": 60,
+          "rewardGold": 136,
+          "rewardFormula": "round(51 * 2.667 * 1)",
+          "rewardBase": 51,
           "rewardMultiplier": 2.667,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 740.886,
+            "waveBaseHp": 263,
             "archetypeHpMultiplier": 2.4,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 0.5
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 93.6,
@@ -4077,7 +4015,7 @@
             "elite",
             "shielded"
           ],
-          "shieldHp": 311.172,
+          "shieldHp": 220.92,
           "bossPhaseBands": null,
           "conditionalGold": [],
           "maxGoldPerKillBeforeTowerBonuses": 160
@@ -4097,29 +4035,28 @@
         248,
         345
       ],
-      "rewardBaseGoldPerKill": 62,
+      "rewardBaseGoldPerKill": 52,
       "totalSpawnCount": 24,
-      "guaranteedGoldIfAllKilled": 2224,
-      "maxGoldBeforeTowerBonuses": 2224,
+      "guaranteedGoldIfAllKilled": 1880,
+      "maxGoldBeforeTowerBonuses": 1880,
       "packs": [
         {
           "type": "fire_swarm",
           "name": "Ember Swarm",
           "role": "swarm",
           "count": 10,
-          "hp": 327.472,
+          "hp": 107.6,
           "speed": 142.2,
-          "rewardGold": 41,
-          "rewardFormula": "round(62 * 0.667 * 1)",
-          "rewardBase": 62,
+          "rewardGold": 35,
+          "rewardFormula": "round(52 * 0.667 * 1)",
+          "rewardBase": 52,
           "rewardMultiplier": 0.667,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 818.679,
+            "waveBaseHp": 269,
             "archetypeHpMultiplier": 0.4,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 94.8,
@@ -4139,19 +4076,18 @@
           "name": "Swift Runner",
           "role": "fast",
           "count": 8,
-          "hp": 654.943,
+          "hp": 215.2,
           "speed": 265.44,
-          "rewardGold": 103,
-          "rewardFormula": "round(62 * 1.667 * 1)",
-          "rewardBase": 62,
+          "rewardGold": 87,
+          "rewardFormula": "round(52 * 1.667 * 1)",
+          "rewardBase": 52,
           "rewardMultiplier": 1.667,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 818.679,
+            "waveBaseHp": 269,
             "archetypeHpMultiplier": 0.8,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 94.8,
@@ -4171,19 +4107,18 @@
           "name": "Shielded Mage",
           "role": "elite",
           "count": 6,
-          "hp": 982.415,
+          "hp": 645.6,
           "speed": 85.32,
-          "rewardGold": 165,
-          "rewardFormula": "round(62 * 2.667 * 1)",
-          "rewardBase": 62,
+          "rewardGold": 139,
+          "rewardFormula": "round(52 * 2.667 * 1)",
+          "rewardBase": 52,
           "rewardMultiplier": 2.667,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 818.679,
+            "waveBaseHp": 269,
             "archetypeHpMultiplier": 2.4,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 0.5
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 94.8,
@@ -4194,7 +4129,7 @@
             "elite",
             "shielded"
           ],
-          "shieldHp": 343.845,
+          "shieldHp": 225.96,
           "bossPhaseBands": null,
           "conditionalGold": [],
           "maxGoldPerKillBeforeTowerBonuses": 165
@@ -4214,29 +4149,28 @@
         256,
         356
       ],
-      "rewardBaseGoldPerKill": 63,
+      "rewardBaseGoldPerKill": 54,
       "totalSpawnCount": 21,
-      "guaranteedGoldIfAllKilled": 2184,
-      "maxGoldBeforeTowerBonuses": 2184,
+      "guaranteedGoldIfAllKilled": 1872,
+      "maxGoldBeforeTowerBonuses": 1872,
       "packs": [
         {
           "type": "ancient_golem",
           "name": "Ancient Golem",
           "role": "elite",
           "count": 1,
-          "hp": 36185.623,
+          "hp": 22000,
           "speed": 28.8,
-          "rewardGold": 1260,
-          "rewardFormula": "round(63 * 20 * 1)",
-          "rewardBase": 63,
+          "rewardGold": 1080,
+          "rewardFormula": "round(54 * 20 * 1)",
+          "rewardBase": 54,
           "rewardMultiplier": 20,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 904.641,
+            "waveBaseHp": 275,
             "archetypeHpMultiplier": 80,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 0.5
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 96,
@@ -4276,19 +4210,18 @@
           "name": "Swarmling",
           "role": "swarm",
           "count": 12,
-          "hp": 253.299,
+          "hp": 77,
           "speed": 134.4,
-          "rewardGold": 21,
-          "rewardFormula": "round(63 * 0.333 * 1)",
-          "rewardBase": 63,
+          "rewardGold": 18,
+          "rewardFormula": "round(54 * 0.333 * 1)",
+          "rewardBase": 54,
           "rewardMultiplier": 0.333,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 904.641,
+            "waveBaseHp": 275,
             "archetypeHpMultiplier": 0.28,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 96,
@@ -4307,19 +4240,18 @@
           "name": "Runner",
           "role": "fast",
           "count": 8,
-          "hp": 497.552,
+          "hp": 151.25,
           "speed": 211.2,
-          "rewardGold": 84,
-          "rewardFormula": "round(63 * 1.333 * 1)",
-          "rewardBase": 63,
+          "rewardGold": 72,
+          "rewardFormula": "round(54 * 1.333 * 1)",
+          "rewardBase": 54,
           "rewardMultiplier": 1.333,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 904.641,
+            "waveBaseHp": 275,
             "archetypeHpMultiplier": 0.55,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 96,
@@ -4348,29 +4280,28 @@
         264,
         367
       ],
-      "rewardBaseGoldPerKill": 65,
+      "rewardBaseGoldPerKill": 55,
       "totalSpawnCount": 32,
-      "guaranteedGoldIfAllKilled": 3602,
-      "maxGoldBeforeTowerBonuses": 3602,
+      "guaranteedGoldIfAllKilled": 3038,
+      "maxGoldBeforeTowerBonuses": 3038,
       "packs": [
         {
           "type": "brute",
           "name": "Brute",
           "role": "tank",
           "count": 6,
-          "hp": 2748.977,
+          "hp": 1545.5,
           "speed": 53.46,
-          "rewardGold": 217,
-          "rewardFormula": "round(65 * 3.333 * 1)",
-          "rewardBase": 65,
+          "rewardGold": 183,
+          "rewardFormula": "round(55 * 3.333 * 1)",
+          "rewardBase": 55,
           "rewardMultiplier": 3.333,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 999.628,
+            "waveBaseHp": 281,
             "archetypeHpMultiplier": 5.5,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 0.5
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 97.2,
@@ -4390,19 +4321,18 @@
           "name": "Runner",
           "role": "fast",
           "count": 8,
-          "hp": 549.795,
+          "hp": 154.55,
           "speed": 213.84,
-          "rewardGold": 87,
-          "rewardFormula": "round(65 * 1.333 * 1)",
-          "rewardBase": 65,
+          "rewardGold": 73,
+          "rewardFormula": "round(55 * 1.333 * 1)",
+          "rewardBase": 55,
           "rewardMultiplier": 1.333,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 999.628,
+            "waveBaseHp": 281,
             "archetypeHpMultiplier": 0.55,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 97.2,
@@ -4421,19 +4351,18 @@
           "name": "Shielded Mage",
           "role": "elite",
           "count": 8,
-          "hp": 1199.553,
+          "hp": 674.4,
           "speed": 87.48,
-          "rewardGold": 173,
-          "rewardFormula": "round(65 * 2.667 * 1)",
-          "rewardBase": 65,
+          "rewardGold": 147,
+          "rewardFormula": "round(55 * 2.667 * 1)",
+          "rewardBase": 55,
           "rewardMultiplier": 2.667,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 999.628,
+            "waveBaseHp": 281,
             "archetypeHpMultiplier": 2.4,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 0.5
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 97.2,
@@ -4444,7 +4373,7 @@
             "elite",
             "shielded"
           ],
-          "shieldHp": 419.844,
+          "shieldHp": 236.04,
           "bossPhaseBands": null,
           "conditionalGold": [],
           "maxGoldPerKillBeforeTowerBonuses": 173
@@ -4454,19 +4383,18 @@
           "name": "Swarmling",
           "role": "swarm",
           "count": 10,
-          "hp": 279.896,
+          "hp": 78.68,
           "speed": 136.08,
-          "rewardGold": 22,
-          "rewardFormula": "round(65 * 0.333 * 1)",
-          "rewardBase": 65,
+          "rewardGold": 18,
+          "rewardFormula": "round(55 * 0.333 * 1)",
+          "rewardBase": 55,
           "rewardMultiplier": 0.333,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 999.628,
+            "waveBaseHp": 281,
             "archetypeHpMultiplier": 0.28,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 97.2,
@@ -4495,29 +4423,28 @@
         272,
         378
       ],
-      "rewardBaseGoldPerKill": 66,
+      "rewardBaseGoldPerKill": 56,
       "totalSpawnCount": 22,
-      "guaranteedGoldIfAllKilled": 2420,
-      "maxGoldBeforeTowerBonuses": 2420,
+      "guaranteedGoldIfAllKilled": 2046,
+      "maxGoldBeforeTowerBonuses": 2046,
       "packs": [
         {
           "type": "swift_runner",
           "name": "Swift Runner",
           "role": "fast",
           "count": 12,
-          "hp": 883.671,
+          "hp": 229.6,
           "speed": 275.52,
-          "rewardGold": 110,
-          "rewardFormula": "round(66 * 1.667 * 1)",
-          "rewardBase": 66,
+          "rewardGold": 93,
+          "rewardFormula": "round(56 * 1.667 * 1)",
+          "rewardBase": 56,
           "rewardMultiplier": 1.667,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 1104.589,
+            "waveBaseHp": 287,
             "archetypeHpMultiplier": 0.8,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 98.4,
@@ -4537,19 +4464,18 @@
           "name": "Linked Construct",
           "role": "fast",
           "count": 10,
-          "hp": 1988.26,
+          "hp": 516.6,
           "speed": 98.4,
-          "rewardGold": 110,
-          "rewardFormula": "round(66 * 1.667 * 1)",
-          "rewardBase": 66,
+          "rewardGold": 93,
+          "rewardFormula": "round(56 * 1.667 * 1)",
+          "rewardBase": 56,
           "rewardMultiplier": 1.667,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 1104.589,
+            "waveBaseHp": 287,
             "archetypeHpMultiplier": 1.8,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 98.4,
@@ -4579,29 +4505,28 @@
         280,
         389
       ],
-      "rewardBaseGoldPerKill": 68,
+      "rewardBaseGoldPerKill": 58,
       "totalSpawnCount": 18,
-      "guaranteedGoldIfAllKilled": 3258,
-      "maxGoldBeforeTowerBonuses": 3258,
+      "guaranteedGoldIfAllKilled": 2790,
+      "maxGoldBeforeTowerBonuses": 2790,
       "packs": [
         {
           "type": "regenerator",
           "name": "Regenerator",
           "role": "tank",
           "count": 10,
-          "hp": 1830.856,
+          "hp": 879,
           "speed": 79.68,
-          "rewardGold": 181,
-          "rewardFormula": "round(68 * 2.667 * 1)",
-          "rewardBase": 68,
+          "rewardGold": 155,
+          "rewardFormula": "round(58 * 2.667 * 1)",
+          "rewardBase": 58,
           "rewardMultiplier": 2.667,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 1220.571,
+            "waveBaseHp": 293,
             "archetypeHpMultiplier": 3,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 0.5
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 99.6,
@@ -4622,19 +4547,18 @@
           "name": "Shielded Mage",
           "role": "elite",
           "count": 8,
-          "hp": 1464.685,
+          "hp": 703.2,
           "speed": 89.64,
-          "rewardGold": 181,
-          "rewardFormula": "round(68 * 2.667 * 1)",
-          "rewardBase": 68,
+          "rewardGold": 155,
+          "rewardFormula": "round(58 * 2.667 * 1)",
+          "rewardBase": 58,
           "rewardMultiplier": 2.667,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 1220.571,
+            "waveBaseHp": 293,
             "archetypeHpMultiplier": 2.4,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 0.5
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 99.6,
@@ -4645,7 +4569,7 @@
             "elite",
             "shielded"
           ],
-          "shieldHp": 512.64,
+          "shieldHp": 246.12,
           "bossPhaseBands": null,
           "conditionalGold": [],
           "maxGoldPerKillBeforeTowerBonuses": 181
@@ -4665,29 +4589,28 @@
         288,
         400
       ],
-      "rewardBaseGoldPerKill": 69,
+      "rewardBaseGoldPerKill": 59,
       "totalSpawnCount": 42,
-      "guaranteedGoldIfAllKilled": 2346,
-      "maxGoldBeforeTowerBonuses": 2346,
+      "guaranteedGoldIfAllKilled": 2016,
+      "maxGoldBeforeTowerBonuses": 2016,
       "packs": [
         {
           "type": "swarm",
           "name": "Swarmling",
           "role": "swarm",
           "count": 30,
-          "hp": 377.645,
+          "hp": 83.72,
           "speed": 141.12,
-          "rewardGold": 23,
-          "rewardFormula": "round(69 * 0.333 * 1)",
-          "rewardBase": 69,
+          "rewardGold": 20,
+          "rewardFormula": "round(59 * 0.333 * 1)",
+          "rewardBase": 59,
           "rewardMultiplier": 0.333,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 1348.731,
+            "waveBaseHp": 299,
             "archetypeHpMultiplier": 0.28,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 100.8,
@@ -4706,19 +4629,18 @@
           "name": "Splitter",
           "role": "normal",
           "count": 12,
-          "hp": 3506.699,
+          "hp": 777.4,
           "speed": 100.8,
-          "rewardGold": 138,
-          "rewardFormula": "round(69 * 2 * 1)",
-          "rewardBase": 69,
+          "rewardGold": 118,
+          "rewardFormula": "round(59 * 2 * 1)",
+          "rewardBase": 59,
           "rewardMultiplier": 2,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 1348.731,
+            "waveBaseHp": 299,
             "archetypeHpMultiplier": 2.6,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 100.8,
@@ -4752,29 +4674,28 @@
         296,
         411
       ],
-      "rewardBaseGoldPerKill": 71,
+      "rewardBaseGoldPerKill": 60,
       "totalSpawnCount": 14,
-      "guaranteedGoldIfAllKilled": 3318,
-      "maxGoldBeforeTowerBonuses": 3318,
+      "guaranteedGoldIfAllKilled": 2800,
+      "maxGoldBeforeTowerBonuses": 2800,
       "packs": [
         {
           "type": "brute",
           "name": "Brute",
           "role": "tank",
           "count": 14,
-          "hp": 4098.455,
+          "hp": 1677.5,
           "speed": 56.1,
-          "rewardGold": 237,
-          "rewardFormula": "round(71 * 3.333 * 1)",
-          "rewardBase": 71,
+          "rewardGold": 200,
+          "rewardFormula": "round(60 * 3.333 * 1)",
+          "rewardBase": 60,
           "rewardMultiplier": 3.333,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 1490.347,
+            "waveBaseHp": 305,
             "archetypeHpMultiplier": 5.5,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 0.5
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 102,
@@ -4804,29 +4725,28 @@
         304,
         422
       ],
-      "rewardBaseGoldPerKill": 72,
+      "rewardBaseGoldPerKill": 62,
       "totalSpawnCount": 36,
-      "guaranteedGoldIfAllKilled": 3072,
-      "maxGoldBeforeTowerBonuses": 3072,
+      "guaranteedGoldIfAllKilled": 2652,
+      "maxGoldBeforeTowerBonuses": 2652,
       "packs": [
         {
           "type": "runner",
           "name": "Runner",
           "role": "fast",
           "count": 12,
-          "hp": 905.759,
+          "hp": 170.5,
           "speed": 227.04,
-          "rewardGold": 96,
-          "rewardFormula": "round(72 * 1.333 * 1)",
-          "rewardBase": 72,
+          "rewardGold": 83,
+          "rewardFormula": "round(62 * 1.333 * 1)",
+          "rewardBase": 62,
           "rewardMultiplier": 1.333,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 1646.834,
+            "waveBaseHp": 310,
             "archetypeHpMultiplier": 0.55,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 103.2,
@@ -4845,19 +4765,18 @@
           "name": "Swarmling",
           "role": "swarm",
           "count": 16,
-          "hp": 461.113,
+          "hp": 86.8,
           "speed": 144.48,
-          "rewardGold": 24,
-          "rewardFormula": "round(72 * 0.333 * 1)",
-          "rewardBase": 72,
+          "rewardGold": 21,
+          "rewardFormula": "round(62 * 0.333 * 1)",
+          "rewardBase": 62,
           "rewardMultiplier": 0.333,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 1646.834,
+            "waveBaseHp": 310,
             "archetypeHpMultiplier": 0.28,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 103.2,
@@ -4876,19 +4795,18 @@
           "name": "Shielded Mage",
           "role": "elite",
           "count": 8,
-          "hp": 1976.2,
+          "hp": 744,
           "speed": 92.88,
-          "rewardGold": 192,
-          "rewardFormula": "round(72 * 2.667 * 1)",
-          "rewardBase": 72,
+          "rewardGold": 165,
+          "rewardFormula": "round(62 * 2.667 * 1)",
+          "rewardBase": 62,
           "rewardMultiplier": 2.667,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 1646.834,
+            "waveBaseHp": 310,
             "archetypeHpMultiplier": 2.4,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 0.5
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 103.2,
@@ -4899,7 +4817,7 @@
             "elite",
             "shielded"
           ],
-          "shieldHp": 691.67,
+          "shieldHp": 260.4,
           "bossPhaseBands": null,
           "conditionalGold": [],
           "maxGoldPerKillBeforeTowerBonuses": 192
@@ -4919,29 +4837,28 @@
         312,
         433
       ],
-      "rewardBaseGoldPerKill": 74,
+      "rewardBaseGoldPerKill": 63,
       "totalSpawnCount": 24,
-      "guaranteedGoldIfAllKilled": 3840,
-      "maxGoldBeforeTowerBonuses": 3840,
+      "guaranteedGoldIfAllKilled": 3276,
+      "maxGoldBeforeTowerBonuses": 3276,
       "packs": [
         {
           "type": "shielded",
           "name": "Shielded Mage",
           "role": "elite",
           "count": 12,
-          "hp": 2183.701,
+          "hp": 756,
           "speed": 93.96,
-          "rewardGold": 197,
-          "rewardFormula": "round(74 * 2.667 * 1)",
-          "rewardBase": 74,
+          "rewardGold": 168,
+          "rewardFormula": "round(63 * 2.667 * 1)",
+          "rewardBase": 63,
           "rewardMultiplier": 2.667,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 1819.751,
+            "waveBaseHp": 315,
             "archetypeHpMultiplier": 2.4,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 0.5
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 104.4,
@@ -4952,7 +4869,7 @@
             "elite",
             "shielded"
           ],
-          "shieldHp": 764.296,
+          "shieldHp": 264.6,
           "bossPhaseBands": null,
           "conditionalGold": [],
           "maxGoldPerKillBeforeTowerBonuses": 197
@@ -4962,19 +4879,18 @@
           "name": "Linked Construct",
           "role": "fast",
           "count": 12,
-          "hp": 3275.552,
+          "hp": 567,
           "speed": 104.4,
-          "rewardGold": 123,
-          "rewardFormula": "round(74 * 1.667 * 1)",
-          "rewardBase": 74,
+          "rewardGold": 105,
+          "rewardFormula": "round(63 * 1.667 * 1)",
+          "rewardBase": 63,
           "rewardMultiplier": 1.667,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 1819.751,
+            "waveBaseHp": 315,
             "archetypeHpMultiplier": 1.8,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 104.4,
@@ -5004,29 +4920,28 @@
         320,
         444
       ],
-      "rewardBaseGoldPerKill": 75,
+      "rewardBaseGoldPerKill": 64,
       "totalSpawnCount": 30,
-      "guaranteedGoldIfAllKilled": 2500,
-      "maxGoldBeforeTowerBonuses": 2500,
+      "guaranteedGoldIfAllKilled": 2130,
+      "maxGoldBeforeTowerBonuses": 2130,
       "packs": [
         {
           "type": "regenerator",
           "name": "Regenerator",
           "role": "tank",
           "count": 10,
-          "hp": 3016.238,
+          "hp": 960,
           "speed": 84.48,
-          "rewardGold": 200,
-          "rewardFormula": "round(75 * 2.667 * 1)",
-          "rewardBase": 75,
+          "rewardGold": 171,
+          "rewardFormula": "round(64 * 2.667 * 1)",
+          "rewardBase": 64,
           "rewardMultiplier": 2.667,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 2010.825,
+            "waveBaseHp": 320,
             "archetypeHpMultiplier": 3,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 0.5
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 105.6,
@@ -5047,19 +4962,18 @@
           "name": "Swarmling",
           "role": "swarm",
           "count": 20,
-          "hp": 563.031,
+          "hp": 89.6,
           "speed": 147.84,
-          "rewardGold": 25,
-          "rewardFormula": "round(75 * 0.333 * 1)",
-          "rewardBase": 75,
+          "rewardGold": 21,
+          "rewardFormula": "round(64 * 0.333 * 1)",
+          "rewardBase": 64,
           "rewardMultiplier": 0.333,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 2010.825,
+            "waveBaseHp": 320,
             "archetypeHpMultiplier": 0.28,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 105.6,
@@ -5088,29 +5002,28 @@
         328,
         455
       ],
-      "rewardBaseGoldPerKill": 77,
+      "rewardBaseGoldPerKill": 65,
       "totalSpawnCount": 28,
-      "guaranteedGoldIfAllKilled": 3700,
-      "maxGoldBeforeTowerBonuses": 3700,
+      "guaranteedGoldIfAllKilled": 3124,
+      "maxGoldBeforeTowerBonuses": 3124,
       "packs": [
         {
           "type": "splitter",
           "name": "Splitter",
           "role": "normal",
           "count": 16,
-          "hp": 5777.1,
+          "hp": 845,
           "speed": 106.8,
-          "rewardGold": 154,
-          "rewardFormula": "round(77 * 2 * 1)",
-          "rewardBase": 77,
+          "rewardGold": 130,
+          "rewardFormula": "round(65 * 2 * 1)",
+          "rewardBase": 65,
           "rewardMultiplier": 2,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 2221.962,
+            "waveBaseHp": 325,
             "archetypeHpMultiplier": 2.6,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 106.8,
@@ -5134,19 +5047,18 @@
           "name": "Runner",
           "role": "fast",
           "count": 12,
-          "hp": 1222.079,
+          "hp": 178.75,
           "speed": 234.96,
-          "rewardGold": 103,
-          "rewardFormula": "round(77 * 1.333 * 1)",
-          "rewardBase": 77,
+          "rewardGold": 87,
+          "rewardFormula": "round(65 * 1.333 * 1)",
+          "rewardBase": 65,
           "rewardMultiplier": 1.333,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 2221.962,
+            "waveBaseHp": 325,
             "archetypeHpMultiplier": 0.55,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 106.8,
@@ -5175,29 +5087,28 @@
         336,
         466
       ],
-      "rewardBaseGoldPerKill": 78,
+      "rewardBaseGoldPerKill": 67,
       "totalSpawnCount": 25,
-      "guaranteedGoldIfAllKilled": 5096,
-      "maxGoldBeforeTowerBonuses": 5096,
+      "guaranteedGoldIfAllKilled": 4369,
+      "maxGoldBeforeTowerBonuses": 4369,
       "packs": [
         {
           "type": "colossus",
           "name": "Colossus",
           "role": "elite",
           "count": 1,
-          "hp": 73658.03,
+          "hp": 19800,
           "speed": 30.24,
-          "rewardGold": 2600,
-          "rewardFormula": "round(78 * 33.333 * 1)",
-          "rewardBase": 78,
+          "rewardGold": 2233,
+          "rewardFormula": "round(67 * 33.333 * 1)",
+          "rewardBase": 67,
           "rewardMultiplier": 33.333,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 2455.268,
+            "waveBaseHp": 330,
             "archetypeHpMultiplier": 60,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 0.5
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 108,
@@ -5211,7 +5122,7 @@
             "tank",
             "colossus"
           ],
-          "shieldHp": 33146.114,
+          "shieldHp": 8910,
           "spawnOnThresholds": [
             {
               "threshold": 0.75,
@@ -5238,19 +5149,18 @@
           "name": "Brute",
           "role": "tank",
           "count": 8,
-          "hp": 6751.986,
+          "hp": 1815,
           "speed": 59.4,
-          "rewardGold": 260,
-          "rewardFormula": "round(78 * 3.333 * 1)",
-          "rewardBase": 78,
+          "rewardGold": 223,
+          "rewardFormula": "round(67 * 3.333 * 1)",
+          "rewardBase": 67,
           "rewardMultiplier": 3.333,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 2455.268,
+            "waveBaseHp": 330,
             "archetypeHpMultiplier": 5.5,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 0.5
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 108,
@@ -5270,19 +5180,18 @@
           "name": "Swarmling",
           "role": "swarm",
           "count": 16,
-          "hp": 687.475,
+          "hp": 92.4,
           "speed": 151.2,
-          "rewardGold": 26,
-          "rewardFormula": "round(78 * 0.333 * 1)",
-          "rewardBase": 78,
+          "rewardGold": 22,
+          "rewardFormula": "round(67 * 0.333 * 1)",
+          "rewardBase": 67,
           "rewardMultiplier": 0.333,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 2455.268,
+            "waveBaseHp": 330,
             "archetypeHpMultiplier": 0.28,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 108,
@@ -5311,29 +5220,28 @@
         344,
         477
       ],
-      "rewardBaseGoldPerKill": 80,
+      "rewardBaseGoldPerKill": 68,
       "totalSpawnCount": 28,
-      "guaranteedGoldIfAllKilled": 6504,
-      "maxGoldBeforeTowerBonuses": 6504,
+      "guaranteedGoldIfAllKilled": 5528,
+      "maxGoldBeforeTowerBonuses": 5528,
       "packs": [
         {
           "type": "brute",
           "name": "Brute",
           "role": "tank",
           "count": 10,
-          "hp": 7460.945,
+          "hp": 1842.5,
           "speed": 60.06,
-          "rewardGold": 267,
-          "rewardFormula": "round(80 * 3.333 * 1)",
-          "rewardBase": 80,
+          "rewardGold": 227,
+          "rewardFormula": "round(68 * 3.333 * 1)",
+          "rewardBase": 68,
           "rewardMultiplier": 3.333,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 2713.071,
+            "waveBaseHp": 335,
             "archetypeHpMultiplier": 5.5,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 0.5
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 109.2,
@@ -5353,19 +5261,18 @@
           "name": "Shielded Mage",
           "role": "elite",
           "count": 10,
-          "hp": 3255.685,
+          "hp": 804,
           "speed": 98.28,
-          "rewardGold": 213,
-          "rewardFormula": "round(80 * 2.667 * 1)",
-          "rewardBase": 80,
+          "rewardGold": 181,
+          "rewardFormula": "round(68 * 2.667 * 1)",
+          "rewardBase": 68,
           "rewardMultiplier": 2.667,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 2713.071,
+            "waveBaseHp": 335,
             "archetypeHpMultiplier": 2.4,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 0.5
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 109.2,
@@ -5376,7 +5283,7 @@
             "elite",
             "shielded"
           ],
-          "shieldHp": 1139.49,
+          "shieldHp": 281.4,
           "bossPhaseBands": null,
           "conditionalGold": [],
           "maxGoldPerKillBeforeTowerBonuses": 213
@@ -5386,19 +5293,18 @@
           "name": "Regenerator",
           "role": "tank",
           "count": 8,
-          "hp": 4069.606,
+          "hp": 1005,
           "speed": 87.36,
-          "rewardGold": 213,
-          "rewardFormula": "round(80 * 2.667 * 1)",
-          "rewardBase": 80,
+          "rewardGold": 181,
+          "rewardFormula": "round(68 * 2.667 * 1)",
+          "rewardBase": 68,
           "rewardMultiplier": 2.667,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 2713.071,
+            "waveBaseHp": 335,
             "archetypeHpMultiplier": 3,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 0.5
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 109.2,
@@ -5429,29 +5335,28 @@
         352,
         488
       ],
-      "rewardBaseGoldPerKill": 81,
+      "rewardBaseGoldPerKill": 69,
       "totalSpawnCount": 34,
-      "guaranteedGoldIfAllKilled": 2592,
-      "maxGoldBeforeTowerBonuses": 2592,
+      "guaranteedGoldIfAllKilled": 2208,
+      "maxGoldBeforeTowerBonuses": 2208,
       "packs": [
         {
           "type": "fire_swarm",
           "name": "Ember Swarm",
           "role": "swarm",
           "count": 20,
-          "hp": 1199.177,
+          "hp": 136,
           "speed": 165.6,
-          "rewardGold": 54,
-          "rewardFormula": "round(81 * 0.667 * 1)",
-          "rewardBase": 81,
+          "rewardGold": 46,
+          "rewardFormula": "round(69 * 0.667 * 1)",
+          "rewardBase": 69,
           "rewardMultiplier": 0.667,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 2997.943,
+            "waveBaseHp": 340,
             "archetypeHpMultiplier": 0.4,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 110.4,
@@ -5471,19 +5376,18 @@
           "name": "Runner",
           "role": "fast",
           "count": 14,
-          "hp": 1648.869,
+          "hp": 187,
           "speed": 242.88,
-          "rewardGold": 108,
-          "rewardFormula": "round(81 * 1.333 * 1)",
-          "rewardBase": 81,
+          "rewardGold": 92,
+          "rewardFormula": "round(69 * 1.333 * 1)",
+          "rewardBase": 69,
           "rewardMultiplier": 1.333,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 2997.943,
+            "waveBaseHp": 340,
             "archetypeHpMultiplier": 0.55,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 110.4,
@@ -5512,29 +5416,28 @@
         360,
         499
       ],
-      "rewardBaseGoldPerKill": 83,
+      "rewardBaseGoldPerKill": 71,
       "totalSpawnCount": 28,
-      "guaranteedGoldIfAllKilled": 3864,
-      "maxGoldBeforeTowerBonuses": 3864,
+      "guaranteedGoldIfAllKilled": 3304,
+      "maxGoldBeforeTowerBonuses": 3304,
       "packs": [
         {
           "type": "swift_runner",
           "name": "Swift Runner",
           "role": "fast",
           "count": 16,
-          "hp": 2650.182,
+          "hp": 276,
           "speed": 312.48,
-          "rewardGold": 138,
-          "rewardFormula": "round(83 * 1.667 * 1)",
-          "rewardBase": 83,
+          "rewardGold": 118,
+          "rewardFormula": "round(71 * 1.667 * 1)",
+          "rewardBase": 71,
           "rewardMultiplier": 1.667,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 3312.727,
+            "waveBaseHp": 345,
             "archetypeHpMultiplier": 0.8,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 111.6,
@@ -5554,19 +5457,18 @@
           "name": "Linked Construct",
           "role": "fast",
           "count": 12,
-          "hp": 5962.909,
+          "hp": 621,
           "speed": 111.6,
-          "rewardGold": 138,
-          "rewardFormula": "round(83 * 1.667 * 1)",
-          "rewardBase": 83,
+          "rewardGold": 118,
+          "rewardFormula": "round(71 * 1.667 * 1)",
+          "rewardBase": 71,
           "rewardMultiplier": 1.667,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 3312.727,
+            "waveBaseHp": 345,
             "archetypeHpMultiplier": 1.8,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 111.6,
@@ -5596,29 +5498,28 @@
         368,
         510
       ],
-      "rewardBaseGoldPerKill": 84,
+      "rewardBaseGoldPerKill": 72,
       "totalSpawnCount": 30,
-      "guaranteedGoldIfAllKilled": 8960,
-      "maxGoldBeforeTowerBonuses": 8960,
+      "guaranteedGoldIfAllKilled": 7680,
+      "maxGoldBeforeTowerBonuses": 7680,
       "packs": [
         {
           "type": "hoarder",
           "name": "Hoarder",
           "role": "normal",
           "count": 20,
-          "hp": 4392.676,
+          "hp": 420,
           "speed": 157.92,
-          "rewardGold": 336,
-          "rewardFormula": "round(84 * 4 * 1)",
-          "rewardBase": 84,
+          "rewardGold": 288,
+          "rewardFormula": "round(72 * 4 * 1)",
+          "rewardBase": 72,
           "rewardMultiplier": 4,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 3660.564,
+            "waveBaseHp": 350,
             "archetypeHpMultiplier": 1.2,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 112.8,
@@ -5644,19 +5545,18 @@
           "name": "Shielded Mage",
           "role": "elite",
           "count": 10,
-          "hp": 4392.676,
+          "hp": 840,
           "speed": 101.52,
-          "rewardGold": 224,
-          "rewardFormula": "round(84 * 2.667 * 1)",
-          "rewardBase": 84,
+          "rewardGold": 192,
+          "rewardFormula": "round(72 * 2.667 * 1)",
+          "rewardBase": 72,
           "rewardMultiplier": 2.667,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 3660.564,
+            "waveBaseHp": 350,
             "archetypeHpMultiplier": 2.4,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 0.5
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 112.8,
@@ -5667,7 +5567,7 @@
             "elite",
             "shielded"
           ],
-          "shieldHp": 1537.437,
+          "shieldHp": 294,
           "bossPhaseBands": null,
           "conditionalGold": [],
           "maxGoldPerKillBeforeTowerBonuses": 224
@@ -5687,29 +5587,28 @@
         376,
         521
       ],
-      "rewardBaseGoldPerKill": 86,
+      "rewardBaseGoldPerKill": 73,
       "totalSpawnCount": 48,
-      "guaranteedGoldIfAllKilled": 6776,
-      "maxGoldBeforeTowerBonuses": 6776,
+      "guaranteedGoldIfAllKilled": 5732,
+      "maxGoldBeforeTowerBonuses": 5732,
       "packs": [
         {
           "type": "brute",
           "name": "Brute",
           "role": "tank",
           "count": 12,
-          "hp": 11123.538,
+          "hp": 1952.5,
           "speed": 62.7,
-          "rewardGold": 287,
-          "rewardFormula": "round(86 * 3.333 * 1)",
-          "rewardBase": 86,
+          "rewardGold": 243,
+          "rewardFormula": "round(73 * 3.333 * 1)",
+          "rewardBase": 73,
           "rewardMultiplier": 3.333,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 4044.923,
+            "waveBaseHp": 355,
             "archetypeHpMultiplier": 5.5,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 0.5
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 114,
@@ -5729,19 +5628,18 @@
           "name": "Splitter",
           "role": "normal",
           "count": 16,
-          "hp": 10516.799,
+          "hp": 923,
           "speed": 114,
-          "rewardGold": 172,
-          "rewardFormula": "round(86 * 2 * 1)",
-          "rewardBase": 86,
+          "rewardGold": 146,
+          "rewardFormula": "round(73 * 2 * 1)",
+          "rewardBase": 73,
           "rewardMultiplier": 2,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 4044.923,
+            "waveBaseHp": 355,
             "archetypeHpMultiplier": 2.6,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 114,
@@ -5765,19 +5663,18 @@
           "name": "Swarmling",
           "role": "swarm",
           "count": 20,
-          "hp": 1132.578,
+          "hp": 99.4,
           "speed": 159.6,
-          "rewardGold": 29,
-          "rewardFormula": "round(86 * 0.333 * 1)",
-          "rewardBase": 86,
+          "rewardGold": 24,
+          "rewardFormula": "round(73 * 0.333 * 1)",
+          "rewardBase": 73,
           "rewardMultiplier": 0.333,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 4044.923,
+            "waveBaseHp": 355,
             "archetypeHpMultiplier": 0.28,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 114,
@@ -5806,29 +5703,28 @@
         384,
         532
       ],
-      "rewardBaseGoldPerKill": 87,
+      "rewardBaseGoldPerKill": 75,
       "totalSpawnCount": 60,
-      "guaranteedGoldIfAllKilled": 8700,
-      "maxGoldBeforeTowerBonuses": 8700,
+      "guaranteedGoldIfAllKilled": 7500,
+      "maxGoldBeforeTowerBonuses": 7500,
       "packs": [
         {
           "type": "runner",
           "name": "Runner",
           "role": "fast",
           "count": 12,
-          "hp": 2458.302,
+          "hp": 198,
           "speed": 253.44,
-          "rewardGold": 116,
-          "rewardFormula": "round(87 * 1.333 * 1)",
-          "rewardBase": 87,
+          "rewardGold": 100,
+          "rewardFormula": "round(75 * 1.333 * 1)",
+          "rewardBase": 75,
           "rewardMultiplier": 1.333,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 4469.64,
+            "waveBaseHp": 360,
             "archetypeHpMultiplier": 0.55,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 115.2,
@@ -5847,19 +5743,18 @@
           "name": "Shielded Mage",
           "role": "elite",
           "count": 12,
-          "hp": 5363.568,
+          "hp": 864,
           "speed": 103.68,
-          "rewardGold": 232,
-          "rewardFormula": "round(87 * 2.667 * 1)",
-          "rewardBase": 87,
+          "rewardGold": 200,
+          "rewardFormula": "round(75 * 2.667 * 1)",
+          "rewardBase": 75,
           "rewardMultiplier": 2.667,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 4469.64,
+            "waveBaseHp": 360,
             "archetypeHpMultiplier": 2.4,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 0.5
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 115.2,
@@ -5870,7 +5765,7 @@
             "elite",
             "shielded"
           ],
-          "shieldHp": 1877.249,
+          "shieldHp": 302.4,
           "bossPhaseBands": null,
           "conditionalGold": [],
           "maxGoldPerKillBeforeTowerBonuses": 232
@@ -5880,19 +5775,18 @@
           "name": "Regenerator",
           "role": "tank",
           "count": 10,
-          "hp": 6704.46,
+          "hp": 1080,
           "speed": 92.16,
-          "rewardGold": 232,
-          "rewardFormula": "round(87 * 2.667 * 1)",
-          "rewardBase": 87,
+          "rewardGold": 200,
+          "rewardFormula": "round(75 * 2.667 * 1)",
+          "rewardBase": 75,
           "rewardMultiplier": 2.667,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 4469.64,
+            "waveBaseHp": 360,
             "archetypeHpMultiplier": 3,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 0.5
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 115.2,
@@ -5913,19 +5807,18 @@
           "name": "Splitter",
           "role": "normal",
           "count": 10,
-          "hp": 11621.063,
+          "hp": 936,
           "speed": 115.2,
-          "rewardGold": 174,
-          "rewardFormula": "round(87 * 2 * 1)",
-          "rewardBase": 87,
+          "rewardGold": 150,
+          "rewardFormula": "round(75 * 2 * 1)",
+          "rewardBase": 75,
           "rewardMultiplier": 2,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 4469.64,
+            "waveBaseHp": 360,
             "archetypeHpMultiplier": 2.6,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 115.2,
@@ -5949,19 +5842,18 @@
           "name": "Swarmling",
           "role": "swarm",
           "count": 16,
-          "hp": 1251.499,
+          "hp": 100.8,
           "speed": 161.28,
-          "rewardGold": 29,
-          "rewardFormula": "round(87 * 0.333 * 1)",
-          "rewardBase": 87,
+          "rewardGold": 25,
+          "rewardFormula": "round(75 * 0.333 * 1)",
+          "rewardBase": 75,
           "rewardMultiplier": 0.333,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 4469.64,
+            "waveBaseHp": 360,
             "archetypeHpMultiplier": 0.28,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 115.2,
@@ -5990,29 +5882,28 @@
         392,
         543
       ],
-      "rewardBaseGoldPerKill": 89,
+      "rewardBaseGoldPerKill": 76,
       "totalSpawnCount": 28,
-      "guaranteedGoldIfAllKilled": 7596,
-      "maxGoldBeforeTowerBonuses": 7596,
+      "guaranteedGoldIfAllKilled": 6484,
+      "maxGoldBeforeTowerBonuses": 6484,
       "packs": [
         {
           "type": "brute",
           "name": "Brute",
           "role": "tank",
           "count": 16,
-          "hp": 13582.118,
+          "hp": 2007.5,
           "speed": 64.02,
-          "rewardGold": 297,
-          "rewardFormula": "round(89 * 3.333 * 1)",
-          "rewardBase": 89,
+          "rewardGold": 253,
+          "rewardFormula": "round(76 * 3.333 * 1)",
+          "rewardBase": 76,
           "rewardMultiplier": 3.333,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 4938.952,
+            "waveBaseHp": 365,
             "archetypeHpMultiplier": 5.5,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 0.5
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 116.4,
@@ -6032,19 +5923,18 @@
           "name": "Shielded Mage",
           "role": "elite",
           "count": 12,
-          "hp": 5926.742,
+          "hp": 876,
           "speed": 104.76,
-          "rewardGold": 237,
-          "rewardFormula": "round(89 * 2.667 * 1)",
-          "rewardBase": 89,
+          "rewardGold": 203,
+          "rewardFormula": "round(76 * 2.667 * 1)",
+          "rewardBase": 76,
           "rewardMultiplier": 2.667,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 4938.952,
+            "waveBaseHp": 365,
             "archetypeHpMultiplier": 2.4,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 0.5
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 116.4,
@@ -6055,7 +5945,7 @@
             "elite",
             "shielded"
           ],
-          "shieldHp": 2074.36,
+          "shieldHp": 306.6,
           "bossPhaseBands": null,
           "conditionalGold": [],
           "maxGoldPerKillBeforeTowerBonuses": 237
@@ -6075,29 +5965,28 @@
         400,
         554
       ],
-      "rewardBaseGoldPerKill": 90,
+      "rewardBaseGoldPerKill": 77,
       "totalSpawnCount": 50,
-      "guaranteedGoldIfAllKilled": 8040,
-      "maxGoldBeforeTowerBonuses": 8040,
+      "guaranteedGoldIfAllKilled": 6868,
+      "maxGoldBeforeTowerBonuses": 6868,
       "packs": [
         {
           "type": "swift_runner",
           "name": "Swift Runner",
           "role": "fast",
           "count": 18,
-          "hp": 4366.033,
+          "hp": 296,
           "speed": 329.28,
-          "rewardGold": 150,
-          "rewardFormula": "round(90 * 1.667 * 1)",
-          "rewardBase": 90,
+          "rewardGold": 128,
+          "rewardFormula": "round(77 * 1.667 * 1)",
+          "rewardBase": 77,
           "rewardMultiplier": 1.667,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 5457.542,
+            "waveBaseHp": 370,
             "archetypeHpMultiplier": 0.8,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 117.6,
@@ -6117,19 +6006,18 @@
           "name": "Splitter",
           "role": "normal",
           "count": 18,
-          "hp": 14189.609,
+          "hp": 962,
           "speed": 117.6,
-          "rewardGold": 180,
-          "rewardFormula": "round(90 * 2 * 1)",
-          "rewardBase": 90,
+          "rewardGold": 154,
+          "rewardFormula": "round(77 * 2 * 1)",
+          "rewardBase": 77,
           "rewardMultiplier": 2,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 5457.542,
+            "waveBaseHp": 370,
             "archetypeHpMultiplier": 2.6,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 117.6,
@@ -6153,19 +6041,18 @@
           "name": "Linked Construct",
           "role": "fast",
           "count": 14,
-          "hp": 9823.575,
+          "hp": 666,
           "speed": 117.6,
-          "rewardGold": 150,
-          "rewardFormula": "round(90 * 1.667 * 1)",
-          "rewardBase": 90,
+          "rewardGold": 128,
+          "rewardFormula": "round(77 * 1.667 * 1)",
+          "rewardBase": 77,
           "rewardMultiplier": 1.667,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 5457.542,
+            "waveBaseHp": 370,
             "archetypeHpMultiplier": 1.8,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 117.6,
@@ -6195,29 +6082,28 @@
         408,
         565
       ],
-      "rewardBaseGoldPerKill": 92,
+      "rewardBaseGoldPerKill": 79,
       "totalSpawnCount": 70,
-      "guaranteedGoldIfAllKilled": 11662,
-      "maxGoldBeforeTowerBonuses": 11662,
+      "guaranteedGoldIfAllKilled": 9998,
+      "maxGoldBeforeTowerBonuses": 9998,
       "packs": [
         {
           "type": "brute",
           "name": "Brute",
           "role": "tank",
           "count": 12,
-          "hp": 16584.105,
+          "hp": 2062.5,
           "speed": 65.34,
-          "rewardGold": 307,
-          "rewardFormula": "round(92 * 3.333 * 1)",
-          "rewardBase": 92,
+          "rewardGold": 263,
+          "rewardFormula": "round(79 * 3.333 * 1)",
+          "rewardBase": 79,
           "rewardMultiplier": 3.333,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 6030.584,
+            "waveBaseHp": 375,
             "archetypeHpMultiplier": 5.5,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 0.5
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 118.8,
@@ -6237,19 +6123,18 @@
           "name": "Runner",
           "role": "fast",
           "count": 16,
-          "hp": 3316.821,
+          "hp": 206.25,
           "speed": 261.36,
-          "rewardGold": 123,
-          "rewardFormula": "round(92 * 1.333 * 1)",
-          "rewardBase": 92,
+          "rewardGold": 105,
+          "rewardFormula": "round(79 * 1.333 * 1)",
+          "rewardBase": 79,
           "rewardMultiplier": 1.333,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 6030.584,
+            "waveBaseHp": 375,
             "archetypeHpMultiplier": 0.55,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 118.8,
@@ -6268,19 +6153,18 @@
           "name": "Shielded Mage",
           "role": "elite",
           "count": 12,
-          "hp": 7236.7,
+          "hp": 900,
           "speed": 106.92,
-          "rewardGold": 245,
-          "rewardFormula": "round(92 * 2.667 * 1)",
-          "rewardBase": 92,
+          "rewardGold": 211,
+          "rewardFormula": "round(79 * 2.667 * 1)",
+          "rewardBase": 79,
           "rewardMultiplier": 2.667,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 6030.584,
+            "waveBaseHp": 375,
             "archetypeHpMultiplier": 2.4,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 0.5
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 118.8,
@@ -6291,7 +6175,7 @@
             "elite",
             "shielded"
           ],
-          "shieldHp": 2532.845,
+          "shieldHp": 315,
           "bossPhaseBands": null,
           "conditionalGold": [],
           "maxGoldPerKillBeforeTowerBonuses": 245
@@ -6301,19 +6185,18 @@
           "name": "Regenerator",
           "role": "tank",
           "count": 10,
-          "hp": 9045.876,
+          "hp": 1125,
           "speed": 95.04,
-          "rewardGold": 245,
-          "rewardFormula": "round(92 * 2.667 * 1)",
-          "rewardBase": 92,
+          "rewardGold": 211,
+          "rewardFormula": "round(79 * 2.667 * 1)",
+          "rewardBase": 79,
           "rewardMultiplier": 2.667,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 6030.584,
+            "waveBaseHp": 375,
             "archetypeHpMultiplier": 3,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 0.5
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 118.8,
@@ -6334,19 +6217,18 @@
           "name": "Swarmling",
           "role": "swarm",
           "count": 20,
-          "hp": 1688.563,
+          "hp": 105,
           "speed": 166.32,
-          "rewardGold": 31,
-          "rewardFormula": "round(92 * 0.333 * 1)",
-          "rewardBase": 92,
+          "rewardGold": 26,
+          "rewardFormula": "round(79 * 0.333 * 1)",
+          "rewardBase": 79,
           "rewardMultiplier": 0.333,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 6030.584,
+            "waveBaseHp": 375,
             "archetypeHpMultiplier": 0.28,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 118.8,
@@ -6375,29 +6257,28 @@
         416,
         576
       ],
-      "rewardBaseGoldPerKill": 93,
+      "rewardBaseGoldPerKill": 80,
       "totalSpawnCount": 39,
-      "guaranteedGoldIfAllKilled": 19840,
-      "maxGoldBeforeTowerBonuses": 19840,
+      "guaranteedGoldIfAllKilled": 17079,
+      "maxGoldBeforeTowerBonuses": 17079,
       "packs": [
         {
           "type": "worldbreaker",
           "name": "Worldbreaker",
           "role": "elite",
           "count": 1,
-          "hp": 399827.699,
+          "hp": 45600,
           "speed": 26.4,
-          "rewardGold": 15500,
-          "rewardFormula": "round(93 * 166.667 * 1)",
-          "rewardBase": 93,
+          "rewardGold": 13333,
+          "rewardFormula": "round(80 * 166.667 * 1)",
+          "rewardBase": 80,
           "rewardMultiplier": 166.667,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 6663.795,
+            "waveBaseHp": 380,
             "archetypeHpMultiplier": 120,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 0.5
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 120,
@@ -6411,7 +6292,7 @@
             "tank",
             "worldbreaker"
           ],
-          "shieldHp": 219905.235,
+          "shieldHp": 25080,
           "bossPhaseBands": [
             {
               "spawnEnemy": "runner",
@@ -6450,19 +6331,18 @@
           "name": "Brute",
           "role": "tank",
           "count": 8,
-          "hp": 18325.436,
+          "hp": 2090,
           "speed": 66,
-          "rewardGold": 310,
-          "rewardFormula": "round(93 * 3.333 * 1)",
-          "rewardBase": 93,
+          "rewardGold": 267,
+          "rewardFormula": "round(80 * 3.333 * 1)",
+          "rewardBase": 80,
           "rewardMultiplier": 3.333,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 6663.795,
+            "waveBaseHp": 380,
             "archetypeHpMultiplier": 5.5,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 0.5
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 120,
@@ -6482,19 +6362,18 @@
           "name": "Runner",
           "role": "fast",
           "count": 10,
-          "hp": 3665.087,
+          "hp": 209,
           "speed": 264,
-          "rewardGold": 124,
-          "rewardFormula": "round(93 * 1.333 * 1)",
-          "rewardBase": 93,
+          "rewardGold": 107,
+          "rewardFormula": "round(80 * 1.333 * 1)",
+          "rewardBase": 80,
           "rewardMultiplier": 1.333,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 6663.795,
+            "waveBaseHp": 380,
             "archetypeHpMultiplier": 0.55,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 120,
@@ -6513,19 +6392,18 @@
           "name": "Swarmling",
           "role": "swarm",
           "count": 20,
-          "hp": 1865.863,
+          "hp": 106.4,
           "speed": 168,
-          "rewardGold": 31,
-          "rewardFormula": "round(93 * 0.333 * 1)",
-          "rewardBase": 93,
+          "rewardGold": 27,
+          "rewardFormula": "round(80 * 0.333 * 1)",
+          "rewardBase": 80,
           "rewardMultiplier": 0.333,
           "packRewardMultiplier": 1,
           "hpFormulaParts": {
-            "waveBaseHp": 6663.795,
+            "waveBaseHp": 380,
             "archetypeHpMultiplier": 0.28,
             "packHpMultiplier": 1,
-            "heavyHpEarlyMultiplier": 1,
-            "tankEliteHpScale": 1
+            "heavyHpEarlyMultiplier": 1
           },
           "speedFormulaParts": {
             "waveBaseSpeed": 120,

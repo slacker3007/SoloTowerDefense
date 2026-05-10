@@ -16,8 +16,8 @@ export class CombatSystem {
   }
 
   /** @param {{ type?: string }} tower */
-  _fireDamageOpts(tower) {
-    return { fireHit: tower?.type === "fire" };
+  _fireDamageOpts(tower, extra = {}) {
+    return { fireHit: tower?.type === "fire", ...extra };
   }
 
   tickColossusStompAuras(deltaSeconds) {
@@ -67,7 +67,7 @@ export class CombatSystem {
         }
         const raw = tower.damage * ratio;
         const dmg = this.resolveDamage(tower, enemy, raw);
-        const killed = this.enemySystem.damageEnemy(enemy, dmg, this._fireDamageOpts(tower));
+        const killed = this.enemySystem.damageEnemy(enemy, dmg, this._fireDamageOpts(tower, { aoe: true }));
         if (killed) {
           gameState.gold += this.enemySystem.getKillGold(enemy);
           for (const effect of tower.effects ?? []) {
@@ -213,6 +213,13 @@ export class CombatSystem {
     const utilityBudget = tower.utilityBudget ?? 1;
     if (utilityBudget < 1) {
       damage = clampUtilityBudget(tower.type, damage, cooldown);
+    }
+    if (
+      tower?.type === "basic" &&
+      (enemy.role === "swarm" || tags.includes("swarm")) &&
+      Number.isFinite(balanceRules.basicTowerSwarmDamageMultiplier)
+    ) {
+      damage *= balanceRules.basicTowerSwarmDamageMultiplier;
     }
     return damage;
   }
@@ -381,7 +388,7 @@ export class CombatSystem {
       }
       const distance = Math.hypot(enemy.sprite.x - target.sprite.x, enemy.sprite.y - target.sprite.y);
       if (distance <= radius) {
-        this.enemySystem.damageEnemy(enemy, baseDamage * ratio, this._fireDamageOpts(tower));
+        this.enemySystem.damageEnemy(enemy, baseDamage * ratio, this._fireDamageOpts(tower, { aoe: true }));
       }
     }
   }
@@ -399,7 +406,7 @@ export class CombatSystem {
       this.enemySystem.damageEnemy(
         enemy,
         baseDamage * (decay ? ratio : 1) * vuln,
-        this._fireDamageOpts(tower),
+        this._fireDamageOpts(tower, { aoe: true }),
       );
       hit.push(enemy);
       if (decay) {
@@ -486,7 +493,7 @@ export class CombatSystem {
     for (const enemy of this.enemySystem.getActiveEnemies()) {
       const distance = Math.hypot(enemy.sprite.x - tower.x, enemy.sprite.y - tower.y);
       if (distance <= tower.range) {
-        this.enemySystem.damageEnemy(enemy, amount, this._fireDamageOpts(tower));
+        this.enemySystem.damageEnemy(enemy, amount, this._fireDamageOpts(tower, { aoe: true }));
       }
     }
   }
@@ -498,10 +505,10 @@ export class CombatSystem {
       .filter((enemy) => Math.hypot(enemy.sprite.x - tower.x, enemy.sprite.y - tower.y) <= tower.range)
       .slice(0, safeArrows);
     for (const enemy of enemies) {
-      this.enemySystem.damageEnemy(enemy, amount * 0.35, this._fireDamageOpts(tower));
+      this.enemySystem.damageEnemy(enemy, amount * 0.35, this._fireDamageOpts(tower, { aoe: true }));
     }
     if (!enemies.includes(target)) {
-      this.enemySystem.damageEnemy(target, amount * 0.35, this._fireDamageOpts(tower));
+      this.enemySystem.damageEnemy(target, amount * 0.35, this._fireDamageOpts(tower, { aoe: true }));
     }
   }
 
@@ -550,7 +557,11 @@ export class CombatSystem {
       .filter((enemy) => Math.hypot(enemy.sprite.x - tower.x, enemy.sprite.y - tower.y) <= tower.range)
       .slice(0, safeTargets);
     for (const enemy of enemies) {
-      this.enemySystem.damageEnemy(enemy, enemy === target ? amount * 0.25 : amount * 0.5, this._fireDamageOpts(tower));
+      this.enemySystem.damageEnemy(
+        enemy,
+        enemy === target ? amount * 0.25 : amount * 0.5,
+        this._fireDamageOpts(tower, { aoe: true }),
+      );
     }
   }
 }

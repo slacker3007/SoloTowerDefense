@@ -6,7 +6,6 @@ import {
   getWaveBaseSpeed,
   getScriptedWave,
   getWaveStep,
-  TANK_ELITE_HP_SCALE,
 } from "../balance";
 
 const ROLE_VISUALS = {
@@ -54,9 +53,7 @@ export class WaveSystem {
     const step = getWaveStep(waveIndex);
     const earlyHeavyHp =
       step.role === "tank" || step.role === "elite" ? getHeavyEnemyEarlyHpMultiplier(waveIndex) : 1;
-    const tankEliteHp =
-      step.role === "tank" || step.role === "elite" ? TANK_ELITE_HP_SCALE : 1;
-    const hp = getWaveBaseHp(waveIndex) * this.director.hpScale * earlyHeavyHp * tankEliteHp;
+    const hp = getWaveBaseHp(waveIndex) * this.director.hpScale * earlyHeavyHp;
     const speed = 60 * getWaveBaseSpeed(waveIndex) * this.director.speedScale;
     const spawnCount = Math.max(2, 6 + waveIndex);
     return {
@@ -67,9 +64,17 @@ export class WaveSystem {
         hp,
         speed,
         role: step.role,
+        archetype: "grunt",
+        waveIndex,
         tags: this._buildEnemyTags(step.role, waveIndex),
         rewardGold: getGoldPerKill(waveIndex, step.breather),
         visual: this._getWaveVisualForRole(step.role),
+        fireHitDamageMultiplier: 1,
+        postShieldDamageMultiplier: 1,
+        slowEffectivenessMultiplier: 1,
+        chainVulnerabilityMultiplier: 1,
+        damageTakenMultiplier: 1,
+        aoeDamageTakenMultiplier: 1,
       },
       waveRole: step.role,
       secondaryRole: step.secondaryRole ?? null,
@@ -85,10 +90,12 @@ export class WaveSystem {
 
   _buildScriptedSpawnerForWave(waveIndex, scriptedWave) {
     const spawnQueue = [];
+    let spawnOrdinal = 0;
     for (const pack of scriptedWave.packs ?? []) {
       const count = Math.max(0, Number(pack?.count) || 0);
       for (let i = 0; i < count; i += 1) {
-        spawnQueue.push(this._buildEnemyDefinitionFromPack(waveIndex, pack));
+        spawnQueue.push(this._buildEnemyDefinitionFromPack(waveIndex, pack, spawnOrdinal));
+        spawnOrdinal += 1;
       }
     }
     return {
@@ -109,7 +116,40 @@ export class WaveSystem {
     };
   }
 
-  _buildEnemyDefinitionFromPack(waveIndex, pack) {
+  _traitHash(waveIndex, typeKey, ordinal) {
+    const key = typeof typeKey === "string" ? typeKey : "grunt";
+    return ((waveIndex * 73856093) ^ (key.length * 19349663) ^ (ordinal * 83492791)) >>> 0;
+  }
+
+  /**
+   * Deterministic anti-stall rolls for late waves (solo survival).
+   * @param {Record<string, unknown>} def
+   * @param {number} waveIndex
+   * @param {number} ordinal
+   */
+  _applyPostWave30Traits(def, waveIndex, ordinal) {
+    if (waveIndex <= 30) {
+      return;
+    }
+    const h = this._traitHash(waveIndex, def.archetype ?? def.role ?? "grunt", ordinal);
+    if ((h & 0xff) < 70) {
+      def.speedRampPerSecond = Math.max(Number(def.speedRampPerSecond) || 0, 0.015);
+    }
+    if (((h >> 8) & 0xff) < 60) {
+      def.fireHitDamageMultiplier = (Number.isFinite(def.fireHitDamageMultiplier) ? def.fireHitDamageMultiplier : 1) * 0.5;
+      const tagBurn =
+        Array.isArray(def.tags) && def.tags.includes("fireResist") ? 0.35 : 1;
+      def.burnDamageMultiplier = (Number.isFinite(def.burnDamageMultiplier) ? def.burnDamageMultiplier : tagBurn) * 0.5;
+    }
+    if (((h >> 16) & 0xff) < 60) {
+      def.slowEffectivenessMultiplier = (Number.isFinite(def.slowEffectivenessMultiplier) ? def.slowEffectivenessMultiplier : 1) * 0.4;
+    }
+    if (((h >> 24) & 0xff) < 60) {
+      def.aoeDamageTakenMultiplier = (Number.isFinite(def.aoeDamageTakenMultiplier) ? def.aoeDamageTakenMultiplier : 1) * 0.5;
+    }
+  }
+
+  _buildEnemyDefinitionFromPack(waveIndex, pack, spawnOrdinal = 0) {
     const archetype = getEnemyArchetype(pack.type);
     const baseHp = getWaveBaseHp(waveIndex);
     const baseSpeed = 60 * getWaveBaseSpeed(waveIndex);
@@ -119,14 +159,13 @@ export class WaveSystem {
     const role = archetype.role ?? "normal";
     if (role === "tank" || role === "elite") {
       hp *= getHeavyEnemyEarlyHpMultiplier(waveIndex);
-      hp *= TANK_ELITE_HP_SCALE;
     }
     const speed = baseSpeed * (archetype.speedMultiplier ?? 1) * packSpeedMult * this.director.speedScale;
     const rewardBase = getGoldPerKill(waveIndex, false);
     const rewardMult = Number.isFinite(pack.rewardMultiplier) ? pack.rewardMultiplier : 1;
     const rewardGold = Math.max(1, Math.round(rewardBase * (archetype.rewardMultiplier ?? 1) * rewardMult));
     const tags = [...new Set([role, ...(archetype.tags ?? []), ...(pack.tags ?? [])])];
-    return {
+    const def = {
       hp,
       speed,
       role,
@@ -147,12 +186,15 @@ export class WaveSystem {
       slowEffectivenessMultiplier: Number.isFinite(archetype.slowEffectivenessMultiplier) ? archetype.slowEffectivenessMultiplier : 1,
       chainVulnerabilityMultiplier: Number.isFinite(archetype.chainVulnerabilityMultiplier) ? archetype.chainVulnerabilityMultiplier : 1,
       damageTakenMultiplier: Number.isFinite(archetype.damageTakenMultiplier) ? archetype.damageTakenMultiplier : 1,
+      aoeDamageTakenMultiplier: 1,
       earlyKillHpThreshold: archetype.earlyKillHpThreshold ?? null,
       earlyKillBonusGold: Number.isFinite(archetype.earlyKillBonusGold) ? archetype.earlyKillBonusGold : 0,
       stompAuraRadiusTiles: Number.isFinite(archetype.stompAuraRadiusTiles) ? archetype.stompAuraRadiusTiles : 0,
       stompAuraInterval: Number.isFinite(archetype.stompAuraInterval) ? archetype.stompAuraInterval : 2.4,
       bossPhaseBands: Array.isArray(archetype.bossPhaseBands) ? archetype.bossPhaseBands.map((b) => ({ ...b })) : null,
     };
+    this._applyPostWave30Traits(def, waveIndex, spawnOrdinal);
+    return def;
   }
 
   _getWaveVisualForRole(role) {
@@ -189,7 +231,12 @@ export class WaveSystem {
     }
 
     this.spawner.timer = 0;
-    const definition = this.spawner.spawnQueue?.[this.spawner.totalSpawned] ?? this.spawner.enemyDefinition;
+    let definition = this.spawner.spawnQueue?.[this.spawner.totalSpawned] ?? this.spawner.enemyDefinition;
+    if (!this.spawner.spawnQueue) {
+      const ord = this.spawner.totalSpawned;
+      definition = { ...definition };
+      this._applyPostWave30Traits(definition, this.waveIndex, ord);
+    }
     const spawned = this.enemySystem.spawnEnemy(definition);
     if (spawned) {
       this.spawner.totalSpawned += 1;
@@ -199,8 +246,11 @@ export class WaveSystem {
     if (triggeredSpawns.length > 0) {
       for (const trigger of triggeredSpawns) {
         const count = Math.max(0, Number(trigger.count) || 0);
+        const ordBase = this.spawner.spawnQueue.length;
         for (let i = 0; i < count; i += 1) {
-          this.spawner.spawnQueue.push(this._buildEnemyDefinitionFromPack(this.waveIndex, { type: trigger.type }));
+          this.spawner.spawnQueue.push(
+            this._buildEnemyDefinitionFromPack(this.waveIndex, { type: trigger.type }, ordBase + i),
+          );
         }
       }
       this.spawner.spawnTarget = this.spawner.spawnQueue.length;

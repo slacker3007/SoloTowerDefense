@@ -11,7 +11,8 @@
     "survival:sim": "node scripts/survival-sim.js",
     "survival:sim:progression": "node scripts/survival-sim.js --progression",
     "survival:sim:unlimited": "node scripts/survival-sim.js --unlimited",
-    "survival:sim:unlimited-progression": "node scripts/survival-sim.js --unlimited --progression"
+    "survival:sim:unlimited-progression": "node scripts/survival-sim.js --unlimited --progression",
+    "campaign:gold-sim": "node scripts/campaign-kill-gold-sim.mjs"
   },
   "dependencies": {
     "phaser": "^3.90.0"

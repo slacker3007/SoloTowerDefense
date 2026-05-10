@@ -31,6 +31,7 @@ import { DebugOverlay } from "../game/debug/DebugOverlay";
 import {
   BASIC_CONVERSION_ORDER,
   balanceRules,
+  economy,
   getAdaptiveAdjustment,
   getTowerDescription,
   getTowerDisplayName,
@@ -2133,6 +2134,12 @@ export class GameScene extends Phaser.Scene {
     if (this.gameState.wave !== this.waveSystem.waveIndex) {
       this._performance.clearedWaves += 1;
       const livesLostInWave = Math.max(0, this._performance.livesAtWaveStart - this.gameState.lives);
+      if (this.gameState.wave === 1 && livesLostInWave === 0) {
+        const bonus = Number(economy.wave1FullClearBonusGold);
+        if (Number.isFinite(bonus) && bonus > 0) {
+          this.gameState.gold += bonus;
+        }
+      }
       const adjustment = this.computeAdaptiveAdjustment(livesLostInWave);
       this.waveSystem.setAdaptiveAdjustment(adjustment);
       this._performance.waveTimer = 0;

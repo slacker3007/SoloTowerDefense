@@ -12,7 +12,6 @@ import {
   getGoldPerKill,
   getHeavyEnemyEarlyHpMultiplier,
   getTowerTierCost,
-  TANK_ELITE_HP_SCALE,
   getWaveBaseHp,
   getWaveBaseSpeed,
   getScriptedWave,
@@ -85,7 +84,6 @@ function buildEnemyDefinitionFromPack(waveIndex, pack, director) {
   const role = archetype.role ?? "normal";
   if (role === "tank" || role === "elite") {
     hp *= getHeavyEnemyEarlyHpMultiplier(waveIndex);
-    hp *= TANK_ELITE_HP_SCALE;
   }
   const speed =
     60 * getWaveBaseSpeed(waveIndex) * (archetype.speedMultiplier ?? 1) * (pack.speedMultiplier ?? 1) * director.speedScale;
@@ -874,6 +872,17 @@ export const SCENARIOS_UNLIMITED_PROGRESSION = [
     unlimitedTowers: true,
     dynamicUpgrades: true,
     economyTowerCount: 50,
+  },
+  {
+    id: "UP10",
+    label: "∞ hybrid 15 ice + 15 fire tier0→T3 (30-slot gold)",
+    specs: [
+      ...Array.from({ length: 15 }, () => ({ type: "ice", upgradeIds: [] })),
+      ...Array.from({ length: 15 }, () => ({ type: "fire", upgradeIds: [] })),
+    ],
+    unlimitedTowers: true,
+    dynamicUpgrades: true,
+    economyTowerCount: 30,
   },
 ];
 
