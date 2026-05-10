@@ -1,8 +1,9 @@
 import { deriveLayers } from "../maps/elevation";
 import { TILESET_PRESETS, frameIndexToSheetPixels, getHighGroundFrameIndex, getShoreFrameIndex } from "../maps/tileRules";
-import { DEFAULT_TERRAIN_SHEET, TERRAIN_TILE_SHEETS } from "../maps/tileOverrideSchema";
+import { DEFAULT_TERRAIN_SHEET, SHEEP_IDLE_SHEET_KEY, TERRAIN_TILE_SHEETS } from "../maps/tileOverrideSchema";
 
-const TINY_SWORDS_TILESET_BASE = "/TinySwords/Terrain/Tileset";
+const TINY_SWORDS_ROOT = "/TinySwords";
+const TINY_SWORDS_TILESET_BASE = `${TINY_SWORDS_ROOT}/Terrain/Tileset`;
 /** @type {Record<string, string>} */
 const TERRAIN_SHEET_URLS = {
   terrainColor1: `${TINY_SWORDS_TILESET_BASE}/Tilemap_color1.png`,
@@ -12,6 +13,16 @@ const TERRAIN_SHEET_URLS = {
   terrainColor5: `${TINY_SWORDS_TILESET_BASE}/Tilemap_color5.png`,
   terrainColor6: `${TINY_SWORDS_TILESET_BASE}/Tilemap_color6.png`,
 };
+
+/** Editor canvas previews for decoration-only assets (same paths as `assets.js`). */
+const DECORATION_PREVIEW_URLS = {
+  [SHEEP_IDLE_SHEET_KEY]: `${TINY_SWORDS_ROOT}/Terrain/Resources/Meat/Sheep/Sheep_Idle.png`,
+  blueHouse2: `${TINY_SWORDS_ROOT}/Buildings/Blue Buildings/House2.png`,
+  redHouse2: `${TINY_SWORDS_ROOT}/Buildings/Red Buildings/House2.png`,
+};
+
+const SHEEP_STRIP_COLS = 6;
+const SHEEP_FRAME_SIZE = 128;
 
 const PREVIEW_SIZE = 44;
 const TILE = 64;
@@ -58,6 +69,8 @@ export class EditorPanel {
     this._tilePickerHintEl = null;
     /** @type {HTMLButtonElement[]} */
     this._sheetButtons = [];
+    /** @type {HTMLButtonElement | null} */
+    this._sheepDecorationBtn = null;
     /** @type {HTMLInputElement | null} */
     this._pathEraseCheckbox = null;
     /** @type {{ col: number, row: number } | null} */
@@ -260,6 +273,32 @@ export class EditorPanel {
     }
     pickerSec.appendChild(sheetRow);
 
+    const decPresetLabel = document.createElement("h3");
+    decPresetLabel.textContent = "Decoration presets";
+    decPresetLabel.style.marginTop = "10px";
+    pickerSec.appendChild(decPresetLabel);
+    const decPresetRow = document.createElement("div");
+    decPresetRow.className = "editor-panel__btn-row";
+    const mkDecBtn = (label, onClick) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "editor-panel__btn editor-panel__btn--small";
+      b.textContent = label;
+      b.addEventListener("click", onClick);
+      decPresetRow.appendChild(b);
+      return b;
+    };
+    this._sheepDecorationBtn = mkDecBtn("Sheep idle", () => this.editor.setSheepDecorationPicker());
+    mkDecBtn("Blue House2", () => this.editor.applyHouseDecoration("blueHouse2"));
+    mkDecBtn("Red House2", () => this.editor.applyHouseDecoration("redHouse2"));
+    pickerSec.appendChild(decPresetRow);
+    const decPresetHint = document.createElement("p");
+    decPresetHint.className = "editor-panel__picker-hint";
+    decPresetHint.style.marginTop = "4px";
+    decPresetHint.textContent =
+      "Sheep: switches to Decoration + 6-frame strip below. Houses apply in one click to selected cells.";
+    pickerSec.appendChild(decPresetHint);
+
     this._pickerHeadingEl = document.createElement("h3");
     this._pickerHeadingEl.className = "editor-panel__picker-title";
     this._pickerHeadingEl.textContent = "Tile picker";
@@ -365,6 +404,19 @@ export class EditorPanel {
     const my = ev.clientY - rect.top;
     const cw = this.tilePickerCanvas.width;
     const ch = this.tilePickerCanvas.height;
+    const e = this.editor;
+    const sheepMode = e.pickerRole === "decoration" && e.pickerSheet === SHEEP_IDLE_SHEET_KEY;
+    if (sheepMode) {
+      const cellW = cw / SHEEP_STRIP_COLS;
+      const col = Math.max(0, Math.min(SHEEP_STRIP_COLS - 1, Math.floor(mx / cellW)));
+      if (kind === "move") {
+        this._pickerHover = { col, row: 0 };
+        this._redrawTilePicker();
+      } else {
+        this.editor.applyPickedTileFrame(col);
+      }
+      return;
+    }
     const cellW = cw / TILEMAP_COLS;
     const cellH = ch / TILEMAP_ROWS;
     const col = Math.max(0, Math.min(TILEMAP_COLS - 1, Math.floor(mx / cellW)));
@@ -402,17 +454,25 @@ export class EditorPanel {
     }
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     const disabled = this.editor.getSelectedCount() === 0;
-    const img = this._getPickerImage();
+    const e = this.editor;
+    const sheepMode = e.pickerRole === "decoration" && e.pickerSheet === SHEEP_IDLE_SHEET_KEY;
+    const img = sheepMode ? this._tileImages.get(SHEEP_IDLE_SHEET_KEY) : this._getPickerImage();
     if (img) {
       ctx.globalAlpha = disabled ? 0.35 : 1;
-      ctx.drawImage(img, 0, 0, 576, 384, 0, 0, canvas.width, canvas.height);
+      if (sheepMode) {
+        const sw = SHEEP_STRIP_COLS * SHEEP_FRAME_SIZE;
+        const sh = SHEEP_FRAME_SIZE;
+        ctx.drawImage(img, 0, 0, sw, sh, 0, 0, canvas.width, canvas.height);
+      } else {
+        ctx.drawImage(img, 0, 0, 576, 384, 0, 0, canvas.width, canvas.height);
+      }
       ctx.globalAlpha = 1;
     } else {
       ctx.fillStyle = "#2a3548";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
-    const cellW = canvas.width / TILEMAP_COLS;
-    const cellH = canvas.height / TILEMAP_ROWS;
+    const cellW = sheepMode ? canvas.width / SHEEP_STRIP_COLS : canvas.width / TILEMAP_COLS;
+    const cellH = sheepMode ? canvas.height : canvas.height / TILEMAP_ROWS;
     if (this._pickerHover && !disabled) {
       ctx.strokeStyle = "#5cb3ff";
       ctx.lineWidth = 2;
@@ -434,11 +494,16 @@ export class EditorPanel {
         }
       }
       if (highlightFrame != null) {
-        const c = highlightFrame % TILEMAP_COLS;
-        const r = Math.floor(highlightFrame / TILEMAP_COLS);
         ctx.strokeStyle = "#f5d742";
         ctx.lineWidth = 2;
-        ctx.strokeRect(c * cellW + 1, r * cellH + 1, cellW - 2, cellH - 2);
+        if (sheepMode) {
+          const c = Math.max(0, Math.min(SHEEP_STRIP_COLS - 1, highlightFrame));
+          ctx.strokeRect(c * cellW + 1, 1, cellW - 2, cellH - 2);
+        } else {
+          const c = highlightFrame % TILEMAP_COLS;
+          const r = Math.floor(highlightFrame / TILEMAP_COLS);
+          ctx.strokeRect(c * cellW + 1, r * cellH + 1, cellW - 2, cellH - 2);
+        }
       }
     }
   }
@@ -494,7 +559,8 @@ export class EditorPanel {
   }
 
   _loadTilemapImages() {
-    let remaining = TERRAIN_TILE_SHEETS.length;
+    const extraKeys = Object.keys(DECORATION_PREVIEW_URLS);
+    let remaining = TERRAIN_TILE_SHEETS.length + extraKeys.length;
     const onOneDone = () => {
       remaining -= 1;
       if (remaining <= 0) {
@@ -507,6 +573,24 @@ export class EditorPanel {
 
     for (const key of TERRAIN_TILE_SHEETS) {
       const src = TERRAIN_SHEET_URLS[key];
+      if (!src) {
+        onOneDone();
+        continue;
+      }
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => {
+        this._tileImages.set(key, img);
+        onOneDone();
+      };
+      img.onerror = () => {
+        onOneDone();
+      };
+      img.src = src;
+    }
+
+    for (const key of extraKeys) {
+      const src = DECORATION_PREVIEW_URLS[key];
       if (!src) {
         onOneDone();
         continue;
@@ -584,6 +668,16 @@ export class EditorPanel {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     const img = this._tileImages.get(sheetKey) ?? this._getColor1Image();
     if (!img || !Number.isFinite(frame)) {
+      return;
+    }
+    if (sheetKey === SHEEP_IDLE_SHEET_KEY) {
+      const fi = Math.max(0, Math.min(SHEEP_STRIP_COLS - 1, Math.floor(frame)));
+      const sx = fi * SHEEP_FRAME_SIZE;
+      ctx.drawImage(img, sx, 0, SHEEP_FRAME_SIZE, SHEEP_FRAME_SIZE, 0, 0, THUMB, THUMB);
+      return;
+    }
+    if (sheetKey === "blueHouse2" || sheetKey === "redHouse2") {
+      ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, THUMB, THUMB);
       return;
     }
     const { sx, sy } = frameIndexToSheetPixels(frame);
@@ -710,9 +804,13 @@ export class EditorPanel {
       .join(" · ");
 
     if (this._pickerHeadingEl) {
-      const idx = TERRAIN_TILE_SHEETS.indexOf(e.pickerSheet);
-      const n = idx >= 0 ? idx + 1 : 1;
-      this._pickerHeadingEl.textContent = `Tile picker (Tilemap color ${n})`;
+      if (e.pickerRole === "decoration" && e.pickerSheet === SHEEP_IDLE_SHEET_KEY) {
+        this._pickerHeadingEl.textContent = "Tile picker (Sheep idle · 6 frames)";
+      } else {
+        const idx = TERRAIN_TILE_SHEETS.indexOf(e.pickerSheet);
+        const n = idx >= 0 ? idx + 1 : 1;
+        this._pickerHeadingEl.textContent = `Tile picker (Tilemap color ${n})`;
+      }
     }
 
     for (const b of this.toolButtons) {
@@ -744,7 +842,16 @@ export class EditorPanel {
 
     for (const btn of this._sheetButtons) {
       const key = btn.dataset.sheetKey;
-      btn.classList.toggle("editor-panel__btn--primary", key === e.pickerSheet);
+      btn.classList.toggle(
+        "editor-panel__btn--primary",
+        key === e.pickerSheet && TERRAIN_TILE_SHEETS.includes(e.pickerSheet),
+      );
+    }
+    if (this._sheepDecorationBtn) {
+      this._sheepDecorationBtn.classList.toggle(
+        "editor-panel__btn--primary",
+        e.pickerSheet === SHEEP_IDLE_SHEET_KEY && e.pickerRole === "decoration",
+      );
     }
 
     const shore = e.map.tilesets?.shore ?? "default";
@@ -811,6 +918,7 @@ export class EditorPanel {
     this._pickerHeadingEl = null;
     this._tilePickerHintEl = null;
     this._sheetButtons = [];
+    this._sheepDecorationBtn = null;
     this.tilePickerCanvas = null;
     this._pickerMove = null;
     this._pickerLeave = null;

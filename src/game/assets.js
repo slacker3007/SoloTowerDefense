@@ -7,6 +7,11 @@ const barsRoot = `${tinySwordsRoot}/UI Elements/UI Elements/Bars`;
 const elementIconsRoot = `${tinySwordsRoot}/UI Elements/UI Elements/Element_Icons`;
 const elementalBuildingsRoot = `${tinySwordsRoot}/Buildings/Elemental Buildings notog`;
 const particleFxRoot = `${tinySwordsRoot}/Particle FX`;
+const terrainResourcesRoot = `${tinySwordsRoot}/Terrain/Resources/Meat/Sheep`;
+
+/** Matches `tileOverrideSchema.SHEEP_IDLE_SHEET_KEY` */
+export const SHEEP_IDLE_SHEET_KEY = "sheepIdleSheet";
+export const SHEEP_IDLE_ANIM_KEY = "sheep-idle";
 
 export const spriteSheets = [
   {
@@ -60,6 +65,11 @@ export const spriteSheets = [
     frameConfig: { frameWidth: 192, frameHeight: 192 },
   },
   {
+    key: "redWarriorIdleSheet",
+    path: `${tinySwordsRoot}/Units/Red Units/Warrior/Warrior_Idle.png`,
+    frameConfig: { frameWidth: 192, frameHeight: 192 },
+  },
+  {
     key: "redLancerRunSheet",
     path: `${tinySwordsRoot}/Units/Red Units/Lancer/Lancer_Run.png`,
     frameConfig: { frameWidth: 320, frameHeight: 320 },
@@ -90,9 +100,29 @@ export const spriteSheets = [
     frameConfig: { frameWidth: 192, frameHeight: 192 },
   },
   {
+    key: "blueWarriorIdleSheet",
+    path: `${tinySwordsRoot}/Units/Blue Units/Warrior/Warrior_Idle.png`,
+    frameConfig: { frameWidth: 192, frameHeight: 192 },
+  },
+  {
+    key: "blueArcherIdleSheet",
+    path: `${tinySwordsRoot}/Units/Blue Units/Archer/Archer_Idle.png`,
+    frameConfig: { frameWidth: 192, frameHeight: 192 },
+  },
+  {
+    key: "blueLancerIdleSheet",
+    path: `${tinySwordsRoot}/Units/Blue Units/Lancer/Lancer_Idle.png`,
+    frameConfig: { frameWidth: 320, frameHeight: 320 },
+  },
+  {
     key: "fire01Sheet",
     path: `${particleFxRoot}/Fire_01.png`,
     frameConfig: { frameWidth: 64, frameHeight: 64 },
+  },
+  {
+    key: SHEEP_IDLE_SHEET_KEY,
+    path: `${terrainResourcesRoot}/Sheep_Idle.png`,
+    frameConfig: { frameWidth: 128, frameHeight: 128 },
   },
   /** BigBar_Base 320×64 = (5×64)×64: frames 0=left, 2=tile middle (repeat), 4=right; 1 and 3 are blank. */
   {
@@ -103,9 +133,12 @@ export const spriteSheets = [
 ];
 
 export const standaloneImages = [
+  { key: "gameLogo", path: `${tinySwordsRoot}/logo.png` },
   { key: "waterBackground", path: `${terrainRoot}/Water Background color.png` },
   { key: "blueBarracks", path: `${tinySwordsRoot}/Buildings/Blue Buildings/Barracks.png` },
+  { key: "blueHouse2", path: `${tinySwordsRoot}/Buildings/Blue Buildings/House2.png` },
   { key: "redBarracks", path: `${tinySwordsRoot}/Buildings/Red Buildings/Barracks.png` },
+  { key: "redHouse2", path: `${tinySwordsRoot}/Buildings/Red Buildings/House2.png` },
   { key: "blueTower", path: `${tinySwordsRoot}/Buildings/Blue Buildings/Tower.png` },
   { key: "tower_archer_building", path: `${elementalBuildingsRoot}/archer_tower.png` },
   { key: "tower_lightning_building", path: `${elementalBuildingsRoot}/lightning_tower.png` },
@@ -156,8 +189,8 @@ export function createTinySwordsAnimations(scene) {
     if (!scene.textures.exists(sheetKey) || scene.anims.exists(animationKey)) {
       return;
     }
-    const frameCount = scene.textures.get(sheetKey).frameTotal - 1;
-    const computedEndFrame = Math.max(0, frameCount - 1);
+    const totalFrames = scene.textures.get(sheetKey).frameTotal;
+    const computedEndFrame = Math.max(0, totalFrames - 1);
     const endFrame = Number.isInteger(explicitEndFrame)
       ? Math.max(0, Math.min(explicitEndFrame, computedEndFrame))
       : computedEndFrame;
@@ -173,13 +206,18 @@ export function createTinySwordsAnimations(scene) {
   };
 
   createRunLoop("redWarriorRunSheet", "red-warrior-run");
+  createRunLoop("redWarriorIdleSheet", "red-warrior-idle");
   createRunLoop("redLancerRunSheet", "red-lancer-run", 5);
   createRunLoop("redMonkRunSheet", "red-monk-run");
   createRunLoop("redArcherRunSheet", "red-archer-run");
   createRunLoop("blackWarriorRunSheet", "black-warrior-run");
   createRunLoop("bluePawnRunHammerSheet", "blue-pawn-run-hammer");
   createRunLoop("bluePawnInteractHammerSheet", "blue-pawn-interact-hammer");
+  createRunLoop("blueWarriorIdleSheet", "blue-warrior-idle");
+  createRunLoop("blueArcherIdleSheet", "blue-archer-idle");
+  createRunLoop("blueLancerIdleSheet", "blue-lancer-idle");
   createRunLoop("fire01Sheet", "fire-01-loop", 7);
+  createRunLoop(SHEEP_IDLE_SHEET_KEY, SHEEP_IDLE_ANIM_KEY, 5);
 }
 
 export function hasTinySwordsFolderHint(scene) {

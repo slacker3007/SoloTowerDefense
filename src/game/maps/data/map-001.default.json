@@ -2729,7 +2729,10 @@
       null,
       null,
       null,
-      null,
+      {
+        "sheet": "terrainColor1",
+        "frame": 10
+      },
       null,
       null,
       null,
@@ -2767,8 +2770,14 @@
       null,
       null,
       null,
-      null,
-      null,
+      {
+        "sheet": "blueHouse2",
+        "frame": 0
+      },
+      {
+        "sheet": "sheepIdleSheet",
+        "frame": 0
+      },
       null,
       null,
       null,
@@ -3719,8 +3728,14 @@
       null,
       null,
       null,
-      null,
-      null,
+      {
+        "sheet": "sheepIdleSheet",
+        "frame": 0
+      },
+      {
+        "sheet": "redHouse2",
+        "frame": 0
+      },
       {
         "sheet": "terrainColor1",
         "frame": 31

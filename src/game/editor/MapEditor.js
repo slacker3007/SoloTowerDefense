@@ -7,7 +7,12 @@ import {
   ensurePathMaskGrid,
   syncBarracksPointsFromBuildings,
 } from "../maps/mapUtils";
-import { normalizeTerrainTileOverride, TERRAIN_TILE_SHEETS } from "../maps/tileOverrideSchema";
+import {
+  DECORATION_IMAGE_KEYS,
+  normalizeTerrainTileOverride,
+  SHEEP_IDLE_SHEET_KEY,
+  TERRAIN_TILE_SHEETS,
+} from "../maps/tileOverrideSchema";
 
 const MAP_JSON_VERSION = 1;
 const DEFAULT_PICKER_SHEET = "terrainColor1";
@@ -246,17 +251,47 @@ export class MapEditor {
    */
   setPickerRole(role) {
     this.pickerRole = role;
+    if (role === "terrain" && this.pickerSheet === SHEEP_IDLE_SHEET_KEY) {
+      this.pickerSheet = DEFAULT_PICKER_SHEET;
+    }
     this._notifyChange();
   }
 
   /**
-   * @param {string} sheetKey terrainColor1 … terrainColor5
+   * @param {string} sheetKey terrain tilemap or `sheepIdleSheet` when decoration role
    */
   setPickerSheet(sheetKey) {
-    if (!TERRAIN_TILE_SHEETS.includes(sheetKey)) {
+    if (TERRAIN_TILE_SHEETS.includes(sheetKey)) {
+      this.pickerSheet = sheetKey;
+      this._notifyChange();
       return;
     }
-    this.pickerSheet = sheetKey;
+    if (sheetKey === SHEEP_IDLE_SHEET_KEY && this.pickerRole === "decoration") {
+      this.pickerSheet = sheetKey;
+      this._notifyChange();
+    }
+  }
+
+  /** Select Decoration role and the sheep idle strip for the tile picker. */
+  setSheepDecorationPicker() {
+    this.pickerRole = "decoration";
+    this.pickerSheet = SHEEP_IDLE_SHEET_KEY;
+    this._notifyChange();
+  }
+
+  /**
+   * @param {string} imageKey `blueHouse2` or `redHouse2`
+   */
+  applyHouseDecoration(imageKey) {
+    if (!DECORATION_IMAGE_KEYS.includes(imageKey) || this.getSelectedCount() === 0) {
+      return;
+    }
+    ensureMapOverrideGrids(this.map);
+    for (const { x, y } of this.getSelectedCells()) {
+      this.map.decorations[y][x] = { sheet: imageKey, frame: 0 };
+    }
+    this.scene.redrawTerrain();
+    this._markDirty();
     this._notifyChange();
   }
 
@@ -302,7 +337,8 @@ export class MapEditor {
       if (this.pickerRole === "terrain") {
         this.map.tileOverrides[y][x] = { sheet: this.pickerSheet, frame };
       } else {
-        this.map.decorations[y][x] = { sheet: this.pickerSheet, frame };
+        const f = DECORATION_IMAGE_KEYS.includes(this.pickerSheet) ? 0 : frame;
+        this.map.decorations[y][x] = { sheet: this.pickerSheet, frame: f };
       }
     }
 

@@ -8,7 +8,12 @@ import {
   STARTING_LIVES,
   TILE_SIZE,
 } from "../game/constants";
-import { createTinySwordsAnimations, hasTinySwordsFolderHint } from "../game/assets";
+import {
+  createTinySwordsAnimations,
+  hasTinySwordsFolderHint,
+  SHEEP_IDLE_ANIM_KEY,
+  SHEEP_IDLE_SHEET_KEY,
+} from "../game/assets";
 import { createFreshMap001 } from "../game/maps/map-001";
 import { deriveLayers } from "../game/maps/elevation";
 import {
@@ -18,7 +23,11 @@ import {
   isInsideGrid,
   worldToCell,
 } from "../game/maps/tileRules";
-import { DEFAULT_TERRAIN_SHEET, normalizeTerrainTileOverride } from "../game/maps/tileOverrideSchema";
+import {
+  DECORATION_IMAGE_KEYS,
+  DEFAULT_TERRAIN_SHEET,
+  normalizeTerrainTileOverride,
+} from "../game/maps/tileOverrideSchema";
 import { EnemySystem } from "../game/systems/EnemySystem";
 import { BuilderSystem } from "../game/systems/BuilderSystem";
 import { TowerSystem } from "../game/systems/TowerSystem";
@@ -1546,6 +1555,10 @@ export class GameScene extends Phaser.Scene {
     this.input.keyboard.on("keydown-G", this._boundKeyDebug);
     this._boundKeyHudDebug = () => {
       this.hud?.toggleDebugPanelVisibility?.();
+      if (!this.hud?.isDebugPanelVisible() && this.editor.enabled) {
+        this.editor.setEnabled(false);
+        this._syncAfterMapEditorChange();
+      }
     };
     this.input.keyboard.on("keydown-F3", this._boundKeyHudDebug);
 
@@ -1791,7 +1804,14 @@ export class GameScene extends Phaser.Scene {
   }
 
   toggleMapEditorFromMenu() {
+    if (!this.editor.enabled && !this.hud?.isDebugPanelVisible()) {
+      return;
+    }
     this.editor.toggle();
+    this._syncAfterMapEditorChange();
+  }
+
+  _syncAfterMapEditorChange() {
     this._refreshScaleAfterEditorPanelToggle();
     this.syncHudForEditorMode();
     this.updateHudActions();
@@ -1921,9 +1941,25 @@ export class GameScene extends Phaser.Scene {
           }
           const px = x * TILE_SIZE;
           const py = y * TILE_SIZE;
-          const spr = this.add.sprite(px + TILE_SIZE / 2, py + TILE_SIZE / 2, dec.sheet, dec.frame);
-          spr.setDepth(12);
-          this.terrainContainer.add(spr);
+          if (dec.sheet === SHEEP_IDLE_SHEET_KEY) {
+            const spr = this.add.sprite(px + TILE_SIZE / 2, py + TILE_SIZE / 2, dec.sheet, 0);
+            spr.setDisplaySize(64, 64);
+            spr.setDepth(12);
+            if (this.anims.exists(SHEEP_IDLE_ANIM_KEY)) {
+              spr.play(SHEEP_IDLE_ANIM_KEY, false, Phaser.Math.Clamp(Math.floor(dec.frame), 0, 5));
+            }
+            this.terrainContainer.add(spr);
+          } else if (DECORATION_IMAGE_KEYS.includes(dec.sheet)) {
+            const spr = this.add.sprite(px + TILE_SIZE / 2, py + TILE_SIZE, dec.sheet);
+            spr.setOrigin(0.5, 1);
+            spr.setDisplaySize(128, 192);
+            spr.setDepth(12);
+            this.terrainContainer.add(spr);
+          } else {
+            const spr = this.add.sprite(px + TILE_SIZE / 2, py + TILE_SIZE / 2, dec.sheet, dec.frame);
+            spr.setDepth(12);
+            this.terrainContainer.add(spr);
+          }
         }
       }
     }

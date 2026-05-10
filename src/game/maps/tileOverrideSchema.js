@@ -4,6 +4,15 @@ export const DEFAULT_TERRAIN_SHEET = "terrainColor1";
 /** Spritesheet keys for TinySwords terrain tilemaps (editor picker). */
 export const TERRAIN_TILE_SHEETS = ["terrainColor1", "terrainColor2", "terrainColor3", "terrainColor4", "terrainColor5", "terrainColor6"];
 
+/** Map editor: extra spritesheet used only for decorations (not terrain overrides). */
+export const SHEEP_IDLE_SHEET_KEY = "sheepIdleSheet";
+
+/** Decoration-only spritesheet keys (editor may set `pickerSheet` when role is decoration). */
+export const DECORATION_SPRITE_SHEETS = [SHEEP_IDLE_SHEET_KEY];
+
+/** Standalone image keys placed as decorations from the editor. */
+export const DECORATION_IMAGE_KEYS = ["blueHouse2", "redHouse2", "blueTower"];
+
 /**
  * @param {unknown} v
  * @returns {{ sheet: string, frame: number } | null}

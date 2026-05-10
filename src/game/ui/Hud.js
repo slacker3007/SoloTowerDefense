@@ -154,6 +154,7 @@ export class Hud {
       this.closeMenuDropdown();
       this.onMapEditorFromMenu();
     });
+    this.menuBtnMapEditor.setVisible(false);
     this.menuBtnSettings = this.createButton("Settings", true, () => {
       this.closeMenuDropdown();
       this.onOpenSettings();
@@ -1287,7 +1288,13 @@ export class Hud {
       const dropY = this.menuButton.y + Math.round(this.menuButton.height * 0.5) + menuPad;
       this.menuDropdownRoot.setPosition(this.menuButton.x, dropY);
       const menuWidth = this.clamp(Math.round(contentWidth * 0.5), 280, 380);
-      const menuHeight = this.clamp(Math.round(this.topBarHeight * 2.8), 130, 200);
+      const showMapEditor = this.isDebugPanelVisible();
+      const menuRowCount = showMapEditor ? 3 : 2;
+      const menuHeight = this.clamp(
+        Math.round(this.topBarHeight * (menuRowCount === 3 ? 2.8 : 1.95)),
+        menuRowCount === 3 ? 130 : 96,
+        menuRowCount === 3 ? 200 : 160,
+      );
       const menuItemFontSize = this.clamp(Math.round(this.topBarHeight * 0.42), 18, 30);
       const menuItemPadX = this.clamp(Math.round(menuWidth * 0.05), 12, 20);
       const menuItemPadY = this.clamp(Math.round(this.topBarHeight * 0.22), 8, 14);
@@ -1297,9 +1304,15 @@ export class Hud {
       this.menuBtnMainMenu.setStyle({ fontSize: `${menuItemFontSize}px`, padding: { x: menuItemPadX, y: menuItemPadY } });
       const itemGap = Math.max(38, Math.round(menuHeight * 0.28));
       const itemStartY = Math.max(24, Math.round(menuHeight * 0.18));
-      this.menuBtnMapEditor.setPosition(14, itemStartY);
-      this.menuBtnSettings.setPosition(14, itemStartY + itemGap);
-      this.menuBtnMainMenu.setPosition(14, itemStartY + itemGap * 2);
+      this.menuBtnMapEditor.setVisible(showMapEditor);
+      if (showMapEditor) {
+        this.menuBtnMapEditor.setPosition(14, itemStartY);
+        this.menuBtnSettings.setPosition(14, itemStartY + itemGap);
+        this.menuBtnMainMenu.setPosition(14, itemStartY + itemGap * 2);
+      } else {
+        this.menuBtnSettings.setPosition(14, itemStartY);
+        this.menuBtnMainMenu.setPosition(14, itemStartY + itemGap);
+      }
 
       this.keybindBackdrop.setPosition(0, 0);
       this.keybindBackdrop.setSize(rootWidth, rootHeight);
@@ -2013,6 +2026,7 @@ export class Hud {
     this._debugPanelVisible = Boolean(visible);
     this._refreshDebugTelemetryText();
     this.debugPanelRoot?.setVisible(this._debugPanelVisible);
+    this.layout();
   }
 
   isDebugPanelVisible() {

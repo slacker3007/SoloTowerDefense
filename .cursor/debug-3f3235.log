@@ -1,0 +1,4 @@
+{"sessionId":"3f3235","location":"GameScene.js:create","message":"create entered","data":{"step":0},"timestamp":1778421332915,"hypothesisId":"H2","runId":"post-fix"}
+{"sessionId":"3f3235","location":"GameScene.js:create","message":"createTinySwordsAnimations ok","data":{},"timestamp":1778421332919,"hypothesisId":"H3","runId":"post-fix"}
+{"sessionId":"3f3235","location":"GameScene.js:redrawTerrain","message":"redrawTerrain enter","data":{},"timestamp":1778421332927,"hypothesisId":"H5","runId":"post-fix"}
+{"sessionId":"3f3235","location":"GameScene.js:redrawTerrain","message":"sheep keys resolve","data":{"ok":true},"timestamp":1778421332938,"hypothesisId":"H1","runId":"post-fix"}
