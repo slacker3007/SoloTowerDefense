@@ -19,6 +19,8 @@ const WAVE_PROGRESS_SEGMENT_COUNT = 8;
 const WAVE_PROGRESS_SEGMENT_GAP = 3;
 /** Pixels below preview icon for role label (Normal, Tank, …). */
 const WAVE_PREVIEW_ROLE_GAP = 24;
+/** Vertical gap between wave title row and enemies/progress/previews block. */
+const WAVE_TITLE_TO_BODY_GAP = 13;
 
 export class Hud {
   /**
@@ -1173,7 +1175,7 @@ export class Hud {
           )
         : 0;
       const railContentW = Math.max(220, contentWidth - rightPanelW - (splitLandscape ? gapSm : 0));
-      const waveStripH = splitLandscape ? 0 : this._bottomVisible && isWaveCtx ? 120 : 0;
+      const waveStripH = splitLandscape ? 0 : this._bottomVisible && isWaveCtx ? 125 : 0;
       const towerSummaryEstimate = splitLandscape ? 0 : this._bottomVisible && isTowerCtx ? 200 : 0;
       const maxRailW = railContentW - panelPadding * 2;
       let actionCell = this.clamp(
@@ -1350,7 +1352,7 @@ export class Hud {
       const contextBaseX = splitLandscape ? contentX + railContentW + gapSm + panelPadding : contentX + panelPadding;
       const splitPanelTop = splitLandscape ? this.topBarHeight + panelPadding : yCursor;
       const splitPanelBottomLimit = splitLandscape ? bottomY - panelPadding : rootHeight - panelPadding;
-      const splitPanelH = splitLandscape ? Math.max(120, splitPanelBottomLimit - splitPanelTop) : 0;
+      const splitPanelH = splitLandscape ? Math.max(125, splitPanelBottomLimit - splitPanelTop) : 0;
 
       if (splitLandscape && this._bottomVisible) {
         this.contextPanelFrame.setPosition(contextBaseX, splitPanelTop);
@@ -1361,7 +1363,7 @@ export class Hud {
           this.contextTitleText.y + this.contextTitleText.height + 4,
         );
         if (isWaveCtx) {
-          const waveBodyTop = this.contextTitleText.y + this.contextTitleText.height + 8;
+          const waveBodyTop = this.contextTitleText.y + this.contextTitleText.height + WAVE_TITLE_TO_BODY_GAP;
           this.waveEnemiesText.setPosition(this.contextTitleText.x, waveBodyTop);
           const progressTrackY = this.waveEnemiesText.y + this.waveEnemiesText.height + 8;
           const progressTrackW = Math.max(90, contextPanelW - contextPad * 2);
@@ -1466,7 +1468,7 @@ export class Hud {
           this.contextTitleText.x,
           this.contextTitleText.y + this.contextTitleText.height + 4,
         );
-        const waveBodyTop = this.contextTitleText.y + this.contextTitleText.height + 8;
+        const waveBodyTop = this.contextTitleText.y + this.contextTitleText.height + WAVE_TITLE_TO_BODY_GAP;
         this.waveEnemiesText.setPosition(this.contextTitleText.x, waveBodyTop);
         const progressTrackY = this.waveEnemiesText.y + this.waveEnemiesText.height + 4;
         const progressTrackW = Math.max(70, contextPanelW - contextPad * 2);
