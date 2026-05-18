@@ -4,6 +4,9 @@ export const DEFAULT_TERRAIN_SHEET = "terrainColor1";
 /** Spritesheet keys for TinySwords terrain tilemaps (editor picker). */
 export const TERRAIN_TILE_SHEETS = ["terrainColor1", "terrainColor2", "terrainColor3", "terrainColor4", "terrainColor5", "terrainColor6"];
 
+/** Numbered map editor terrain layers: 0 water, 1-3 ground levels. */
+export const MAP_TILE_LAYER_COUNT = 4;
+
 /** Map editor: extra spritesheet used only for decorations (not terrain overrides). */
 export const SHEEP_IDLE_SHEET_KEY = "sheepIdleSheet";
 
@@ -41,4 +44,19 @@ export function cloneTerrainTileOverride(cell) {
     return null;
   }
   return { sheet: cell.sheet, frame: cell.frame };
+}
+
+/**
+ * @param {unknown} v
+ * @returns {{ sheet: string, frame: number } | null}
+ */
+export function normalizeLayerTile(v) {
+  return normalizeTerrainTileOverride(v);
+}
+
+/**
+ * @param {{ sheet: string, frame: number } | null} cell
+ */
+export function cloneLayerTile(cell) {
+  return cloneTerrainTileOverride(cell);
 }

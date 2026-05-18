@@ -1,6 +1,6 @@
 /**
- * Elevation grid: 0 = water, 1 = grass / island, 2 = high ground plateau.
- * Visual masks are derived for autotiling and foam.
+ * Elevation grid: 0 = water, 1-3 = numbered ground levels.
+ * Legacy visual masks are still available for generated/menu maps.
  */
 
 /** @param {number} rows @param {number} cols @param {number} fill */

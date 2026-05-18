@@ -2,15 +2,17 @@ import { createFreshMap001 } from "../maps/map-001";
 import { buildDefaultPathMask, pathMaskFromLegacyEnemyPath, tryParsePathMaskFromJson } from "../maps/enemyPath";
 import {
   copyMapStateFrom,
+  ensureMapLayerTiles,
   ensureMapOverrideGrids,
   ensureMapTilesets,
   ensurePathMaskGrid,
+  recomputeCellElevationFromLayerTiles,
   syncBarracksPointsFromBuildings,
 } from "../maps/mapUtils";
 import {
-  DECORATION_IMAGE_KEYS,
-  normalizeTerrainTileOverride,
-  SHEEP_IDLE_SHEET_KEY,
+  cloneLayerTile,
+  MAP_TILE_LAYER_COUNT,
+  normalizeLayerTile,
   TERRAIN_TILE_SHEETS,
 } from "../maps/tileOverrideSchema";
 
@@ -29,17 +31,24 @@ export class MapEditor {
     this.map = map;
     ensureMapTilesets(this.map);
     ensureMapOverrideGrids(this.map);
+    ensureMapLayerTiles(this.map);
     ensurePathMaskGrid(this.map);
 
     this.enabled = false;
-    /** @type {"paint" | "moveBuilding" | "select" | "pathMask"} */
-    this.tool = "paint";
+    /** @type {"map" | "objects"} */
+    this.editorMode = "map";
+    /** @type {0 | 1 | 2 | 3} */
+    this.activeLayer = 0;
+    /** @type {"brush" | "moveBuilding" | "select" | "pathMask" | "placeBuilding"} */
+    this.tool = "brush";
     /** When true, path mask brush erases (sets 0). */
     this.pathMaskErase = false;
-    /** @type {"elevation" | "stairs"} */
-    this.paintKind = "elevation";
-    /** @type {0 | 1 | 2} */
-    this.paintElevation = 1;
+    /** When true, map brush erases the active layer on the cell. */
+    this.brushEraser = false;
+    /** Selected tile frame for the active layer brush. */
+    this.pickerFrame = 0;
+    /** Building key for place-building tool (`barracks_blue`, `barracks_red`, etc.). */
+    this.placeBuildingType = "barracks_blue";
     /** @type {{ x: number, y: number } | null} */
     this.movePickCell = null;
     /** @type {string} */
@@ -47,8 +56,6 @@ export class MapEditor {
     /** @type {{ x: number, y: number } | null} */
     this.selectedCell = null;
     this.selectedCellKeys = new Set();
-    /** @type {"terrain" | "decoration"} */
-    this.pickerRole = "terrain";
     this.pickerSheet = DEFAULT_PICKER_SHEET;
 
     this.isDirty = false;
@@ -170,29 +177,82 @@ export class MapEditor {
     this.setEnabled(!this.enabled);
   }
 
-  setTool(tool) {
-    this.tool = tool;
-    if (tool === "moveBuilding") {
+  /**
+   * @param {"map" | "objects"} mode
+   */
+  setEditorMode(mode) {
+    this.editorMode = mode;
+    if (mode === "map") {
+      this.tool = "brush";
       this.movePickCell = null;
-      this.moveStatus = "Move: click a barracks";
-    } else {
       this.moveStatus = "";
+    } else {
+      this.tool = "placeBuilding";
+      this.movePickCell = null;
+      this.moveStatus = "Place: drag to stamp building";
     }
     this._notifyChange();
     this.scene.redrawTerrain();
   }
 
-  setElevationBrush(level) {
-    this.tool = "paint";
-    this.paintKind = "elevation";
-    this.paintElevation = /** @type {0|1|2} */ (level);
+  setActiveLayer(layer) {
+    const nextLayer = Number(layer);
+    if (!Number.isInteger(nextLayer) || nextLayer < 0 || nextLayer >= MAP_TILE_LAYER_COUNT) {
+      return;
+    }
+    this.activeLayer = /** @type {0 | 1 | 2 | 3} */ (nextLayer);
+    this.tool = "brush";
+    this.editorMode = "map";
     this._notifyChange();
-    this.scene.redrawTerrain();
   }
 
-  setStairsBrush() {
-    this.tool = "paint";
-    this.paintKind = "stairs";
+  setBrushEraser(erase) {
+    this.brushEraser = Boolean(erase);
+    this._notifyChange();
+  }
+
+  /**
+   * @param {number} frame
+   */
+  setBrushTileFrame(frame) {
+    if (!Number.isFinite(frame)) {
+      return;
+    }
+    this.pickerFrame = frame;
+    this.tool = "brush";
+    this.editorMode = "map";
+    this._notifyChange();
+  }
+
+  /**
+   * @param {string} buildingType
+   */
+  setPlaceBuildingType(buildingType) {
+    this.placeBuildingType = buildingType;
+    this.tool = "placeBuilding";
+    this.editorMode = "objects";
+    this.movePickCell = null;
+    this.moveStatus = `Place: ${buildingType}`;
+    this._notifyChange();
+  }
+
+  setTool(tool) {
+    this.tool = tool;
+    if (tool === "moveBuilding") {
+      this.editorMode = "objects";
+      this.movePickCell = null;
+      this.moveStatus = "Move: click a barracks";
+    } else if (tool === "placeBuilding") {
+      this.editorMode = "objects";
+      this.moveStatus = `Place: ${this.placeBuildingType}`;
+    } else if (tool === "pathMask") {
+      this.editorMode = "objects";
+      this.moveStatus = "";
+    } else if (tool === "select") {
+      this.moveStatus = "Select: click cells (Shift to add)";
+    } else {
+      this.moveStatus = "";
+    }
     this._notifyChange();
     this.scene.redrawTerrain();
   }
@@ -208,7 +268,7 @@ export class MapEditor {
   setSelectTool() {
     this.tool = "select";
     this.movePickCell = null;
-    this.moveStatus = "";
+    this.moveStatus = "Select: click cells (Shift to add)";
     this._notifyChange();
     this.scene.redrawTerrain();
   }
@@ -247,52 +307,13 @@ export class MapEditor {
   }
 
   /**
-   * @param {"terrain" | "decoration"} role
-   */
-  setPickerRole(role) {
-    this.pickerRole = role;
-    if (role === "terrain" && this.pickerSheet === SHEEP_IDLE_SHEET_KEY) {
-      this.pickerSheet = DEFAULT_PICKER_SHEET;
-    }
-    this._notifyChange();
-  }
-
-  /**
-   * @param {string} sheetKey terrain tilemap or `sheepIdleSheet` when decoration role
+   * @param {string} sheetKey terrain tilemap key
    */
   setPickerSheet(sheetKey) {
     if (TERRAIN_TILE_SHEETS.includes(sheetKey)) {
       this.pickerSheet = sheetKey;
       this._notifyChange();
-      return;
     }
-    if (sheetKey === SHEEP_IDLE_SHEET_KEY && this.pickerRole === "decoration") {
-      this.pickerSheet = sheetKey;
-      this._notifyChange();
-    }
-  }
-
-  /** Select Decoration role and the sheep idle strip for the tile picker. */
-  setSheepDecorationPicker() {
-    this.pickerRole = "decoration";
-    this.pickerSheet = SHEEP_IDLE_SHEET_KEY;
-    this._notifyChange();
-  }
-
-  /**
-   * @param {string} imageKey `blueHouse2` or `redHouse2`
-   */
-  applyHouseDecoration(imageKey) {
-    if (!DECORATION_IMAGE_KEYS.includes(imageKey) || this.getSelectedCount() === 0) {
-      return;
-    }
-    ensureMapOverrideGrids(this.map);
-    for (const { x, y } of this.getSelectedCells()) {
-      this.map.decorations[y][x] = { sheet: imageKey, frame: 0 };
-    }
-    this.scene.redrawTerrain();
-    this._markDirty();
-    this._notifyChange();
   }
 
   clearSelection() {
@@ -328,18 +349,31 @@ export class MapEditor {
    * @param {number} frame
    */
   applyPickedTileFrame(frame) {
-    if (this.getSelectedCount() === 0 || !Number.isFinite(frame)) {
+    if (!Number.isFinite(frame)) {
       return;
     }
-    ensureMapOverrideGrids(this.map);
+    this.setBrushTileFrame(frame);
+    if (this.getSelectedCount() === 0) {
+      return;
+    }
+    ensureMapLayerTiles(this.map);
 
     for (const { x, y } of this.getSelectedCells()) {
-      if (this.pickerRole === "terrain") {
-        this.map.tileOverrides[y][x] = { sheet: this.pickerSheet, frame };
-      } else {
-        const f = DECORATION_IMAGE_KEYS.includes(this.pickerSheet) ? 0 : frame;
-        this.map.decorations[y][x] = { sheet: this.pickerSheet, frame: f };
-      }
+      this._setLayerTileAt(x, y, { sheet: this.pickerSheet, frame });
+    }
+
+    this.scene.redrawTerrain();
+    this._markDirty();
+  }
+
+  clearActiveLayer() {
+    if (this.getSelectedCount() === 0) {
+      return;
+    }
+    ensureMapLayerTiles(this.map);
+
+    for (const { x, y } of this.getSelectedCells()) {
+      this._setLayerTileAt(x, y, null);
     }
 
     this.scene.redrawTerrain();
@@ -347,46 +381,36 @@ export class MapEditor {
   }
 
   clearTerrainOverride() {
-    if (this.getSelectedCount() === 0) {
-      return;
-    }
-    ensureMapOverrideGrids(this.map);
-
-    for (const { x, y } of this.getSelectedCells()) {
-      this.map.tileOverrides[y][x] = null;
-    }
-
-    this.scene.redrawTerrain();
-    this._markDirty();
+    this.clearActiveLayer();
   }
 
   clearDecoration() {
-    if (this.getSelectedCount() === 0) {
-      return;
-    }
-    ensureMapOverrideGrids(this.map);
-
-    for (const { x, y } of this.getSelectedCells()) {
-      this.map.decorations[y][x] = null;
-    }
-
-    this.scene.redrawTerrain();
-    this._markDirty();
+    this.clearActiveLayer();
   }
 
   /**
-   * @param {"shore" | "plateau"} layer
-   * @param {string} key
+   * @param {number} x
+   * @param {number} y
+   * @param {{ sheet: string, frame: number } | null} tile
    */
-  setTilesetPreset(layer, key) {
-    ensureMapTilesets(this.map);
-    if (layer === "shore") {
-      this.map.tilesets.shore = key;
+  _setLayerTileAt(x, y, tile) {
+    ensureMapLayerTiles(this.map);
+    ensureMapOverrideGrids(this.map);
+    const layer = this.activeLayer;
+    this.map.layerTiles[layer][y][x] = cloneLayerTile(normalizeLayerTile(tile));
+    if (tile == null) {
+      recomputeCellElevationFromLayerTiles(this.map, x, y);
     } else {
-      this.map.tilesets.plateau = key;
+      for (let higher = layer + 1; higher < MAP_TILE_LAYER_COUNT; higher += 1) {
+        this.map.layerTiles[higher][y][x] = null;
+      }
+      this.map.elevation[y][x] = layer;
+      if (layer === 0) {
+        this.map.stairs[y][x] = 0;
+      }
     }
-    this.scene.redrawTerrain();
-    this._markDirty();
+    this.map.tileOverrides[y][x] = null;
+    this.map.decorations[y][x] = null;
   }
 
   resetToDefault() {
@@ -479,13 +503,13 @@ export class MapEditor {
     }
 
     if (event.key === "1") {
-      this.setElevationBrush(0);
+      this.setActiveLayer(0);
     } else if (event.key === "2") {
-      this.setElevationBrush(1);
+      this.setActiveLayer(1);
     } else if (event.key === "3") {
-      this.setElevationBrush(2);
+      this.setActiveLayer(2);
     } else if (event.key === "4") {
-      this.setStairsBrush();
+      this.setActiveLayer(3);
     } else if (event.key === "5") {
       this.setMoveBuildingTool();
     } else if (event.key === "6") {
@@ -603,10 +627,10 @@ export class MapEditor {
         const ev = rowE[x];
         const st = rowS[x];
         const bd = rowB[x];
-        if (typeof ev !== "number" || ev < 0 || ev > 2) {
+        if (typeof ev !== "number" || ev < 0 || ev >= MAP_TILE_LAYER_COUNT) {
           return false;
         }
-        this.map.elevation[y][x] = ev;
+        this.map.elevation[y][x] = Math.floor(ev);
         this.map.stairs[y][x] = st === 1 ? 1 : 0;
         this.map.buildings[y][x] = typeof bd === "string" ? bd : null;
       }
@@ -623,7 +647,7 @@ export class MapEditor {
         }
         for (let x = 0; x < this.map.width; x += 1) {
           const v = row[x];
-          this.map.tileOverrides[y][x] = normalizeTerrainTileOverride(v);
+          this.map.tileOverrides[y][x] = normalizeLayerTile(v);
         }
       }
     } else {
@@ -655,6 +679,13 @@ export class MapEditor {
         }
       }
     }
+
+    if (Array.isArray(d.layerTiles) && d.layerTiles.length === MAP_TILE_LAYER_COUNT) {
+      this.map.layerTiles = d.layerTiles;
+    } else {
+      this.map.layerTiles = undefined;
+    }
+    ensureMapLayerTiles(this.map);
 
     syncBarracksPointsFromBuildings(this.map);
     ensureMapTilesets(this.map);
@@ -698,6 +729,7 @@ export class MapEditor {
   exportJson() {
     ensureMapTilesets(this.map);
     ensureMapOverrideGrids(this.map);
+    ensureMapLayerTiles(this.map);
     ensurePathMaskGrid(this.map);
     const payload = this._buildSerializableMapPayload();
 
@@ -712,6 +744,7 @@ export class MapEditor {
 
   _buildSerializableMapPayload() {
     ensurePathMaskGrid(this.map);
+    ensureMapLayerTiles(this.map);
     return {
       id: this.map.id,
       version: MAP_JSON_VERSION,
@@ -729,9 +762,8 @@ export class MapEditor {
       elevation: this.map.elevation.map((row) => [...row]),
       stairs: this.map.stairs.map((row) => [...row]),
       buildings: this.map.buildings.map((row) => [...row]),
-      tileOverrides: this.map.tileOverrides.map((row) => row.map((cell) => normalizeTerrainTileOverride(cell))),
-      decorations: this.map.decorations.map((row) =>
-        row.map((cell) => (cell && typeof cell === "object" ? { sheet: cell.sheet, frame: cell.frame } : null)),
+      layerTiles: this.map.layerTiles.map((grid) =>
+        grid.map((row) => row.map((cell) => cloneLayerTile(normalizeLayerTile(cell)))),
       ),
       pathMask: this.map.pathMask.map((row) => [...row]),
     };
@@ -768,8 +800,18 @@ export class MapEditor {
       return true;
     }
 
-    this._isPainting = true;
-    this._applyPaintAt(cell.x, cell.y);
+    if (this.tool === "placeBuilding") {
+      this._isPainting = true;
+      this._applyPlaceBuildingAt(cell.x, cell.y);
+      return true;
+    }
+
+    if (this.tool === "brush" || this.tool === "paint") {
+      this._isPainting = true;
+      this._applyPaintAt(cell.x, cell.y);
+      return true;
+    }
+
     return true;
   }
 
@@ -788,7 +830,14 @@ export class MapEditor {
       }
       return true;
     }
-    if (!this._isPainting || this.tool !== "paint") {
+    if (this._isPainting && this.tool === "placeBuilding" && pointer.leftButtonDown()) {
+      const cell = this.scene.pointerToCell(pointer);
+      if (cell) {
+        this._applyPlaceBuildingAt(cell.x, cell.y);
+      }
+      return true;
+    }
+    if (!this._isPainting || (this.tool !== "brush" && this.tool !== "paint")) {
       return false;
     }
     if (!pointer.leftButtonDown()) {
@@ -815,25 +864,31 @@ export class MapEditor {
   }
 
   _applyPaintAt(x, y) {
-    ensureMapOverrideGrids(this.map);
-    if (this.paintKind === "stairs") {
-      if (this.map.elevation[y][x] < 1) {
-        return;
-      }
-      this.map.stairs[y][x] = this.map.stairs[y][x] === 1 ? 0 : 1;
-    } else {
-      if (this.map.buildings[y][x] != null) {
-        return;
-      }
-      this.map.elevation[y][x] = this.paintElevation;
-      if (this.map.elevation[y][x] === 0) {
-        this.map.stairs[y][x] = 0;
-      }
-      this.map.tileOverrides[y][x] = null;
-      this.map.decorations[y][x] = null;
+    if (this.editorMode !== "map" || this.map.buildings[y][x] != null) {
+      return;
     }
 
+    const tile = this.brushEraser ? null : { sheet: this.pickerSheet, frame: this.pickerFrame };
+    this._setLayerTileAt(x, y, tile);
     this.scene.redrawTerrain();
+    this._markDirty();
+  }
+
+  _applyPlaceBuildingAt(x, y) {
+    const type = this.placeBuildingType;
+    if (!type || typeof type !== "string") {
+      return;
+    }
+    if (this.map.elevation[y][x] < 1 || this.map.stairs[y][x] === 1) {
+      return;
+    }
+    if (this.map.buildings[y][x] != null && this.map.buildings[y][x] !== type) {
+      return;
+    }
+    this.map.buildings[y][x] = type;
+    syncBarracksPointsFromBuildings(this.map);
+    this.scene.redrawTerrain();
+    this.scene.syncEnemyBarracksTargets();
     this._markDirty();
   }
 

@@ -1,6 +1,5 @@
-import { deriveLayers } from "../maps/elevation";
-import { TILESET_PRESETS, frameIndexToSheetPixels, getHighGroundFrameIndex, getShoreFrameIndex } from "../maps/tileRules";
-import { DEFAULT_TERRAIN_SHEET, SHEEP_IDLE_SHEET_KEY, TERRAIN_TILE_SHEETS } from "../maps/tileOverrideSchema";
+import { frameIndexToSheetPixels } from "../maps/tileRules";
+import { DEFAULT_TERRAIN_SHEET, MAP_TILE_LAYER_COUNT, TERRAIN_TILE_SHEETS } from "../maps/tileOverrideSchema";
 
 const TINY_SWORDS_ROOT = "/TinySwords";
 const TINY_SWORDS_TILESET_BASE = `${TINY_SWORDS_ROOT}/Terrain/Tileset`;
@@ -14,17 +13,6 @@ const TERRAIN_SHEET_URLS = {
   terrainColor6: `${TINY_SWORDS_TILESET_BASE}/Tilemap_color6.png`,
 };
 
-/** Editor canvas previews for decoration-only assets (same paths as `assets.js`). */
-const DECORATION_PREVIEW_URLS = {
-  [SHEEP_IDLE_SHEET_KEY]: `${TINY_SWORDS_ROOT}/Terrain/Resources/Meat/Sheep/Sheep_Idle.png`,
-  blueHouse2: `${TINY_SWORDS_ROOT}/Buildings/Blue Buildings/House2.png`,
-  redHouse2: `${TINY_SWORDS_ROOT}/Buildings/Red Buildings/House2.png`,
-};
-
-const SHEEP_STRIP_COLS = 6;
-const SHEEP_FRAME_SIZE = 128;
-
-const PREVIEW_SIZE = 44;
 const TILE = 64;
 const TILEMAP_COLS = 9;
 const TILEMAP_ROWS = 6;
@@ -43,10 +31,6 @@ export class EditorPanel {
     this.root = null;
     /** @type {HTMLButtonElement[]} */
     this.toolButtons = [];
-    /** @type {Record<string, HTMLButtonElement>} */
-    this.shorePresetEls = {};
-    /** @type {Record<string, HTMLButtonElement>} */
-    this.plateauPresetEls = {};
     /** @type {HTMLParagraphElement | null} */
     this.statusEl = null;
     /** @type {HTMLButtonElement | null} */
@@ -58,10 +42,6 @@ export class EditorPanel {
     /** @type {HTMLCanvasElement | null} */
     this._terrainThumb = null;
     /** @type {HTMLCanvasElement | null} */
-    this._decThumb = null;
-    /** @type {HTMLInputElement[]} */
-    this._roleRadios = [];
-    /** @type {HTMLCanvasElement | null} */
     this.tilePickerCanvas = null;
     /** @type {HTMLHeadingElement | null} */
     this._pickerHeadingEl = null;
@@ -69,10 +49,18 @@ export class EditorPanel {
     this._tilePickerHintEl = null;
     /** @type {HTMLButtonElement[]} */
     this._sheetButtons = [];
-    /** @type {HTMLButtonElement | null} */
-    this._sheepDecorationBtn = null;
     /** @type {HTMLInputElement | null} */
     this._pathEraseCheckbox = null;
+    /** @type {HTMLInputElement | null} */
+    this._brushEraserCheckbox = null;
+    /** @type {HTMLElement | null} */
+    this._mapPanelEl = null;
+    /** @type {HTMLElement | null} */
+    this._objectsPanelEl = null;
+    /** @type {HTMLButtonElement[]} */
+    this._layerButtons = [];
+    /** @type {HTMLButtonElement[]} */
+    this._placeBuildingButtons = [];
     /** @type {{ col: number, row: number } | null} */
     this._pickerHover = null;
     /** @type {Map<string, HTMLImageElement>} */
@@ -110,35 +98,208 @@ export class EditorPanel {
     const hint = document.createElement("p");
     hint.className = "editor-panel__hint";
     hint.textContent =
-      "Press E to close · 1–3 terrain, 4 stairs, 5 move, 6 select, 7 path mask · G = route preview · Ctrl+S save";
+      "E close · Map: layer + asset, drag to paint · Objects: buildings & path · Ctrl+S save";
 
-    const toolsSec = document.createElement("section");
-    toolsSec.className = "editor-panel__section";
-    const toolsLabel = document.createElement("h3");
-    toolsLabel.textContent = "Tools";
-    toolsSec.appendChild(toolsLabel);
+    const tabRow = document.createElement("div");
+    tabRow.className = "editor-panel__tabs";
+    const mapTabBtn = document.createElement("button");
+    mapTabBtn.type = "button";
+    mapTabBtn.className = "editor-panel__tab editor-panel__tab--active";
+    mapTabBtn.textContent = "Map";
+    const objectsTabBtn = document.createElement("button");
+    objectsTabBtn.type = "button";
+    objectsTabBtn.className = "editor-panel__tab";
+    objectsTabBtn.textContent = "Objects";
+    tabRow.appendChild(mapTabBtn);
+    tabRow.appendChild(objectsTabBtn);
 
-    const toolGrid = document.createElement("div");
-    toolGrid.className = "editor-panel__tool-grid editor-panel__tool-grid--seven";
+    this._mapPanelEl = document.createElement("div");
+    this._mapPanelEl.className = "editor-panel__tab-panel";
+    this._objectsPanelEl = document.createElement("div");
+    this._objectsPanelEl.className = "editor-panel__tab-panel";
+    this._objectsPanelEl.hidden = true;
 
-    const mkTool = (label, onClick) => {
+    const switchTab = (mode) => {
+      const isMap = mode === "map";
+      mapTabBtn.classList.toggle("editor-panel__tab--active", isMap);
+      objectsTabBtn.classList.toggle("editor-panel__tab--active", !isMap);
+      this._mapPanelEl.hidden = !isMap;
+      this._objectsPanelEl.hidden = isMap;
+      this.editor.setEditorMode(isMap ? "map" : "objects");
+    };
+    mapTabBtn.addEventListener("click", () => switchTab("map"));
+    objectsTabBtn.addEventListener("click", () => switchTab("objects"));
+
+    const layerSec = document.createElement("section");
+    layerSec.className = "editor-panel__section";
+    const layerH = document.createElement("h3");
+    layerH.textContent = "Layer";
+    layerSec.appendChild(layerH);
+    const layerRow = document.createElement("div");
+    layerRow.className = "editor-panel__btn-row";
+    const mkLayer = (label, layer) => {
       const b = document.createElement("button");
       b.type = "button";
-      b.className = "editor-panel__btn editor-tool-btn";
+      b.className = "editor-panel__btn editor-panel__btn--small editor-layer-btn";
       b.textContent = label;
-      b.addEventListener("click", onClick);
-      toolGrid.appendChild(b);
-      this.toolButtons.push(b);
-      return b;
+      b.dataset.layer = layer;
+      b.addEventListener("click", () => this.editor.setActiveLayer(layer));
+      layerRow.appendChild(b);
+      this._layerButtons.push(b);
     };
+    const layerLabels = ["Water", "Ground 1", "Ground 2", "Ground 3"];
+    for (let layer = 0; layer < MAP_TILE_LAYER_COUNT; layer += 1) {
+      mkLayer(`Layer ${layer} - ${layerLabels[layer]}`, layer);
+    }
+    layerSec.appendChild(layerRow);
 
-    mkTool("Water", () => this.editor.setElevationBrush(0));
-    mkTool("Grass", () => this.editor.setElevationBrush(1));
-    mkTool("High ground", () => this.editor.setElevationBrush(2));
-    mkTool("Stairs", () => this.editor.setStairsBrush());
-    mkTool("Move building", () => this.editor.setMoveBuildingTool());
-    mkTool("Select cell", () => this.editor.setSelectTool());
-    mkTool("Path mask", () => this.editor.setPathMaskBrush());
+    const brushEraseLabel = document.createElement("label");
+    brushEraseLabel.className = "role-radio";
+    brushEraseLabel.style.cssText = "width:100%;margin-top:6px;";
+    this._brushEraserCheckbox = document.createElement("input");
+    this._brushEraserCheckbox.type = "checkbox";
+    this._brushEraserCheckbox.addEventListener("change", () => {
+      this.editor.setBrushEraser(Boolean(this._brushEraserCheckbox?.checked));
+    });
+    brushEraseLabel.appendChild(this._brushEraserCheckbox);
+    brushEraseLabel.appendChild(document.createTextNode(" Eraser (active layer)"));
+    layerSec.appendChild(brushEraseLabel);
+
+    const pickerSec = document.createElement("section");
+    pickerSec.className = "editor-panel__section";
+    const sheetLabel = document.createElement("h3");
+    sheetLabel.textContent = "Asset picker";
+    pickerSec.appendChild(sheetLabel);
+    const sheetRow = document.createElement("div");
+    sheetRow.className = "editor-panel__btn-row editor-panel__sheet-row";
+    for (let i = 0; i < TERRAIN_TILE_SHEETS.length; i += 1) {
+      const key = TERRAIN_TILE_SHEETS[i];
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "editor-panel__btn editor-panel__btn--small";
+      b.textContent = `C${i + 1}`;
+      b.dataset.sheetKey = key;
+      b.addEventListener("click", () => this.editor.setPickerSheet(key));
+      sheetRow.appendChild(b);
+      this._sheetButtons.push(b);
+    }
+    pickerSec.appendChild(sheetRow);
+
+    this._pickerHeadingEl = document.createElement("h3");
+    this._pickerHeadingEl.className = "editor-panel__picker-title";
+    this._pickerHeadingEl.textContent = "Tile picker";
+    pickerSec.appendChild(this._pickerHeadingEl);
+    this._tilePickerHintEl = document.createElement("p");
+    this._tilePickerHintEl.className = "editor-panel__picker-hint editor-panel__tile-picker-hint";
+    this._tilePickerHintEl.textContent = "Pick a tile, choose a layer, then drag on the map.";
+    pickerSec.appendChild(this._tilePickerHintEl);
+    this.tilePickerCanvas = document.createElement("canvas");
+    this.tilePickerCanvas.className = "tile-picker-canvas";
+    const pw = 270;
+    const ph = Math.round((pw * 384) / 576);
+    this.tilePickerCanvas.width = pw;
+    this.tilePickerCanvas.height = ph;
+    pickerSec.appendChild(this.tilePickerCanvas);
+    this._pickerMove = (ev) => this._onTilePickerMouse(ev, "move");
+    this._pickerLeave = () => this._onTilePickerLeave();
+    this._pickerClick = (ev) => this._onTilePickerMouse(ev, "click");
+    this.tilePickerCanvas.addEventListener("mousemove", this._pickerMove);
+    this.tilePickerCanvas.addEventListener("mouseleave", this._pickerLeave);
+    this.tilePickerCanvas.addEventListener("click", this._pickerClick);
+
+    const advSec = document.createElement("section");
+    advSec.className = "editor-panel__section";
+    const advH = document.createElement("h3");
+    advH.textContent = "Bulk (optional)";
+    advSec.appendChild(advH);
+    this._cellHeadingEl = document.createElement("p");
+    this._cellHeadingEl.className = "editor-panel__cell-coord";
+    this._cellHeadingEl.textContent = "No cell selected";
+    advSec.appendChild(this._cellHeadingEl);
+    const advToolRow = document.createElement("div");
+    advToolRow.className = "editor-panel__btn-row";
+    const selectBtn = document.createElement("button");
+    selectBtn.type = "button";
+    selectBtn.className = "editor-panel__btn editor-panel__btn--small";
+    selectBtn.textContent = "Select cells";
+    selectBtn.addEventListener("click", () => this.editor.setSelectTool());
+    advToolRow.appendChild(selectBtn);
+    const clrT = document.createElement("button");
+    clrT.type = "button";
+    clrT.className = "editor-panel__btn editor-panel__btn--small";
+    clrT.textContent = "Clear layer";
+    clrT.addEventListener("click", () => this.editor.clearActiveLayer());
+    advToolRow.appendChild(clrT);
+    advSec.appendChild(advToolRow);
+    const thumbRow = document.createElement("div");
+    thumbRow.className = "thumb-row";
+    const mkThumbBlock = (caption) => {
+      const wrap = document.createElement("div");
+      wrap.className = "thumb-block";
+      const cap = document.createElement("span");
+      cap.className = "thumb-block__cap";
+      cap.textContent = caption;
+      const c = document.createElement("canvas");
+      c.width = THUMB;
+      c.height = THUMB;
+      c.className = "thumb-canvas";
+      wrap.appendChild(cap);
+      wrap.appendChild(c);
+      thumbRow.appendChild(wrap);
+      return c;
+    };
+    this._terrainThumb = mkThumbBlock("Active layer");
+    advSec.appendChild(thumbRow);
+
+    this._mapPanelEl.appendChild(layerSec);
+    this._mapPanelEl.appendChild(pickerSec);
+    this._mapPanelEl.appendChild(advSec);
+
+    const objToolsSec = document.createElement("section");
+    objToolsSec.className = "editor-panel__section";
+    const objH = document.createElement("h3");
+    objH.textContent = "Place building";
+    objToolsSec.appendChild(objH);
+    const placeRow = document.createElement("div");
+    placeRow.className = "editor-panel__btn-row";
+    const mkPlace = (label, type) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "editor-panel__btn editor-panel__btn--small editor-place-btn";
+      b.textContent = label;
+      b.dataset.buildingType = type;
+      b.addEventListener("click", () => this.editor.setPlaceBuildingType(type));
+      placeRow.appendChild(b);
+      this._placeBuildingButtons.push(b);
+    };
+    mkPlace("Blue barracks", "barracks_blue");
+    mkPlace("Red barracks", "barracks_red");
+    objToolsSec.appendChild(placeRow);
+    const objHint = document.createElement("p");
+    objHint.className = "editor-panel__picker-hint";
+    objHint.textContent = "Select a building, then drag on land cells to stamp.";
+    objToolsSec.appendChild(objHint);
+
+    const objToolSec = document.createElement("section");
+    objToolSec.className = "editor-panel__section";
+    const objToolH = document.createElement("h3");
+    objToolH.textContent = "Tools";
+    objToolSec.appendChild(objToolH);
+    const objToolRow = document.createElement("div");
+    objToolRow.className = "editor-panel__btn-row";
+    const moveBtn = document.createElement("button");
+    moveBtn.type = "button";
+    moveBtn.className = "editor-panel__btn editor-panel__btn--small editor-tool-btn";
+    moveBtn.textContent = "Move building";
+    moveBtn.addEventListener("click", () => this.editor.setMoveBuildingTool());
+    objToolRow.appendChild(moveBtn);
+    const pathBtn = document.createElement("button");
+    pathBtn.type = "button";
+    pathBtn.className = "editor-panel__btn editor-panel__btn--small editor-tool-btn";
+    pathBtn.textContent = "Path mask";
+    pathBtn.addEventListener("click", () => this.editor.setPathMaskBrush());
+    objToolRow.appendChild(pathBtn);
+    objToolSec.appendChild(objToolRow);
 
     const pathSec = document.createElement("div");
     pathSec.className = "editor-panel__btn-row";
@@ -163,165 +324,16 @@ export class EditorPanel {
       this.editor.setPathMaskErase(Boolean(this._pathEraseCheckbox?.checked));
     });
     eraseLabel.appendChild(this._pathEraseCheckbox);
-    eraseLabel.appendChild(document.createTextNode(" Path brush eraser (or Shift)"));
-    toolsSec.appendChild(toolGrid);
-    toolsSec.appendChild(pathSec);
+    eraseLabel.appendChild(document.createTextNode(" Path eraser (or Shift)"));
+    objToolSec.appendChild(pathSec);
+    objToolSec.appendChild(eraseLabel);
     const pathHint = document.createElement("p");
     pathHint.className = "editor-panel__picker-hint";
-    pathHint.style.marginTop = "6px";
-    pathHint.textContent =
-      "Paint allowed route cells. Enemies BFS on marked cells. Connect red barracks to blue. Shift-drag erases.";
-    toolsSec.appendChild(eraseLabel);
-    toolsSec.appendChild(pathHint);
+    pathHint.textContent = "Paint enemy route cells connecting barracks.";
+    objToolSec.appendChild(pathHint);
 
-    const shoreSec = this._makePresetSection("Shore (grass / water)", "shore", TILESET_PRESETS.shore, (key) =>
-      this.editor.setTilesetPreset("shore", key),
-    );
-    const plateauSec = this._makePresetSection("High ground (plateau)", "plateau", TILESET_PRESETS.plateau, (key) =>
-      this.editor.setTilesetPreset("plateau", key),
-    );
-
-    const cellSec = document.createElement("section");
-    cellSec.className = "editor-panel__section";
-    const cellH = document.createElement("h3");
-    cellH.textContent = "Selected cell";
-    cellSec.appendChild(cellH);
-    this._cellHeadingEl = document.createElement("p");
-    this._cellHeadingEl.className = "editor-panel__cell-coord";
-    this._cellHeadingEl.textContent = "No cell selected";
-    cellSec.appendChild(this._cellHeadingEl);
-
-    const roleRow = document.createElement("div");
-    roleRow.className = "role-radio-row";
-    const mkRadio = (label, value, checked) => {
-      const lab = document.createElement("label");
-      lab.className = "role-radio";
-      const inp = document.createElement("input");
-      inp.type = "radio";
-      inp.name = "picker-role";
-      inp.value = value;
-      inp.checked = checked;
-      inp.addEventListener("change", () => {
-        if (inp.checked) {
-          this.editor.setPickerRole(/** @type {"terrain"|"decoration"} */ (value));
-        }
-      });
-      this._roleRadios.push(inp);
-      lab.appendChild(inp);
-      lab.appendChild(document.createTextNode(` ${label}`));
-      roleRow.appendChild(lab);
-    };
-    mkRadio("Terrain override", "terrain", true);
-    mkRadio("Decoration", "decoration", false);
-    cellSec.appendChild(roleRow);
-
-    const thumbRow = document.createElement("div");
-    thumbRow.className = "thumb-row";
-    const mkThumbBlock = (caption) => {
-      const wrap = document.createElement("div");
-      wrap.className = "thumb-block";
-      const cap = document.createElement("span");
-      cap.className = "thumb-block__cap";
-      cap.textContent = caption;
-      const c = document.createElement("canvas");
-      c.width = THUMB;
-      c.height = THUMB;
-      c.className = "thumb-canvas";
-      wrap.appendChild(cap);
-      wrap.appendChild(c);
-      thumbRow.appendChild(wrap);
-      return c;
-    };
-    this._terrainThumb = mkThumbBlock("Terrain");
-    this._decThumb = mkThumbBlock("Decoration");
-
-    const clearRow = document.createElement("div");
-    clearRow.className = "editor-panel__btn-row";
-    const clrT = document.createElement("button");
-    clrT.type = "button";
-    clrT.className = "editor-panel__btn editor-panel__btn--small";
-    clrT.textContent = "Clear terrain";
-    clrT.addEventListener("click", () => this.editor.clearTerrainOverride());
-    const clrD = document.createElement("button");
-    clrD.type = "button";
-    clrD.className = "editor-panel__btn editor-panel__btn--small";
-    clrD.textContent = "Clear decoration";
-    clrD.addEventListener("click", () => this.editor.clearDecoration());
-    clearRow.appendChild(clrT);
-    clearRow.appendChild(clrD);
-    cellSec.appendChild(thumbRow);
-    cellSec.appendChild(clearRow);
-
-    const pickerSec = document.createElement("section");
-    pickerSec.className = "editor-panel__section";
-
-    const sheetLabel = document.createElement("h3");
-    sheetLabel.textContent = "Terrain tilemap";
-    pickerSec.appendChild(sheetLabel);
-    const sheetRow = document.createElement("div");
-    sheetRow.className = "editor-panel__btn-row editor-panel__sheet-row";
-    for (let i = 0; i < TERRAIN_TILE_SHEETS.length; i += 1) {
-      const key = TERRAIN_TILE_SHEETS[i];
-      const b = document.createElement("button");
-      b.type = "button";
-      b.className = "editor-panel__btn editor-panel__btn--small";
-      b.textContent = `Color ${i + 1}`;
-      b.dataset.sheetKey = key;
-      b.addEventListener("click", () => this.editor.setPickerSheet(key));
-      sheetRow.appendChild(b);
-      this._sheetButtons.push(b);
-    }
-    pickerSec.appendChild(sheetRow);
-
-    const decPresetLabel = document.createElement("h3");
-    decPresetLabel.textContent = "Decoration presets";
-    decPresetLabel.style.marginTop = "10px";
-    pickerSec.appendChild(decPresetLabel);
-    const decPresetRow = document.createElement("div");
-    decPresetRow.className = "editor-panel__btn-row";
-    const mkDecBtn = (label, onClick) => {
-      const b = document.createElement("button");
-      b.type = "button";
-      b.className = "editor-panel__btn editor-panel__btn--small";
-      b.textContent = label;
-      b.addEventListener("click", onClick);
-      decPresetRow.appendChild(b);
-      return b;
-    };
-    this._sheepDecorationBtn = mkDecBtn("Sheep idle", () => this.editor.setSheepDecorationPicker());
-    mkDecBtn("Blue House2", () => this.editor.applyHouseDecoration("blueHouse2"));
-    mkDecBtn("Red House2", () => this.editor.applyHouseDecoration("redHouse2"));
-    pickerSec.appendChild(decPresetRow);
-    const decPresetHint = document.createElement("p");
-    decPresetHint.className = "editor-panel__picker-hint";
-    decPresetHint.style.marginTop = "4px";
-    decPresetHint.textContent =
-      "Sheep: switches to Decoration + 6-frame strip below. Houses apply in one click to selected cells.";
-    pickerSec.appendChild(decPresetHint);
-
-    this._pickerHeadingEl = document.createElement("h3");
-    this._pickerHeadingEl.className = "editor-panel__picker-title";
-    this._pickerHeadingEl.textContent = "Tile picker";
-    pickerSec.appendChild(this._pickerHeadingEl);
-    this._tilePickerHintEl = document.createElement("p");
-    this._tilePickerHintEl.className = "editor-panel__picker-hint editor-panel__tile-picker-hint";
-    this._tilePickerHintEl.textContent = "Select a cell first, choose role above, then click a tile.";
-    pickerSec.appendChild(this._tilePickerHintEl);
-    this.tilePickerCanvas = document.createElement("canvas");
-    this.tilePickerCanvas.className = "tile-picker-canvas";
-    const pw = 270;
-    const ph = Math.round((pw * 384) / 576);
-    this.tilePickerCanvas.width = pw;
-    this.tilePickerCanvas.height = ph;
-    pickerSec.appendChild(this.tilePickerCanvas);
-
-    this._pickerMove = (ev) => this._onTilePickerMouse(ev, "move");
-    this._pickerLeave = () => this._onTilePickerLeave();
-    this._pickerClick = (ev) => this._onTilePickerMouse(ev, "click");
-    this.tilePickerCanvas.addEventListener("mousemove", this._pickerMove);
-    this.tilePickerCanvas.addEventListener("mouseleave", this._pickerLeave);
-    this.tilePickerCanvas.addEventListener("click", this._pickerClick);
-
+    this._objectsPanelEl.appendChild(objToolsSec);
+    this._objectsPanelEl.appendChild(objToolSec);
     const fileSec = document.createElement("section");
     fileSec.className = "editor-panel__section";
     const fileLabel = document.createElement("h3");
@@ -374,11 +386,9 @@ export class EditorPanel {
 
     mount.appendChild(title);
     mount.appendChild(hint);
-    mount.appendChild(toolsSec);
-    mount.appendChild(shoreSec);
-    mount.appendChild(plateauSec);
-    mount.appendChild(cellSec);
-    mount.appendChild(pickerSec);
+    mount.appendChild(tabRow);
+    mount.appendChild(this._mapPanelEl);
+    mount.appendChild(this._objectsPanelEl);
     mount.appendChild(fileSec);
     mount.appendChild(this.statusEl);
 
@@ -394,7 +404,8 @@ export class EditorPanel {
       return;
     }
     const hasSel = this.editor.getSelectedCount() > 0;
-    if (!hasSel) {
+    const brushMode = this.editor.editorMode === "map";
+    if (!hasSel && !brushMode) {
       this._pickerHover = null;
       this._redrawTilePicker();
       return;
@@ -404,19 +415,6 @@ export class EditorPanel {
     const my = ev.clientY - rect.top;
     const cw = this.tilePickerCanvas.width;
     const ch = this.tilePickerCanvas.height;
-    const e = this.editor;
-    const sheepMode = e.pickerRole === "decoration" && e.pickerSheet === SHEEP_IDLE_SHEET_KEY;
-    if (sheepMode) {
-      const cellW = cw / SHEEP_STRIP_COLS;
-      const col = Math.max(0, Math.min(SHEEP_STRIP_COLS - 1, Math.floor(mx / cellW)));
-      if (kind === "move") {
-        this._pickerHover = { col, row: 0 };
-        this._redrawTilePicker();
-      } else {
-        this.editor.applyPickedTileFrame(col);
-      }
-      return;
-    }
     const cellW = cw / TILEMAP_COLS;
     const cellH = ch / TILEMAP_ROWS;
     const col = Math.max(0, Math.min(TILEMAP_COLS - 1, Math.floor(mx / cellW)));
@@ -453,26 +451,18 @@ export class EditorPanel {
       return;
     }
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    const disabled = this.editor.getSelectedCount() === 0;
-    const e = this.editor;
-    const sheepMode = e.pickerRole === "decoration" && e.pickerSheet === SHEEP_IDLE_SHEET_KEY;
-    const img = sheepMode ? this._tileImages.get(SHEEP_IDLE_SHEET_KEY) : this._getPickerImage();
+    const disabled = this.editor.getSelectedCount() === 0 && this.editor.editorMode !== "map";
+    const img = this._getPickerImage();
     if (img) {
       ctx.globalAlpha = disabled ? 0.35 : 1;
-      if (sheepMode) {
-        const sw = SHEEP_STRIP_COLS * SHEEP_FRAME_SIZE;
-        const sh = SHEEP_FRAME_SIZE;
-        ctx.drawImage(img, 0, 0, sw, sh, 0, 0, canvas.width, canvas.height);
-      } else {
-        ctx.drawImage(img, 0, 0, 576, 384, 0, 0, canvas.width, canvas.height);
-      }
+      ctx.drawImage(img, 0, 0, 576, 384, 0, 0, canvas.width, canvas.height);
       ctx.globalAlpha = 1;
     } else {
       ctx.fillStyle = "#2a3548";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
-    const cellW = sheepMode ? canvas.width / SHEEP_STRIP_COLS : canvas.width / TILEMAP_COLS;
-    const cellH = sheepMode ? canvas.height : canvas.height / TILEMAP_ROWS;
+    const cellW = canvas.width / TILEMAP_COLS;
+    const cellH = canvas.height / TILEMAP_ROWS;
     if (this._pickerHover && !disabled) {
       ctx.strokeStyle = "#5cb3ff";
       ctx.lineWidth = 2;
@@ -482,89 +472,25 @@ export class EditorPanel {
     if (sel && !disabled) {
       const map = this.editor.map;
       let highlightFrame = null;
-      if (this.editor.pickerRole === "terrain") {
-        const v = map.tileOverrides[sel.y][sel.x];
-        if (v != null && typeof v === "object" && v.sheet === this.editor.pickerSheet && typeof v.frame === "number") {
-          highlightFrame = v.frame;
-        }
-      } else {
-        const d = map.decorations[sel.y][sel.x];
-        if (d && d.sheet === this.editor.pickerSheet && typeof d.frame === "number") {
-          highlightFrame = d.frame;
-        }
+      const v = map.layerTiles?.[this.editor.activeLayer]?.[sel.y]?.[sel.x];
+      if (v != null && typeof v === "object" && v.sheet === this.editor.pickerSheet && typeof v.frame === "number") {
+        highlightFrame = v.frame;
       }
       if (highlightFrame != null) {
         ctx.strokeStyle = "#f5d742";
         ctx.lineWidth = 2;
-        if (sheepMode) {
-          const c = Math.max(0, Math.min(SHEEP_STRIP_COLS - 1, highlightFrame));
-          ctx.strokeRect(c * cellW + 1, 1, cellW - 2, cellH - 2);
-        } else {
-          const c = highlightFrame % TILEMAP_COLS;
-          const r = Math.floor(highlightFrame / TILEMAP_COLS);
-          ctx.strokeRect(c * cellW + 1, r * cellH + 1, cellW - 2, cellH - 2);
-        }
+        const c = highlightFrame % TILEMAP_COLS;
+        const r = Math.floor(highlightFrame / TILEMAP_COLS);
+        ctx.strokeRect(c * cellW + 1, r * cellH + 1, cellW - 2, cellH - 2);
       }
     }
-  }
-
-  /**
-   * @param {string} heading
-   * @param {"shore" | "plateau"} layer
-   * @param {Record<string, { byMask: Record<number, number>, fallback: number }>} presets
-   * @param {(key: string) => void} onPick
-   */
-  _makePresetSection(heading, layer, presets, onPick) {
-    const sec = document.createElement("section");
-    sec.className = "editor-panel__section";
-    const h = document.createElement("h3");
-    h.textContent = heading;
-    sec.appendChild(h);
-
-    const row = document.createElement("div");
-    row.className = "editor-panel__preset-row";
-
-    for (const key of Object.keys(presets)) {
-      const card = document.createElement("button");
-      card.type = "button";
-      card.className = "preset-card";
-      card.dataset.presetKey = key;
-      card.dataset.layer = layer;
-
-      const label = document.createElement("span");
-      label.className = "preset-card__label";
-      label.textContent = key === "default" ? "Default" : key === "rocks" ? "Rocks" : key === "mirrorShore" ? "Mirror shore" : key;
-
-      const canvas = document.createElement("canvas");
-      canvas.width = PREVIEW_SIZE * 3 + 8;
-      canvas.height = PREVIEW_SIZE + 4;
-      canvas.className = "preset-card__canvas";
-      canvas.dataset.previewLayer = layer;
-      canvas.dataset.previewKey = key;
-
-      card.appendChild(canvas);
-      card.appendChild(label);
-      card.addEventListener("click", () => onPick(key));
-
-      row.appendChild(card);
-      if (layer === "shore") {
-        this.shorePresetEls[key] = card;
-      } else {
-        this.plateauPresetEls[key] = card;
-      }
-    }
-
-    sec.appendChild(row);
-    return sec;
   }
 
   _loadTilemapImages() {
-    const extraKeys = Object.keys(DECORATION_PREVIEW_URLS);
-    let remaining = TERRAIN_TILE_SHEETS.length + extraKeys.length;
+    let remaining = TERRAIN_TILE_SHEETS.length;
     const onOneDone = () => {
       remaining -= 1;
       if (remaining <= 0) {
-        this._drawAllPresetPreviews();
         this._redrawThumbs();
         this._redrawTilePicker();
         this.refresh();
@@ -588,69 +514,6 @@ export class EditorPanel {
       };
       img.src = src;
     }
-
-    for (const key of extraKeys) {
-      const src = DECORATION_PREVIEW_URLS[key];
-      if (!src) {
-        onOneDone();
-        continue;
-      }
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.onload = () => {
-        this._tileImages.set(key, img);
-        onOneDone();
-      };
-      img.onerror = () => {
-        onOneDone();
-      };
-      img.src = src;
-    }
-  }
-
-  _drawAllPresetPreviews() {
-    const color1 = this._getColor1Image();
-    if (!this.root || !color1) {
-      return;
-    }
-    const canvases = this.root.querySelectorAll("canvas[data-preview-layer]");
-    canvases.forEach((canvas) => {
-      const layer = /** @type {HTMLElement} */ (canvas).dataset.previewLayer;
-      const key = /** @type {HTMLElement} */ (canvas).dataset.previewKey;
-      if (!layer || !key) {
-        return;
-      }
-      const bucket = TILESET_PRESETS[/** @type {"shore"|"plateau"} */ (layer)];
-      const preset = bucket?.[key];
-      if (!preset) {
-        return;
-      }
-      const f1 = preset.byMask[6] ?? preset.fallback;
-      const f2 = preset.byMask[15] ?? preset.fallback;
-      const f3 = preset.byMask[9] ?? preset.fallback;
-      this._drawThreeTiles(/** @type {HTMLCanvasElement} */ (canvas), color1, f1, f2, f3);
-    });
-  }
-
-  /**
-   * @param {HTMLCanvasElement} canvas
-   * @param {HTMLImageElement} sheetImage
-   * @param {number} a
-   * @param {number} b
-   * @param {number} c
-   */
-  _drawThreeTiles(canvas, sheetImage, a, b, c) {
-    const ctx = canvas.getContext("2d");
-    if (!ctx || !sheetImage) {
-      return;
-    }
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    const frames = [a, b, c];
-    for (let i = 0; i < 3; i += 1) {
-      const { sx, sy } = frameIndexToSheetPixels(frames[i]);
-      const dx = i * (PREVIEW_SIZE + 2);
-      ctx.drawImage(sheetImage, sx, sy, TILE, TILE, dx, 0, PREVIEW_SIZE, PREVIEW_SIZE);
-    }
   }
 
   /**
@@ -670,16 +533,6 @@ export class EditorPanel {
     if (!img || !Number.isFinite(frame)) {
       return;
     }
-    if (sheetKey === SHEEP_IDLE_SHEET_KEY) {
-      const fi = Math.max(0, Math.min(SHEEP_STRIP_COLS - 1, Math.floor(frame)));
-      const sx = fi * SHEEP_FRAME_SIZE;
-      ctx.drawImage(img, sx, 0, SHEEP_FRAME_SIZE, SHEEP_FRAME_SIZE, 0, 0, THUMB, THUMB);
-      return;
-    }
-    if (sheetKey === "blueHouse2" || sheetKey === "redHouse2") {
-      ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, THUMB, THUMB);
-      return;
-    }
     const { sx, sy } = frameIndexToSheetPixels(frame);
     ctx.drawImage(img, sx, sy, TILE, TILE, 0, 0, THUMB, THUMB);
   }
@@ -687,64 +540,32 @@ export class EditorPanel {
   _redrawThumbs() {
     const sel = this.editor.selectedCell;
     const map = this.editor.map;
-    if (!this._terrainThumb || !this._decThumb || !this._cellHeadingEl) {
+    if (!this._terrainThumb || !this._cellHeadingEl) {
       return;
     }
     if (sel == null) {
       this._cellHeadingEl.textContent = "No cells selected";
       const tctx = this._terrainThumb.getContext("2d");
-      const dctx = this._decThumb.getContext("2d");
       tctx?.clearRect(0, 0, THUMB, THUMB);
-      dctx?.clearRect(0, 0, THUMB, THUMB);
       if (tctx) {
         tctx.fillStyle = "#0d1118";
         tctx.fillRect(0, 0, THUMB, THUMB);
-      }
-      if (dctx) {
-        dctx.fillStyle = "#0d1118";
-        dctx.fillRect(0, 0, THUMB, THUMB);
       }
       return;
     }
     const count = this.editor.getSelectedCount();
     this._cellHeadingEl.textContent =
-      count > 1 ? `${count} cells selected · Primary (${sel.x}, ${sel.y})` : `Cell (${sel.x}, ${sel.y})`;
-    const elev = map.elevation[sel.y][sel.x];
-    const layers = deriveLayers(map.elevation);
-    const shoreKey = map.tilesets?.shore ?? "default";
-    const plateauKey = map.tilesets?.plateau ?? "rocks";
-    const ov = map.tileOverrides[sel.y][sel.x];
-    let terrainFrame = null;
-    if (elev < 1) {
-      const tctx = this._terrainThumb.getContext("2d");
-      if (tctx) {
-        tctx.fillStyle = "#0d1118";
-        tctx.fillRect(0, 0, THUMB, THUMB);
-      }
-    } else if (ov != null && typeof ov === "object" && typeof ov.sheet === "string" && typeof ov.frame === "number") {
-      this._drawThumbFrame(this._terrainThumb, ov.frame, ov.sheet);
-    } else if (elev >= 2 && layers.highGround[sel.y][sel.x] === 1) {
-      terrainFrame = getHighGroundFrameIndex(layers.highGround, sel.x, sel.y, map.width, map.height, plateauKey);
-      this._drawThumbFrame(this._terrainThumb, terrainFrame ?? 0, DEFAULT_TERRAIN_SHEET);
-    } else if (elev >= 1 && layers.islandMask[sel.y][sel.x] === 1) {
-      terrainFrame = getShoreFrameIndex(layers.islandMask, sel.x, sel.y, map.width, map.height, shoreKey);
-      this._drawThumbFrame(this._terrainThumb, terrainFrame ?? 0, DEFAULT_TERRAIN_SHEET);
+      count > 1
+        ? `${count} cells selected · Primary (${sel.x}, ${sel.y}) · Layer ${this.editor.activeLayer}`
+        : `Cell (${sel.x}, ${sel.y}) · Layer ${this.editor.activeLayer}`;
+    const tile = map.layerTiles?.[this.editor.activeLayer]?.[sel.y]?.[sel.x];
+    if (tile != null && typeof tile === "object" && typeof tile.sheet === "string" && typeof tile.frame === "number") {
+      this._drawThumbFrame(this._terrainThumb, tile.frame, tile.sheet);
     } else {
       const tctx = this._terrainThumb.getContext("2d");
       if (tctx) {
         tctx.fillStyle = "#0d1118";
         tctx.fillRect(0, 0, THUMB, THUMB);
-      }
-    }
-
-    const dec = map.decorations[sel.y][sel.x];
-    if (dec && typeof dec.frame === "number" && typeof dec.sheet === "string") {
-      this._drawThumbFrame(this._decThumb, dec.frame, dec.sheet);
-    } else {
-      const dctx = this._decThumb.getContext("2d");
-      if (dctx) {
-        dctx.fillStyle = "#0d1118";
-        dctx.fillRect(0, 0, THUMB, THUMB);
       }
     }
   }
@@ -764,10 +585,8 @@ export class EditorPanel {
     }
 
     const e = this.editor;
-    const paintLabel =
-      e.paintKind === "stairs"
-        ? "Stairs (click toggles)"
-        : `Elevation ${e.paintElevation} (${["water", "grass", "high"][e.paintElevation] ?? "?"})`;
+    const layerNames = ["water", "ground 1", "ground 2", "ground 3"];
+    const layerLabel = e.editorMode === "map" ? `Layer: ${e.activeLayer} (${layerNames[e.activeLayer] ?? "?"})` : "";
 
     let moveLine = "";
     if (e.tool === "moveBuilding") {
@@ -790,54 +609,54 @@ export class EditorPanel {
         : "Path mask: paint route cells (connect barracks)";
     }
 
+    let placeLine = "";
+    if (e.tool === "placeBuilding") {
+      placeLine = `Place: ${e.placeBuildingType} (drag on map)`;
+    }
+
     this.statusEl.textContent = [
+      `Mode: ${e.editorMode}`,
+      layerLabel,
       `Tool: ${e.tool}`,
-      paintLabel,
       moveLine,
       selLine,
       pathLine,
-      `Picker sheet: ${e.pickerSheet}`,
-      `Shore: ${e.map.tilesets?.shore}`,
-      `Plateau: ${e.map.tilesets?.plateau}`,
+      placeLine,
+      `Picker: ${e.pickerSheet} #${e.pickerFrame}`,
     ]
       .filter(Boolean)
       .join(" · ");
 
     if (this._pickerHeadingEl) {
-      if (e.pickerRole === "decoration" && e.pickerSheet === SHEEP_IDLE_SHEET_KEY) {
-        this._pickerHeadingEl.textContent = "Tile picker (Sheep idle · 6 frames)";
-      } else {
-        const idx = TERRAIN_TILE_SHEETS.indexOf(e.pickerSheet);
-        const n = idx >= 0 ? idx + 1 : 1;
-        this._pickerHeadingEl.textContent = `Tile picker (Tilemap color ${n})`;
-      }
+      const idx = TERRAIN_TILE_SHEETS.indexOf(e.pickerSheet);
+      const n = idx >= 0 ? idx + 1 : 1;
+      this._pickerHeadingEl.textContent = `Tile picker (Tilemap color ${n})`;
     }
 
     for (const b of this.toolButtons) {
       b.classList.remove("editor-tool-btn--active");
     }
-    let idx = 0;
-    if (e.tool === "pathMask") {
-      idx = 6;
-    } else if (e.tool === "select") {
-      idx = 5;
-    } else if (e.tool === "moveBuilding") {
-      idx = 4;
-    } else if (e.paintKind === "stairs") {
-      idx = 3;
-    } else if (e.paintElevation === 0) {
-      idx = 0;
-    } else if (e.paintElevation === 1) {
-      idx = 1;
-    } else {
-      idx = 2;
+    if (this.root && e.editorMode === "objects") {
+      const toolBtns = this.root.querySelectorAll(".editor-tool-btn");
+      for (const btn of toolBtns) {
+        const isMove = e.tool === "moveBuilding" && btn.textContent === "Move building";
+        const isPath = e.tool === "pathMask" && btn.textContent === "Path mask";
+        btn.classList.toggle("editor-tool-btn--active", isMove || isPath);
+      }
     }
-    if (this.toolButtons[idx]) {
-      this.toolButtons[idx].classList.add("editor-tool-btn--active");
+
+    for (const btn of this._layerButtons) {
+      btn.classList.toggle("editor-panel__btn--primary", Number(btn.dataset.layer) === e.activeLayer);
+    }
+    for (const btn of this._placeBuildingButtons) {
+      btn.classList.toggle("editor-panel__btn--primary", btn.dataset.buildingType === e.placeBuildingType);
     }
 
     if (this._pathEraseCheckbox) {
       this._pathEraseCheckbox.checked = e.pathMaskErase;
+    }
+    if (this._brushEraserCheckbox) {
+      this._brushEraserCheckbox.checked = e.brushEraser;
     }
 
     for (const btn of this._sheetButtons) {
@@ -847,26 +666,6 @@ export class EditorPanel {
         key === e.pickerSheet && TERRAIN_TILE_SHEETS.includes(e.pickerSheet),
       );
     }
-    if (this._sheepDecorationBtn) {
-      this._sheepDecorationBtn.classList.toggle(
-        "editor-panel__btn--primary",
-        e.pickerSheet === SHEEP_IDLE_SHEET_KEY && e.pickerRole === "decoration",
-      );
-    }
-
-    const shore = e.map.tilesets?.shore ?? "default";
-    const plateau = e.map.tilesets?.plateau ?? "rocks";
-    for (const [k, el] of Object.entries(this.shorePresetEls)) {
-      el.classList.toggle("preset-card--selected", k === shore);
-    }
-    for (const [k, el] of Object.entries(this.plateauPresetEls)) {
-      el.classList.toggle("preset-card--selected", k === plateau);
-    }
-
-    for (const inp of this._roleRadios) {
-      inp.checked = inp.value === e.pickerRole;
-    }
-
     this._redrawThumbs();
     this._redrawTilePicker();
 
@@ -888,8 +687,8 @@ export class EditorPanel {
     if (this._tilePickerHintEl) {
       this._tilePickerHintEl.textContent =
         e.getSelectedCount() === 0
-          ? "Select cells first (Select tool), choose role, then click a tile."
-          : "Click a tile below to apply to all selected cells.";
+          ? "Pick a tile, choose a layer, then drag on the map. Bulk: use Select cells below."
+          : "Click a tile to set brush, or apply it to selected cells on the active layer.";
     }
   }
 
@@ -906,19 +705,14 @@ export class EditorPanel {
     }
     this.root = null;
     this.toolButtons = [];
-    this.shorePresetEls = {};
-    this.plateauPresetEls = {};
     this.statusEl = null;
     this.saveBtn = null;
     this.saveStateEl = null;
     this._cellHeadingEl = null;
     this._terrainThumb = null;
-    this._decThumb = null;
-    this._roleRadios = [];
     this._pickerHeadingEl = null;
     this._tilePickerHintEl = null;
     this._sheetButtons = [];
-    this._sheepDecorationBtn = null;
     this.tilePickerCanvas = null;
     this._pickerMove = null;
     this._pickerLeave = null;

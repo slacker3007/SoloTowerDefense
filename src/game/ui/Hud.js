@@ -2,8 +2,11 @@ import Phaser from "phaser";
 import { getTowerRoleHudModel } from "../balance";
 import { cozyTheme, createHudButton } from "./CozyTheme";
 
-/** Keep action rail chrome (one empty row) visible when no slots are configured. */
-const RESERVE_EMPTY_ACTION_RAIL = true;
+/** When false, wave/tower context panel is hidden; only the action rail shows. */
+const SHOW_CONTEXT_PANEL = false;
+const ACTION_SLOT_COUNT = 10;
+const ACTION_GRID_COLS = 10;
+const ACTION_GRID_ROWS = 1;
 
 const DETAILS_CLOSE_ICON_KEY = "detailsCloseIcon09";
 
@@ -65,14 +68,12 @@ export class Hud {
     /** @type {Phaser.GameObjects.Zone[]} Full-cell hit targets for action grid slots (64×64 local space). */
     this._actionHitZones = [];
     this._actionGridBackground = null;
-    /** Flat panel behind occupied action cells only. */
-    this._actionRailBg = null;
     this._actionIcons = [];
     this._actionAccentFrames = [];
     this._actionCostTexts = [];
     this._actionInfoTexts = [];
     this._actionInfoHitZones = [];
-    this._actionSlotConfigs = Array.from({ length: 12 }, () => null);
+    this._actionSlotConfigs = Array.from({ length: ACTION_SLOT_COUNT }, () => null);
     this._hoveredActionIndex = -1;
     this._tooltipAnchor = { x: 0, y: 0 };
     this._topVisible = true;
@@ -84,23 +85,8 @@ export class Hud {
     this.root.setScrollFactor(0);
     this._hudColors = cozyTheme.hud;
     this._previewIconSize = 44;
-    this._panelWindows = {
-      context: {
-        locked: true,
-        customBounds: { x: 4, y: 295, width: 340, height: 420 },
-        bounds: { x: 4, y: 295, width: 340, height: 420 },
-        minWidth: 260,
-        minHeight: 180,
-      },
-      action: {
-        locked: true,
-        customBounds: { x: 951, y: 488, width: 325, height: 228 },
-        bounds: { x: 951, y: 488, width: 325, height: 228 },
-        minWidth: 200,
-        minHeight: 96,
-      },
-    };
-    this._panelInteraction = null;
+    /** Action strip bounds for camera occlusion (set in layout). */
+    this._actionStripBounds = { x: 0, y: 0, width: 0, height: 0 };
 
     this.topBackground = scene.add.rectangle(0, 0, scene.scale.width, this.topBarHeight, this._hudColors.topBar, 0.93);
     this.topBackground.setOrigin(0, 0);
@@ -193,18 +179,6 @@ export class Hud {
     this.contextPanelFrame = scene.add.rectangle(0, 0, 320, 130, this._hudColors.panel, 0.95);
     this.contextPanelFrame.setOrigin(0, 0);
     this.contextPanelFrame.setStrokeStyle(2, this._hudColors.panelStrokeSoft, 0.9);
-    this.contextPanelFrame.setInteractive({ useHandCursor: true });
-    this.contextDragZone = scene.add.zone(0, 0, 120, 22);
-    this.contextDragZone.setOrigin(0, 0);
-    this.contextLockText = scene.add.text(0, 0, "🔒", {
-      fontFamily: cozyTheme.typography.bodyFamily,
-      fontSize: "14px",
-      color: this._hudColors.lockLocked ?? "#ffe3a3",
-      backgroundColor: "#00000033",
-      padding: { x: 4, y: 2 },
-    }).setOrigin(1, 0);
-    this.contextResizeHandle = scene.add.rectangle(0, 0, 14, 14, this._hudColors.windowHandle ?? 0x6b8fb5, 0.9);
-    this.contextResizeHandle.setOrigin(1, 1);
     this.contextTitleText = scene.add.text(0, 0, "Battle Context", {
       fontFamily: "monospace",
       fontSize: "16px",
@@ -379,24 +353,10 @@ export class Hud {
     this._lastGoldValue = null;
     this._goldDeltaTween = null;
 
-    this._actionRailBg = scene.add.rectangle(0, 0, 8, 8, this._hudColors.panel, 0.92);
-    this._actionRailBg.setOrigin(0, 0);
-    this._actionRailBg.setStrokeStyle(1, this._hudColors.panelStrokeSoft, 0.85);
     this._actionGridBackground = this.createActionSlotBackground();
-    this.actionDragZone = scene.add.zone(0, 0, 120, 20);
-    this.actionDragZone.setOrigin(0, 0);
-    this.actionLockText = scene.add.text(0, 0, "🔒", {
-      fontFamily: cozyTheme.typography.bodyFamily,
-      fontSize: "14px",
-      color: this._hudColors.lockLocked ?? "#ffe3a3",
-      backgroundColor: "#00000033",
-      padding: { x: 4, y: 2 },
-    }).setOrigin(1, 0);
-    this.actionResizeHandle = scene.add.rectangle(0, 0, 14, 14, this._hudColors.windowHandle ?? 0x6b8fb5, 0.9);
-    this.actionResizeHandle.setOrigin(1, 1);
 
     const actionSlotCell = 60;
-    for (let i = 0; i < 12; i += 1) {
+    for (let i = 0; i < ACTION_SLOT_COUNT; i += 1) {
       const accent = this.scene.add.rectangle(0, 0, actionSlotCell - 8, actionSlotCell - 8, this._hudColors.actionFrame, 0.65);
       accent.setOrigin(0.5, 0.5);
       accent.setStrokeStyle(2, this._hudColors.chipStroke, 0.9);
@@ -552,9 +512,6 @@ export class Hud {
       this.cameraTelemetryText,
       this.debugPanelRoot,
       this.contextPanelFrame,
-      this.contextDragZone,
-      this.contextLockText,
-      this.contextResizeHandle,
       this.contextTitleText,
       this.contextSubtitleText,
       this.waveCountText,
@@ -580,10 +537,6 @@ export class Hud {
       this.towerRangeTrack,
       this.towerRangeFill,
       this.towerEffectText,
-      this._actionRailBg,
-      this.actionDragZone,
-      this.actionLockText,
-      this.actionResizeHandle,
       this._actionGridBackground,
       this.menuBackdrop,
       this.menuDropdownRoot,
@@ -604,9 +557,6 @@ export class Hud {
     this.bottomUiObjects = [
       this.bottomBackground,
       this.contextPanelFrame,
-      this.contextDragZone,
-      this.contextLockText,
-      this.contextResizeHandle,
       this.contextTitleText,
       this.contextSubtitleText,
       this.waveCountText,
@@ -632,118 +582,19 @@ export class Hud {
       this.towerRangeTrack,
       this.towerRangeFill,
       this.towerEffectText,
-      this._actionRailBg,
-      this.actionDragZone,
-      this.actionLockText,
-      this.actionResizeHandle,
       this._actionGridBackground,
     ];
     this.uiObjects = [
       ...this.topUiObjects,
       ...this.bottomUiObjects,
     ];
-    this._bindWindowInteractions();
     this.layout();
-  }
-
-  _bindWindowInteractions() {
-    this.contextLockText.setInteractive({ useHandCursor: true });
-    this.actionLockText.setInteractive({ useHandCursor: true });
-    this.contextDragZone.setInteractive({ useHandCursor: true });
-    this.actionDragZone.setInteractive({ useHandCursor: true });
-    this.contextResizeHandle.setInteractive({ useHandCursor: true });
-    this.actionResizeHandle.setInteractive({ useHandCursor: true });
-    this.contextLockText.on("pointerdown", () => this._togglePanelLock("context"));
-    this.actionLockText.on("pointerdown", () => this._togglePanelLock("action"));
-    this.contextDragZone.on("pointerdown", (pointer) => this._beginPanelInteraction("context", "drag", pointer));
-    this.actionDragZone.on("pointerdown", (pointer) => this._beginPanelInteraction("action", "drag", pointer));
-    this.contextResizeHandle.on("pointerdown", (pointer) => this._beginPanelInteraction("context", "resize", pointer));
-    this.actionResizeHandle.on("pointerdown", (pointer) => this._beginPanelInteraction("action", "resize", pointer));
-    this._boundHudPointerMove = (pointer) => this._updatePanelInteraction(pointer);
-    this._boundHudPointerUp = () => this._endPanelInteraction();
-    this.scene.input.on("pointermove", this._boundHudPointerMove);
-    this.scene.input.on("pointerup", this._boundHudPointerUp);
-  }
-
-  _togglePanelLock(panelId) {
-    const panel = this._panelWindows[panelId];
-    if (!panel) {
-      return;
-    }
-    panel.locked = !panel.locked;
-    this.layout();
-  }
-
-  _beginPanelInteraction(panelId, type, pointer) {
-    const panel = this._panelWindows[panelId];
-    if (!panel || panel.locked || !pointer) {
-      return;
-    }
-    const bounds = panel.customBounds ?? panel.bounds;
-    panel.customBounds = { ...bounds };
-    this._panelInteraction = {
-      panelId,
-      type,
-      startPointerX: pointer.x,
-      startPointerY: pointer.y,
-      startBounds: { ...panel.customBounds },
-    };
-  }
-
-  _updatePanelInteraction(pointer) {
-    if (!this._panelInteraction || !pointer) {
-      return;
-    }
-    const interaction = this._panelInteraction;
-    const panel = this._panelWindows[interaction.panelId];
-    if (!panel || panel.locked || !panel.customBounds) {
-      return;
-    }
-    const dx = pointer.x - interaction.startPointerX;
-    const dy = pointer.y - interaction.startPointerY;
-    if (interaction.type === "drag") {
-      panel.customBounds.x = interaction.startBounds.x + dx;
-      panel.customBounds.y = interaction.startBounds.y + dy;
-    } else {
-      panel.customBounds.width = interaction.startBounds.width + dx;
-      panel.customBounds.height = interaction.startBounds.height + dy;
-    }
-    if (!interaction._loggedFirstMove) interaction._loggedFirstMove = true;
-    this.layout();
-  }
-
-  _endPanelInteraction() {
-    this._panelInteraction = null;
-  }
-
-  _resolvePanelRect(panelId, fallbackRect, rootWidth, rootHeight) {
-    const panel = this._panelWindows[panelId];
-    if (!panel || !fallbackRect) {
-      return fallbackRect;
-    }
-    panel.bounds = { ...fallbackRect };
-    const source = panel.customBounds ?? fallbackRect;
-    const width = this.clamp(source.width, panel.minWidth, rootWidth - 12);
-    const height = this.clamp(source.height, panel.minHeight, rootHeight - 12);
-    const x = this.clamp(source.x, 4, rootWidth - width - 4);
-    const y = this.clamp(source.y, 4, rootHeight - height - 4);
-    const resolved = { x, y, width, height };
-    if (panel.customBounds) {
-      panel.customBounds = { ...resolved };
-    }
-    panel.bounds = { ...resolved };
-    return resolved;
   }
 
   _getVisiblePanelRects() {
     const rects = [];
-    const contextRect = this._panelWindows.context?.bounds;
-    const actionRect = this._panelWindows.action?.bounds;
-    if (this._bottomVisible && this.contextPanelFrame?.visible && contextRect) {
-      rects.push(contextRect);
-    }
-    if (this._bottomVisible && this._actionRailBg?.visible && actionRect) {
-      rects.push(actionRect);
+    if (this._bottomVisible && this._actionStripBounds?.width > 0) {
+      rects.push(this._actionStripBounds);
     }
     return rects;
   }
@@ -774,14 +625,6 @@ export class Hud {
   }
 
   dispose() {
-    if (this._boundHudPointerMove) {
-      this.scene.input.off("pointermove", this._boundHudPointerMove);
-      this._boundHudPointerMove = null;
-    }
-    if (this._boundHudPointerUp) {
-      this.scene.input.off("pointerup", this._boundHudPointerUp);
-      this._boundHudPointerUp = null;
-    }
     this.root?.destroy(true);
   }
 
@@ -991,9 +834,9 @@ export class Hud {
       const controlRowH = 44;
       const railInnerPad = 12;
       const cellGap = 8;
-      const isWaveCtx = this._contextMode === "wave";
-      const isTowerCtx = this._contextMode === "tower";
-      const rightPanelW = splitLandscape
+      const isWaveCtx = SHOW_CONTEXT_PANEL && this._contextMode === "wave";
+      const isTowerCtx = SHOW_CONTEXT_PANEL && this._contextMode === "tower";
+      const rightPanelW = SHOW_CONTEXT_PANEL && splitLandscape
         ? this.clamp(
             Math.round(contentWidth * 0.34),
             cozyTheme.hud.landscapeSidePanelMinWidth ?? 280,
@@ -1004,38 +847,15 @@ export class Hud {
       const waveStripH = splitLandscape ? 0 : this._bottomVisible && isWaveCtx ? 125 : 0;
       const towerSummaryEstimate = splitLandscape ? 0 : this._bottomVisible && isTowerCtx ? 200 : 0;
       const maxRailW = railContentW - panelPadding * 2;
-      let actionCell = this.clamp(
-        Math.floor((maxRailW - 2 * railInnerPad - 3 * cellGap) / 4),
-        56,
+      const actionCell = this.clamp(
+        Math.floor((maxRailW - 2 * railInnerPad - (ACTION_GRID_COLS - 1) * cellGap) / ACTION_GRID_COLS),
+        52,
         64,
       );
-      const occupiedCount = this._bottomVisible
-        ? this._actionSlotConfigs.reduce((n, s) => n + (s ? 1 : 0), 0)
+      const railRowsEst = this._bottomVisible ? ACTION_GRID_ROWS : 0;
+      const actionStripH = this._bottomVisible
+        ? railInnerPad * 2 + railRowsEst * (actionCell + cellGap) - cellGap
         : 0;
-      let actionGridRowSpan = 0;
-      if (this._bottomVisible && occupiedCount > 0) {
-        let minR = 2;
-        let maxR = 0;
-        for (let gi = 0; gi < 12; gi += 1) {
-          if (!this._actionSlotConfigs[gi]) {
-            continue;
-          }
-          const r = Math.floor(gi / 4);
-          minR = Math.min(minR, r);
-          maxR = Math.max(maxR, r);
-        }
-        actionGridRowSpan = maxR - minR + 1;
-      }
-      const reserveEmptyStrip =
-        RESERVE_EMPTY_ACTION_RAIL && this._bottomVisible && occupiedCount === 0;
-      const railRowsEst =
-        occupiedCount === 0 ? (reserveEmptyStrip ? 1 : 0) : actionGridRowSpan;
-      const actionStripH =
-        occupiedCount === 0
-          ? reserveEmptyStrip
-            ? railInnerPad * 2 + actionCell
-            : 0
-          : railInnerPad * 2 + railRowsEst * (actionCell + cellGap) - cellGap;
       let totalBottom =
         panelPadding * 2 +
         waveStripH +
@@ -1047,7 +867,7 @@ export class Hud {
         controlRowH;
       const bottomHeight = splitLandscape
         ? this.clamp(actionStripH + panelPadding * 2 + 12, 96, 150)
-        : this.clamp(totalBottom, isPortrait ? 320 : 250, Math.round(rootHeight * (isPortrait ? 0.4 : 0.5)));
+        : this.clamp(totalBottom, isPortrait ? 200 : 160, Math.round(rootHeight * (isPortrait ? 0.32 : 0.38)));
       this.bottomBarHeight = bottomHeight;
       this._effectiveBottomChromeHeight = 0;
       this._effectiveRightChromeWidth = splitLandscape ? rightPanelW + panelPadding : 0;
@@ -1392,113 +1212,17 @@ export class Hud {
           this.setTowerRangeVisual(tr);
         }
       }
-      const contextDefaultRect = {
-        x: this.contextPanelFrame.x,
-        y: this.contextPanelFrame.y,
-        width: this.contextPanelFrame.width,
-        height: this.contextPanelFrame.height,
-      };
-      const contextRect = this._resolvePanelRect("context", contextDefaultRect, rootWidth, rootHeight);
-      if (contextRect) {
-        const dx = contextRect.x - contextDefaultRect.x;
-        const dy = contextRect.y - contextDefaultRect.y;
-        const sx = contextDefaultRect.width > 0 ? contextRect.width / contextDefaultRect.width : 1;
-        const sy = contextDefaultRect.height > 0 ? contextRect.height / contextDefaultRect.height : 1;
-        this.contextPanelFrame.setPosition(contextRect.x, contextRect.y);
-        this.contextPanelFrame.setSize(contextRect.width, contextRect.height);
-        const contextObjects = [
-          this.contextTitleText,
-          this.contextSubtitleText,
-          this.waveCountText,
-          this.waveEnemiesText,
-          this.upcomingEnemiesTitleText,
-          this.upcomingCurrentIconBg,
-          this.upcomingCurrentIcon,
-          this.upcomingCurrentNowText,
-          this.upcomingCurrentRoleText,
-          this.upcomingNextIconBg,
-          this.upcomingNextIcon,
-          this.upcomingNextNowText,
-          this.upcomingNextRoleText,
-          this.waveProgressTrack,
-          this.waveProgressText,
-          this.towerCardIconBg,
-          this.towerCardIcon,
-          this.towerNameTierText,
-          this.towerRolePrimaryText,
-          this.towerDpsText,
-          this.towerRangeText,
-          this.towerRangeTrack,
-          this.towerRangeFill,
-          this.towerEffectText,
-        ];
-        for (const obj of contextObjects) {
-          if (!obj) {
-            continue;
-          }
-          obj.setPosition(contextRect.x + (obj.x - contextDefaultRect.x) * sx, contextRect.y + (obj.y - contextDefaultRect.y) * sy);
-        }
-        if (this._contextMode === "wave") {
-          this.setWaveProgressVisual(this._waveInfo?.progress);
-        }
-        this.towerRolePrimaryText.setWordWrapWidth(Math.max(100, contextRect.width - 90), true);
-        this.towerDpsText.setWordWrapWidth(Math.max(100, contextRect.width - 90), true);
-        this.towerRangeText.setWordWrapWidth(Math.max(100, contextRect.width - 90), true);
-        this.towerEffectText.setWordWrapWidth(Math.max(100, contextRect.width - 90), true);
-      }
-      this.contextDragZone.setPosition(this.contextPanelFrame.x, this.contextPanelFrame.y);
-      this.contextDragZone.setSize(Math.max(80, this.contextPanelFrame.width - 28), 22);
-      this.contextLockText.setPosition(this.contextPanelFrame.x + this.contextPanelFrame.width - 4, this.contextPanelFrame.y + 2);
-      this.contextResizeHandle.setPosition(
-        this.contextPanelFrame.x + this.contextPanelFrame.width - 2,
-        this.contextPanelFrame.y + this.contextPanelFrame.height - 2,
-      );
-      const contextLocked = this._panelWindows.context.locked;
-      this.contextLockText.setText(contextLocked ? "🔒" : "🔓");
-      this.contextLockText.setColor(contextLocked ? (this._hudColors.lockLocked ?? "#ffe3a3") : (this._hudColors.lockUnlocked ?? "#b7f7da"));
-      this.contextResizeHandle.setFillStyle(
-        contextLocked ? (this._hudColors.windowHandle ?? 0x6b8fb5) : (this._hudColors.windowHandleActive ?? 0x8fb7e3),
-        0.95,
-      );
-
       const contentCellW = actionCell;
       const contentCellH = actionCell;
       const actionFontSize = 14;
       const gridBottomLimit = bottomY + activeBottomHeight - controlRowH - panelPadding;
-      const occupiedIndices = [];
-      for (let i = 0; i < 12; i += 1) {
-        if (this._bottomVisible && this._actionSlotConfigs[i]) {
-          occupiedIndices.push(i);
-        }
-      }
-      const n = occupiedIndices.length;
-      const reserveEmptyActionRail = RESERVE_EMPTY_ACTION_RAIL && this._bottomVisible && n === 0;
-      let minActionCol = 3;
-      let maxActionCol = 0;
-      let minActionRow = 2;
-      let maxActionRow = 0;
-      for (const idx of occupiedIndices) {
-        const c = idx % 4;
-        const r = Math.floor(idx / 4);
-        minActionCol = Math.min(minActionCol, c);
-        maxActionCol = Math.max(maxActionCol, c);
-        minActionRow = Math.min(minActionRow, r);
-        maxActionRow = Math.max(maxActionRow, r);
-      }
-      const gridCols =
-        n === 0 ? (reserveEmptyActionRail ? 4 : 1) : maxActionCol - minActionCol + 1;
-      const railRows = n === 0 ? (reserveEmptyActionRail ? 1 : 0) : maxActionRow - minActionRow + 1;
-      let railW =
-        n === 0 && !reserveEmptyActionRail
-          ? 0
-          : gridCols * (actionCell + cellGap) - cellGap + 2 * railInnerPad;
-      let railH =
-        n === 0 && !reserveEmptyActionRail
-          ? 0
-          : railInnerPad * 2 + railRows * (actionCell + cellGap) - cellGap;
+      const gridCols = ACTION_GRID_COLS;
+      const railRows = this._bottomVisible ? ACTION_GRID_ROWS : 0;
+      let railW = gridCols * (actionCell + cellGap) - cellGap + 2 * railInnerPad;
+      let railH = railInnerPad * 2 + railRows * (actionCell + cellGap) - cellGap;
       let stripTop = yCursor;
       let railX = contentX;
-      if (n > 0 || reserveEmptyActionRail) {
+      if (this._bottomVisible) {
         let stripTopCandidate = gridBottomLimit - railH;
         if (stripTopCandidate < yCursor) {
           stripTopCandidate = yCursor;
@@ -1508,36 +1232,17 @@ export class Hud {
           railH = Math.max(railInnerPad * 2 + actionCell, gridBottomLimit - stripTop);
         }
         railX = contentX + Math.round((railContentW - railW) * 0.5);
-        this._actionRailBg.setPosition(railX, stripTop);
-        this._actionRailBg.setSize(railW, railH);
         this._actionGridBackground.setScale(1);
         this._actionGridBackground.setPosition(railX, stripTop);
       } else {
         this._actionGridBackground.setPosition(contentX, stripTop);
       }
-      const actionDefaultRect = { x: railX, y: stripTop, width: railW, height: railH };
-      const actionRect = this._resolvePanelRect("action", actionDefaultRect, rootWidth, rootHeight);
-      if (actionRect) {
-        railX = actionRect.x;
-        stripTop = actionRect.y;
-        railW = actionRect.width;
-        railH = actionRect.height;
-        this._actionRailBg.setPosition(railX, stripTop);
-        this._actionRailBg.setSize(railW, railH);
-        this._actionGridBackground.setPosition(railX, stripTop);
-      }
-      this._actionRailBg.setVisible(Boolean(this._bottomVisible && (n > 0 || reserveEmptyActionRail)));
-      this.actionDragZone.setPosition(railX, stripTop);
-      this.actionDragZone.setSize(Math.max(80, railW - 28), 20);
-      this.actionLockText.setPosition(railX + railW - 4, stripTop + 2);
-      this.actionResizeHandle.setPosition(railX + railW - 2, stripTop + railH - 2);
-      const actionLocked = this._panelWindows.action.locked;
-      this.actionLockText.setText(actionLocked ? "🔒" : "🔓");
-      this.actionLockText.setColor(actionLocked ? (this._hudColors.lockLocked ?? "#ffe3a3") : (this._hudColors.lockUnlocked ?? "#b7f7da"));
-      this.actionResizeHandle.setFillStyle(
-        actionLocked ? (this._hudColors.windowHandle ?? 0x6b8fb5) : (this._hudColors.windowHandleActive ?? 0x8fb7e3),
-        0.95,
-      );
+      this._actionStripBounds = {
+        x: railX,
+        y: stripTop,
+        width: railW,
+        height: railH,
+      };
 
       const edgeRects = this._getVisiblePanelRects();
       this._effectiveRightChromeWidth = 0;
@@ -1562,25 +1267,15 @@ export class Hud {
         }
       }
 
-      const showEmptyRailGhost = reserveEmptyActionRail;
-      const ghostColCount = reserveEmptyActionRail ? 4 : 1;
       for (let i = 0; i < this._actionButtons.length; i += 1) {
         const slot = this._actionSlotConfigs[i];
-        const isGhost = Boolean(showEmptyRailGhost && !slot && i < ghostColCount);
+        const isEmptyFrame = !slot;
         let x = 0;
         let y = 0;
-        if (isGhost) {
-          const col = i % ghostColCount;
-          const row = 0;
+        if (this._bottomVisible) {
+          const col = i;
           x = railInnerPad + col * (contentCellW + cellGap) + contentCellW / 2;
-          y = railInnerPad + row * (contentCellH + cellGap) + contentCellH / 2;
-        } else if (slot) {
-          const absCol = i % 4;
-          const absRow = Math.floor(i / 4);
-          const col = absCol - minActionCol;
-          const row = absRow - minActionRow;
-          x = railInnerPad + col * (contentCellW + cellGap) + contentCellW / 2;
-          y = railInnerPad + row * (contentCellH + cellGap) + contentCellH / 2;
+          y = railInnerPad + contentCellH / 2;
         }
         const icon = this._actionIcons[i];
         const accent = this._actionAccentFrames[i];
@@ -1607,18 +1302,18 @@ export class Hud {
         const iconSize = Math.round(Math.min(contentCellW, contentCellH) * 0.75);
         const accentColor = Number.isFinite(slot?.accentColor) ? slot.accentColor : 0x6f99c9;
         const accentInner = Math.max(40, contentCellW - 8);
-        if (isGhost) {
+        if (isEmptyFrame) {
           accent
             .setSize(accentInner, accentInner)
             .setPosition(x, y)
-            .setVisible(true)
+            .setVisible(this._bottomVisible)
             .setFillStyle(this._hudColors.actionFrame, 0.14)
             .setStrokeStyle(2, this._hudColors.chipStroke, 0.4);
         } else {
           accent
             .setSize(accentInner, accentInner)
             .setPosition(x, y)
-            .setVisible(Boolean(slot))
+            .setVisible(this._bottomVisible)
             .setFillStyle(accentColor, slot?.enabled === false ? 0.18 : 0.34)
             .setStrokeStyle(2, accentColor, slot?.enabled === false ? 0.35 : 0.85);
         }
@@ -1715,15 +1410,13 @@ export class Hud {
     for (const obj of this.bottomUiObjects) {
       obj.setVisible(this._bottomVisible);
     }
-    const showWavePanel = this._bottomVisible && this._contextMode === "wave";
-    const showTowerPanel = this._bottomVisible && this._contextMode === "tower";
+    const showContext = SHOW_CONTEXT_PANEL && this._bottomVisible;
+    const showWavePanel = showContext && this._contextMode === "wave";
+    const showTowerPanel = showContext && this._contextMode === "tower";
     const subtitleVisible =
-      this._bottomVisible && (this.contextSubtitleText.text?.length ?? 0) > 0;
-    this.contextPanelFrame.setVisible(this._bottomVisible);
-    this.contextDragZone.setVisible(this._bottomVisible);
-    this.contextLockText.setVisible(this._bottomVisible);
-    this.contextResizeHandle.setVisible(this._bottomVisible && !this._panelWindows.context.locked);
-    this.contextTitleText.setVisible(this._bottomVisible);
+      showContext && (this.contextSubtitleText.text?.length ?? 0) > 0;
+    this.contextPanelFrame.setVisible(showContext);
+    this.contextTitleText.setVisible(showContext);
     this.contextSubtitleText.setVisible(subtitleVisible);
     this.waveCountText.setVisible(false);
     this.waveEnemiesText.setVisible(showWavePanel);
@@ -1750,9 +1443,6 @@ export class Hud {
     this.towerEffectText.setVisible(showTowerPanel && (this.towerEffectText.text?.length ?? 0) > 0);
     this.speedButton.setVisible(this._topVisible);
     this.pauseButton.setVisible(this._topVisible);
-    this.actionDragZone.setVisible(this._bottomVisible);
-    this.actionLockText.setVisible(this._bottomVisible);
-    this.actionResizeHandle.setVisible(this._bottomVisible && !this._panelWindows.action.locked);
     if (!this._bottomVisible) {
       this.hideActionTooltip();
       this.hideActionDetails();
@@ -2159,13 +1849,10 @@ export class Hud {
       return;
     }
     const camLine = this._formatCameraTelemetry();
-    const waveLine = this._formatPanelTelemetry("Wave", this._panelWindows?.context?.bounds, {
-      visible: this._bottomVisible && this._contextMode === "wave",
-    });
-    const actionLine = this._formatPanelTelemetry("Action", this._panelWindows?.action?.bounds, {
+    const actionLine = this._formatPanelTelemetry("Action", this._actionStripBounds, {
       visible: this._bottomVisible,
     });
-    this.debugPanelText.setText(`${camLine}\n${waveLine}\n${actionLine}`);
+    this.debugPanelText.setText(`${camLine}\n${actionLine}`);
     const pad = 8;
     this.debugPanelText.setPosition(pad, pad);
     this.debugPanelBg.setSize(this.debugPanelText.width + pad * 2, this.debugPanelText.height + pad * 2);

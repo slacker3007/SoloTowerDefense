@@ -85,6 +85,33 @@
         font-size: 11px;
         line-height: 1.4;
       }
+      .editor-panel__tabs {
+        display: flex;
+        gap: 6px;
+        margin-bottom: 12px;
+      }
+      .editor-panel__tab {
+        flex: 1;
+        padding: 8px 10px;
+        border: 1px solid #3a4a66;
+        border-radius: 4px;
+        background: #1e2a40;
+        color: #c8d4ec;
+        font: inherit;
+        font-size: 12px;
+        cursor: pointer;
+      }
+      .editor-panel__tab:hover {
+        background: #263248;
+      }
+      .editor-panel__tab--active {
+        border-color: #5cb3ff;
+        background: #1a2838;
+        color: #e8ecf4;
+      }
+      .editor-panel__tab-panel[hidden] {
+        display: none;
+      }
       .editor-panel__section {
         margin-bottom: 16px;
       }

@@ -1,5 +1,11 @@
 import { createElevation, createNullGrid } from "./elevation";
-import { cloneTerrainTileOverride, normalizeTerrainTileOverride } from "./tileOverrideSchema";
+import {
+  cloneLayerTile,
+  cloneTerrainTileOverride,
+  MAP_TILE_LAYER_COUNT,
+  normalizeLayerTile,
+  normalizeTerrainTileOverride,
+} from "./tileOverrideSchema";
 
 /**
  * @param {{ tilesets?: { shore?: string, plateau?: string } }} map
@@ -35,6 +41,90 @@ export function ensureMapOverrideGrids(map) {
 }
 
 /**
+ * @param {number} rows
+ * @param {number} cols
+ */
+export function createLayerTileGrids(rows, cols) {
+  return Array.from({ length: MAP_TILE_LAYER_COUNT }, () => createNullGrid(rows, cols));
+}
+
+/**
+ * @param {*} map
+ * @param {number} x
+ * @param {number} y
+ */
+export function recomputeCellElevationFromLayerTiles(map, x, y) {
+  let topLayer = 0;
+  for (let layer = 1; layer < MAP_TILE_LAYER_COUNT; layer += 1) {
+    if (map.layerTiles?.[layer]?.[y]?.[x] != null) {
+      topLayer = layer;
+    }
+  }
+  map.elevation[y][x] = topLayer;
+  if (topLayer === 0) {
+    map.stairs[y][x] = 0;
+  }
+}
+
+/**
+ * Ensure the four numbered editor tile layers exist. Legacy tile overrides migrate
+ * into the elevation layer they were painted on; decorations become layer 3 tiles.
+ * @param {*} map
+ */
+export function ensureMapLayerTiles(map) {
+  ensureMapOverrideGrids(map);
+
+  const existing = Array.isArray(map.layerTiles) ? map.layerTiles : null;
+  const valid =
+    existing != null &&
+    existing.length === MAP_TILE_LAYER_COUNT &&
+    existing.every(
+      (grid) =>
+        Array.isArray(grid) &&
+        grid.length === map.height &&
+        grid.every((row) => Array.isArray(row) && row.length === map.width),
+    );
+
+  if (!valid) {
+    const next = createLayerTileGrids(map.height, map.width);
+    for (let y = 0; y < map.height; y += 1) {
+      for (let x = 0; x < map.width; x += 1) {
+        const elev = Math.max(0, Math.min(MAP_TILE_LAYER_COUNT - 1, Math.floor(map.elevation?.[y]?.[x] ?? 0)));
+        const tile = normalizeLayerTile(map.tileOverrides?.[y]?.[x]);
+        if (tile != null) {
+          next[elev][y][x] = tile;
+        }
+
+        const dec = normalizeLayerTile(map.decorations?.[y]?.[x]);
+        if (dec != null) {
+          next[MAP_TILE_LAYER_COUNT - 1][y][x] = dec;
+          map.elevation[y][x] = MAP_TILE_LAYER_COUNT - 1;
+        }
+      }
+    }
+    map.layerTiles = next;
+  } else {
+    for (let layer = 0; layer < MAP_TILE_LAYER_COUNT; layer += 1) {
+      for (let y = 0; y < map.height; y += 1) {
+        for (let x = 0; x < map.width; x += 1) {
+          map.layerTiles[layer][y][x] = normalizeLayerTile(map.layerTiles[layer][y][x]);
+        }
+      }
+    }
+  }
+
+  for (let y = 0; y < map.height; y += 1) {
+    for (let x = 0; x < map.width; x += 1) {
+      const ev = map.elevation?.[y]?.[x];
+      map.elevation[y][x] = Number.isFinite(ev) ? Math.max(0, Math.min(MAP_TILE_LAYER_COUNT - 1, Math.floor(ev))) : 0;
+      if (valid) {
+        recomputeCellElevationFromLayerTiles(map, x, y);
+      }
+    }
+  }
+}
+
+/**
  * @param {object} map
  */
 export function ensurePathMaskGrid(map) {
@@ -63,7 +153,9 @@ export function ensurePathMaskGrid(map) {
 export function copyMapStateFrom(target, source) {
   ensureMapTilesets(source);
   ensureMapOverrideGrids(source);
+  ensureMapLayerTiles(source);
   ensureMapOverrideGrids(target);
+  ensureMapLayerTiles(target);
   target.id = source.id;
   target.bgColor = source.bgColor;
   target.points = {
@@ -81,6 +173,9 @@ export function copyMapStateFrom(target, source) {
       );
       const dec = source.decorations[y][x];
       target.decorations[y][x] = dec && typeof dec === "object" ? { sheet: dec.sheet, frame: dec.frame } : null;
+      for (let layer = 0; layer < MAP_TILE_LAYER_COUNT; layer += 1) {
+        target.layerTiles[layer][y][x] = cloneLayerTile(normalizeLayerTile(source.layerTiles[layer][y][x]));
+      }
     }
   }
   ensurePathMaskGrid(source);

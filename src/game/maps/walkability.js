@@ -50,7 +50,7 @@ function isPlateauRimCell(map, cellX, cellY) {
  * @param {number} cellY
  */
 export function isRoadCell(map, cellX, cellY) {
-  const o = map.tileOverrides?.[cellY]?.[cellX];
+  const o = map.layerTiles?.[1]?.[cellY]?.[cellX] ?? map.tileOverrides?.[cellY]?.[cellX];
   return o != null && typeof o === "object" && o.sheet === ROAD_TERRAIN_SHEET;
 }
 

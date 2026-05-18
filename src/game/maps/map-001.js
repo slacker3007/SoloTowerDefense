@@ -1,7 +1,13 @@
 import { GRID_COLS, GRID_ROWS } from "../constants";
 import defaultMapJson from "./data/map-001.default.json";
 import { buildDefaultPathMask, pathMaskFromLegacyEnemyPath, tryParsePathMaskFromJson } from "./enemyPath";
-import { ensureMapOverrideGrids, ensureMapTilesets, ensurePathMaskGrid, syncBarracksPointsFromBuildings } from "./mapUtils";
+import {
+  ensureMapLayerTiles,
+  ensureMapOverrideGrids,
+  ensureMapTilesets,
+  ensurePathMaskGrid,
+  syncBarracksPointsFromBuildings,
+} from "./mapUtils";
 import { normalizeTerrainTileOverride } from "./tileOverrideSchema";
 
 /** Build a runtime map object from serialized editor/export JSON. */
@@ -42,6 +48,7 @@ function mapFromSerialized(data) {
     stairs: stairs.map((row) => row.map((v) => (v === 1 ? 1 : 0))),
     buildings: buildings.map((row) => row.map((b) => (typeof b === "string" ? b : null))),
     tileOverrides: tileOv.map((row) => row.map((v) => normalizeTerrainTileOverride(v))),
+    layerTiles: Array.isArray(d.layerTiles) ? d.layerTiles : undefined,
     decorations: dec.map((row) =>
       row.map((v) => {
         if (v != null && typeof v === "object") {
@@ -69,6 +76,7 @@ function mapFromSerialized(data) {
 
   ensureMapTilesets(map);
   ensureMapOverrideGrids(map);
+  ensureMapLayerTiles(map);
   syncBarracksPointsFromBuildings(map);
 
   const pm = tryParsePathMaskFromJson(rawPathMask, width, height);

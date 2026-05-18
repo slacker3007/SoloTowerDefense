@@ -15,19 +15,12 @@ import {
   SHEEP_IDLE_SHEET_KEY,
 } from "../game/assets";
 import { createFreshMap001 } from "../game/maps/map-001";
-import { deriveLayers } from "../game/maps/elevation";
 import {
   cellToWorld,
-  getHighGroundFrameIndex,
-  getShoreFrameIndex,
   isInsideGrid,
   worldToCell,
 } from "../game/maps/tileRules";
-import {
-  DECORATION_IMAGE_KEYS,
-  DEFAULT_TERRAIN_SHEET,
-  normalizeTerrainTileOverride,
-} from "../game/maps/tileOverrideSchema";
+import { DECORATION_IMAGE_KEYS, MAP_TILE_LAYER_COUNT } from "../game/maps/tileOverrideSchema";
 import { EnemySystem } from "../game/systems/EnemySystem";
 import { BuilderSystem } from "../game/systems/BuilderSystem";
 import { TowerSystem } from "../game/systems/TowerSystem";
@@ -57,17 +50,9 @@ import { getDisplaySettings } from "../game/settings/displaySettings.js";
 import { MapEditor } from "../game/editor/MapEditor";
 import { EditorPanel } from "../game/editor/EditorPanel";
 import { GRID_KEYBIND_ACTION_IDS, KeybindStore } from "../game/input/KeybindStore.js";
-import { ensureMapOverrideGrids, ensureMapTilesets, ensurePathMaskGrid } from "../game/maps/mapUtils";
+import { ensureMapLayerTiles, ensureMapOverrideGrids, ensureMapTilesets, ensurePathMaskGrid } from "../game/maps/mapUtils";
 import { cozyTheme, createCozyButton, createCozyPanel } from "../game/ui/CozyTheme";
 import { getViewportProfile } from "../game/config";
-
-/**
- * @param {unknown} ov
- * @returns {{ sheet: string, frame: number } | null}
- */
-function resolvedTerrainOverride(ov) {
-  return normalizeTerrainTileOverride(ov);
-}
 
 const BARRACKS_CLICK_WIDTH = 192;
 const BARRACKS_CLICK_HEIGHT = 256;
@@ -91,9 +76,49 @@ const INTRO_CAMERA_PAN_MS = 3000;
 const CAMERA_VERTICAL_ONLY = true;
 
 /**
+ * @param {Phaser.Scene} scene
+ * @param {Phaser.GameObjects.Container} container
+ * @param {{ sheet: string, frame: number } | null} tile
+ * @param {number} cellX
+ * @param {number} cellY
+ * @param {number} depth
+ */
+function addLayerTileSprite(scene, container, tile, cellX, cellY, depth) {
+  if (tile == null || typeof tile.sheet !== "string" || typeof tile.frame !== "number") {
+    return;
+  }
+  if (!scene.textures.exists(tile.sheet)) {
+    return;
+  }
+  const px = cellX * TILE_SIZE;
+  const py = cellY * TILE_SIZE;
+  if (tile.sheet === SHEEP_IDLE_SHEET_KEY) {
+    const spr = scene.add.sprite(px + TILE_SIZE / 2, py + TILE_SIZE / 2, tile.sheet, 0);
+    spr.setDisplaySize(64, 64);
+    spr.setDepth(depth);
+    if (scene.anims.exists(SHEEP_IDLE_ANIM_KEY)) {
+      spr.play(SHEEP_IDLE_ANIM_KEY, false, Phaser.Math.Clamp(Math.floor(tile.frame), 0, 5));
+    }
+    container.add(spr);
+    return;
+  }
+  if (DECORATION_IMAGE_KEYS.includes(tile.sheet)) {
+    const spr = scene.add.sprite(px + TILE_SIZE / 2, py + TILE_SIZE, tile.sheet);
+    spr.setOrigin(0.5, 1);
+    spr.setDisplaySize(128, 192);
+    spr.setDepth(depth);
+    container.add(spr);
+    return;
+  }
+  const spr = scene.add.sprite(px + TILE_SIZE / 2, py + TILE_SIZE / 2, tile.sheet, tile.frame);
+  spr.setDepth(depth);
+  container.add(spr);
+}
+
+/**
  * @typedef {Object} HudActionPlacement
- * @property {number} innerRow 1..3 inside the action area
- * @property {number} innerCol 1..4 inside the action area
+ * @property {number} innerRow 1 inside the action area
+ * @property {number} innerCol 1..10 inside the action area
  * @property {string} actionId Action handled by `handleHudAction`
  * @property {string} label
  * @property {boolean} [enabled]
@@ -639,6 +664,19 @@ export class GameScene extends Phaser.Scene {
     this.redrawSelectionOutline();
   }
 
+  reselectBlueBarracks() {
+    this.applyDefaultBlueBarracksSelection();
+    this.updateHudActions();
+    this.hud?.render?.(
+      this.gameState,
+      this.towerSystem.towers.length,
+      STARTING_LIVES,
+      this.selectedBuilding,
+      this.getWaveInfo(),
+    );
+    this.redrawSelectionOutline();
+  }
+
   selectBarracksAtWorld(worldX, worldY) {
     const candidates = [
       {
@@ -693,13 +731,13 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
-   * Converts coordinate-addressed actions into the 12-slot HUD array.
+   * Converts coordinate-addressed actions into the 10-slot HUD array (1×10).
    * @param {HudActionPlacement[]} actionDefs
    * @returns {(Record<string, unknown> | null)[]}
    */
   buildHudActionSlots(actionDefs = []) {
-    const rows = 3;
-    const cols = 4;
+    const rows = 1;
+    const cols = 10;
     const totalSlots = rows * cols;
     const slots = Array.from({ length: totalSlots }, () => null);
     const usedCoords = new Set();
@@ -758,72 +796,47 @@ export class GameScene extends Phaser.Scene {
     }
     const selected = this.selectedBuilding;
     if (!selected) {
-      this.hud.setActionSlots([]);
-      return;
-    }
-    if (selected.kind === "barracks" && selected.label === "Blue Barracks") {
-      const canAffordTower = this.gameState.gold >= this.towerSystem.towerCost;
-      if (this._hudActionMode === "barracksCraftMenu") {
-        const slots = this.buildHudActionSlots([
+      if (!this.editor?.enabled) {
+        this.applyDefaultBlueBarracksSelection();
+        this.hud.setActionSlots(this.buildHudActionSlots([
           {
             innerRow: 1,
             innerCol: 1,
             actionId: "craftTower",
             label: "",
-            enabled: canAffordTower,
+            enabled: this.gameState.gold >= this.towerSystem.towerCost,
             iconKey: "buildIcon06",
             tooltipTitle: "Build Basic Tower",
             tooltipDescription: `${getTowerDescription("basic")} ${getTowerTooltipSummary("basic")}`,
             tooltipCost: this.towerSystem.towerCost,
             tooltipResource: "gold",
-            tooltipWarning: canAffordTower ? "" : "Not enough gold",
+            tooltipWarning: this.gameState.gold >= this.towerSystem.towerCost ? "" : "Not enough gold",
             accentColor: getTowerUiAccentColor("basic"),
             cost: this.towerSystem.towerCost,
           },
-          {
-            innerRow: 3,
-            innerCol: 4,
-            actionId: "backFromCraft",
-            label: "",
-            enabled: true,
-            iconKey: "hammerIcon08",
-            tooltipTitle: "Back",
-            tooltipDescription: "Return to the barracks action menu.",
-            tooltipCost: null,
-            tooltipResource: "gold",
-            cost: null,
-            showInfoButton: false,
-          },
-        ]);
-        this.hud.setActionSlots(slots);
-        return;
+        ]));
+      } else {
+        this.hud.setActionSlots([]);
       }
+      return;
+    }
+    if (selected.kind === "barracks" && selected.label === "Blue Barracks") {
+      const canAffordTower = this.gameState.gold >= this.towerSystem.towerCost;
       this.hud.setActionSlots(this.buildHudActionSlots([
         {
           innerRow: 1,
           innerCol: 1,
-          actionId: "openCraftMenu",
+          actionId: "craftTower",
           label: "",
-          enabled: true,
-          iconKey: "buildIcon01",
-          tooltipTitle: "Build Menu",
-          tooltipDescription: "Open the tower crafting options for blue barracks.",
-          tooltipCost: null,
+          enabled: canAffordTower,
+          iconKey: "buildIcon06",
+          tooltipTitle: "Build Basic Tower",
+          tooltipDescription: `${getTowerDescription("basic")} ${getTowerTooltipSummary("basic")}`,
+          tooltipCost: this.towerSystem.towerCost,
           tooltipResource: "gold",
-          showInfoButton: false,
-        },
-        {
-          innerRow: 3,
-          innerCol: 4,
-          actionId: "clearSelection",
-          label: "",
-          enabled: true,
-          iconKey: "hammerIcon08",
-          tooltipTitle: "Clear Selection",
-          tooltipDescription: "Close the current selection.",
-          tooltipCost: null,
-          tooltipResource: "gold",
-          showInfoButton: false,
+          tooltipWarning: canAffordTower ? "" : "Not enough gold",
+          accentColor: getTowerUiAccentColor("basic"),
+          cost: this.towerSystem.towerCost,
         },
       ]));
       return;
@@ -855,10 +868,10 @@ export class GameScene extends Phaser.Scene {
           { innerRow: 1, innerCol: 2, towerType: "lightning" },
           { innerRow: 1, innerCol: 3, towerType: "earth" },
           { innerRow: 1, innerCol: 4, towerType: "dark" },
-          { innerRow: 2, innerCol: 1, towerType: "fire" },
-          { innerRow: 2, innerCol: 2, towerType: "ice" },
-          { innerRow: 2, innerCol: 3, towerType: "holy" },
-          { innerRow: 2, innerCol: 4, towerType: "nature" },
+          { innerRow: 1, innerCol: 5, towerType: "fire" },
+          { innerRow: 1, innerCol: 6, towerType: "ice" },
+          { innerRow: 1, innerCol: 7, towerType: "holy" },
+          { innerRow: 1, innerCol: 8, towerType: "nature" },
         ];
         const actionDefs = [];
         for (const cell of gridCells) {
@@ -888,8 +901,8 @@ export class GameScene extends Phaser.Scene {
           });
         }
         actionDefs.push({
-          innerRow: 3,
-          innerCol: 1,
+          innerRow: 1,
+          innerCol: 9,
           actionId: "sellTower",
           label: "",
           enabled: true,
@@ -898,20 +911,6 @@ export class GameScene extends Phaser.Scene {
           tooltipDescription: "Remove this tower and receive a gold refund.",
           tooltipCost: null,
           tooltipResource: "gold",
-          showInfoButton: false,
-          cost: null,
-        });
-        actionDefs.push({
-          innerRow: 3,
-          innerCol: 4,
-          actionId: "clearSelection",
-          label: "Back",
-          enabled: true,
-          tooltipTitle: "Back",
-          tooltipDescription: "Close this tower menu.",
-          tooltipCost: null,
-          tooltipResource: "gold",
-          iconKey: "hammerIcon08",
           showInfoButton: false,
           cost: null,
         });
@@ -930,8 +929,8 @@ export class GameScene extends Phaser.Scene {
       };
       const upgradeIconKey = upgradeIconByType[tower?.type];
       const actionDefs = [{
-        innerRow: 3,
-        innerCol: 1,
+        innerRow: 1,
+        innerCol: 9,
         actionId: "sellTower",
         label: "",
         enabled: true,
@@ -987,20 +986,6 @@ export class GameScene extends Phaser.Scene {
           cost: null,
         });
       }
-      actionDefs.push({
-        innerRow: 3,
-        innerCol: 4,
-        actionId: "clearSelection",
-        label: "",
-        enabled: true,
-        iconKey: "hammerIcon08",
-        tooltipTitle: "Back",
-        tooltipDescription: "Close this tower menu.",
-        tooltipCost: null,
-        tooltipResource: "gold",
-        showInfoButton: false,
-        cost: null,
-      });
       this.hud.setActionSlots(this.buildHudActionSlots(actionDefs));
       return;
     }
@@ -1008,15 +993,11 @@ export class GameScene extends Phaser.Scene {
   }
 
   handleHudAction(action) {
-    if (action === "openCraftMenu") {
-      this.setHudActionMode("barracksCraftMenu");
-      return;
-    }
     if (action === "craftTower") {
       if (this.gameState.gold < this.towerSystem.towerCost) {
         return;
       }
-      this.startTowerPlacement({ preserveSelection: true, returnMode: "barracksCraftMenu" });
+      this.startTowerPlacement({ preserveSelection: true, returnMode: "barracksMain" });
       return;
     }
     if (action.startsWith("upgrade:") && this.selectedBuilding?.kind === "tower") {
@@ -1027,34 +1008,18 @@ export class GameScene extends Phaser.Scene {
       }
       return;
     }
-    if (action === "backFromCraft") {
-      this.setHudActionMode("barracksMain");
-      return;
-    }
     if (action === "clearSelection") {
-      this.selectedBuilding = null;
       this.clearTowerGroupSelection();
-      this.setHudActionMode("empty");
-      this.hud.render(this.gameState, this.towerSystem.towers.length, STARTING_LIVES, this.selectedBuilding, this.getWaveInfo());
-      this.redrawSelectionOutline();
+      this.reselectBlueBarracks();
       return;
     }
     if (action === "sellTower" && this.selectedBuilding?.kind === "tower") {
       const refund = this.towerSystem.removeTowerAtCell(this.selectedBuilding.cellX, this.selectedBuilding.cellY);
       if (refund > 0) {
         this.gameState.gold += refund;
-        this.selectedBuilding = null;
         this.clearTowerGroupSelection();
-        this.setHudActionMode("empty");
         this.debugOverlay.redraw();
-        this.hud.render(
-          this.gameState,
-          this.towerSystem.towers.length,
-          STARTING_LIVES,
-          this.selectedBuilding,
-          this.getWaveInfo(),
-        );
-        this.redrawSelectionOutline();
+        this.reselectBlueBarracks();
       }
     }
   }
@@ -1490,7 +1455,7 @@ export class GameScene extends Phaser.Scene {
         if (this.selectedBuilding?.kind === "barracks" && this.selectedBuilding?.label === "Blue Barracks") {
           this.setHudActionMode("barracksMain");
         } else if (this.selectedBuilding?.kind === "tower") {
-          this.setHudActionMode("towerMenu");
+          this.setHudActionMode("tower");
         } else {
           this.setHudActionMode("empty");
         }
@@ -1505,17 +1470,8 @@ export class GameScene extends Phaser.Scene {
         return;
       }
 
-      this.selectedBuilding = null;
       this.clearTowerGroupSelection();
-      this.setHudActionMode("empty");
-      this.hud.render(
-        this.gameState,
-        this.towerSystem.towers.length,
-        STARTING_LIVES,
-        this.selectedBuilding,
-        this.getWaveInfo(),
-      );
-      this.redrawSelectionOutline();
+      this.reselectBlueBarracks();
     };
     this.input.on("pointerdown", this._boundPointerDown);
 
@@ -1896,25 +1852,25 @@ export class GameScene extends Phaser.Scene {
       this.togglePause();
       return;
     }
-    if (this._hudActionMode === "barracksCraftMenu") {
-      this.handleHudAction("backFromCraft");
-      return;
-    }
     if (this._pendingPlacement?.type === "tower") {
-      const returnMode = this._placementReturnMode;
       this.clearTowerPlacement();
-      this.setHudActionMode(returnMode ?? "empty");
-      this.hud.render(
-        this.gameState,
-        this.towerSystem.towers.length,
-        STARTING_LIVES,
-        this.selectedBuilding,
-        this.getWaveInfo(),
-      );
+      if (this.selectedBuilding?.kind === "barracks" && this.selectedBuilding?.label === "Blue Barracks") {
+        this.setHudActionMode("barracksMain");
+        this.updateHudActions();
+        this.hud.render(
+          this.gameState,
+          this.towerSystem.towers.length,
+          STARTING_LIVES,
+          this.selectedBuilding,
+          this.getWaveInfo(),
+        );
+      } else {
+        this.reselectBlueBarracks();
+      }
       return;
     }
-    if (this.selectedBuilding != null) {
-      this.handleHudAction("clearSelection");
+    if (this.selectedBuilding?.kind === "tower") {
+      this.reselectBlueBarracks();
     }
   }
 
@@ -1922,97 +1878,40 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor(this.map.bgColor);
     this.terrainContainer.removeAll(true);
 
-    const layers = deriveLayers(this.map.elevation);
     const hasSheet = hasTinySwordsFolderHint(this);
     ensureMapTilesets(this.map);
     ensureMapOverrideGrids(this.map);
+    ensureMapLayerTiles(this.map);
     ensurePathMaskGrid(this.map);
-    const shoreKey = this.map.tilesets.shore;
-    const plateauKey = this.map.tilesets.plateau;
 
     for (let y = 0; y < this.map.height; y += 1) {
       for (let x = 0; x < this.map.width; x += 1) {
-        if (layers.islandMask[y][x] !== 1) {
-          continue;
-        }
         const px = x * TILE_SIZE;
         const py = y * TILE_SIZE;
+        const elev = Math.max(0, Math.min(MAP_TILE_LAYER_COUNT - 1, Math.floor(this.map.elevation[y][x] ?? 0)));
 
-        if (hasSheet) {
-          const elev = this.map.elevation[y][x];
-          const ov = resolvedTerrainOverride(this.map.tileOverrides[y][x]);
-          const frame =
-            elev < 2 && ov != null
-              ? ov.frame
-              : getShoreFrameIndex(layers.islandMask, x, y, this.map.width, this.map.height, shoreKey);
-          const sheetKey = elev < 2 && ov != null && this.textures.exists(ov.sheet) ? ov.sheet : DEFAULT_TERRAIN_SHEET;
-          const spr = this.add.sprite(px + TILE_SIZE / 2, py + TILE_SIZE / 2, sheetKey, frame ?? 0);
-          this.terrainContainer.add(spr);
-        } else {
-          const fallback = this.add.rectangle(px + TILE_SIZE / 2, py + TILE_SIZE / 2, TILE_SIZE, TILE_SIZE, 0x7fa05f);
-          fallback.setOrigin(0.5, 0.5);
-          this.terrainContainer.add(fallback);
-        }
-      }
-    }
-
-    for (let y = 0; y < this.map.height; y += 1) {
-      for (let x = 0; x < this.map.width; x += 1) {
-        if (layers.highGround[y][x] !== 1) {
+        if (!hasSheet) {
+          if (elev >= 1) {
+            const colors = [0x2d4f7d, 0x7fa05f, 0x8fb665, 0x9fc875];
+            const inset = Math.max(0, (elev - 1) * 4);
+            const fallback = this.add.rectangle(
+              px + TILE_SIZE / 2,
+              py + TILE_SIZE / 2,
+              TILE_SIZE - inset,
+              TILE_SIZE - inset,
+              colors[elev] ?? colors[1],
+              elev === 1 ? 1 : 0.75,
+            );
+            fallback.setOrigin(0.5, 0.5);
+            fallback.setDepth(elev);
+            this.terrainContainer.add(fallback);
+          }
           continue;
         }
-        const px = x * TILE_SIZE;
-        const py = y * TILE_SIZE;
-        if (hasSheet) {
-          const elev = this.map.elevation[y][x];
-          const ov = resolvedTerrainOverride(this.map.tileOverrides[y][x]);
-          const frame =
-            elev === 2 && ov != null
-              ? ov.frame
-              : getHighGroundFrameIndex(layers.highGround, x, y, this.map.width, this.map.height, plateauKey);
-          const sheetKey = elev === 2 && ov != null && this.textures.exists(ov.sheet) ? ov.sheet : DEFAULT_TERRAIN_SHEET;
-          const spr = this.add.sprite(px + TILE_SIZE / 2, py + TILE_SIZE / 2, sheetKey, frame ?? 0);
-          spr.setAlpha(0.98);
-          this.terrainContainer.add(spr);
-        } else {
-          const overlay = this.add.rectangle(px + TILE_SIZE / 2, py + TILE_SIZE / 2, TILE_SIZE - 8, TILE_SIZE - 8, 0x8fb665, 0.55);
-          overlay.setOrigin(0.5, 0.5);
-          this.terrainContainer.add(overlay);
-        }
-      }
-    }
 
-    if (hasSheet) {
-      for (let y = 0; y < this.map.height; y += 1) {
-        for (let x = 0; x < this.map.width; x += 1) {
-          const dec = this.map.decorations[y][x];
-          if (dec == null || typeof dec !== "object" || typeof dec.sheet !== "string" || typeof dec.frame !== "number") {
-            continue;
-          }
-          if (!this.textures.exists(dec.sheet)) {
-            continue;
-          }
-          const px = x * TILE_SIZE;
-          const py = y * TILE_SIZE;
-          if (dec.sheet === SHEEP_IDLE_SHEET_KEY) {
-            const spr = this.add.sprite(px + TILE_SIZE / 2, py + TILE_SIZE / 2, dec.sheet, 0);
-            spr.setDisplaySize(64, 64);
-            spr.setDepth(12);
-            if (this.anims.exists(SHEEP_IDLE_ANIM_KEY)) {
-              spr.play(SHEEP_IDLE_ANIM_KEY, false, Phaser.Math.Clamp(Math.floor(dec.frame), 0, 5));
-            }
-            this.terrainContainer.add(spr);
-          } else if (DECORATION_IMAGE_KEYS.includes(dec.sheet)) {
-            const spr = this.add.sprite(px + TILE_SIZE / 2, py + TILE_SIZE, dec.sheet);
-            spr.setOrigin(0.5, 1);
-            spr.setDisplaySize(128, 192);
-            spr.setDepth(12);
-            this.terrainContainer.add(spr);
-          } else {
-            const spr = this.add.sprite(px + TILE_SIZE / 2, py + TILE_SIZE / 2, dec.sheet, dec.frame);
-            spr.setDepth(12);
-            this.terrainContainer.add(spr);
-          }
+        for (let layer = 0; layer <= elev; layer += 1) {
+          const tile = this.map.layerTiles?.[layer]?.[y]?.[x] ?? null;
+          addLayerTileSprite(this, this.terrainContainer, tile, x, y, layer === 3 ? 12 : layer);
         }
       }
     }

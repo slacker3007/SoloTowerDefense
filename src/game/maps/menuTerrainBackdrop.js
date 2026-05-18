@@ -1,14 +1,54 @@
 import Phaser from "phaser";
 import { TILE_SIZE } from "../constants";
 import { hasTinySwordsFolderHint, SHEEP_IDLE_ANIM_KEY, SHEEP_IDLE_SHEET_KEY } from "../assets";
-import { createElevation, createNullGrid, createStringGrid, deriveLayers } from "./elevation";
-import { cellToWorld, getHighGroundFrameIndex, getShoreFrameIndex } from "./tileRules";
-import { ensureMapOverrideGrids, ensureMapTilesets, ensurePathMaskGrid } from "./mapUtils";
+import { createElevation, createNullGrid, createStringGrid } from "./elevation";
+import { cellToWorld } from "./tileRules";
+import { ensureMapLayerTiles, ensureMapOverrideGrids, ensureMapTilesets, ensurePathMaskGrid } from "./mapUtils";
 import {
   DECORATION_IMAGE_KEYS,
   DEFAULT_TERRAIN_SHEET,
-  normalizeTerrainTileOverride,
+  MAP_TILE_LAYER_COUNT,
 } from "./tileOverrideSchema";
+
+/**
+ * @param {Phaser.Scene} scene
+ * @param {Phaser.GameObjects.Container} container
+ * @param {{ sheet: string, frame: number } | null} tile
+ * @param {number} cellX
+ * @param {number} cellY
+ * @param {number} depth
+ */
+function addLayerTileSprite(scene, container, tile, cellX, cellY, depth) {
+  if (tile == null || typeof tile.sheet !== "string" || typeof tile.frame !== "number") {
+    return;
+  }
+  if (!scene.textures.exists(tile.sheet)) {
+    return;
+  }
+  const px = cellX * TILE_SIZE;
+  const py = cellY * TILE_SIZE;
+  if (tile.sheet === SHEEP_IDLE_SHEET_KEY) {
+    const spr = scene.add.sprite(px + TILE_SIZE / 2, py + TILE_SIZE / 2, tile.sheet, 0);
+    spr.setDisplaySize(64, 64);
+    spr.setDepth(depth);
+    if (scene.anims.exists(SHEEP_IDLE_ANIM_KEY)) {
+      spr.play(SHEEP_IDLE_ANIM_KEY, false, Phaser.Math.Clamp(Math.floor(tile.frame), 0, 5));
+    }
+    container.add(spr);
+    return;
+  }
+  if (DECORATION_IMAGE_KEYS.includes(tile.sheet)) {
+    const spr = scene.add.sprite(px + TILE_SIZE / 2, py + TILE_SIZE, tile.sheet);
+    spr.setOrigin(0.5, 1);
+    spr.setDisplaySize(128, 192);
+    spr.setDepth(depth);
+    container.add(spr);
+    return;
+  }
+  const spr = scene.add.sprite(px + TILE_SIZE / 2, py + TILE_SIZE / 2, tile.sheet, tile.frame);
+  spr.setDepth(depth);
+  container.add(spr);
+}
 
 /**
  * @param {number} gridW
@@ -208,7 +248,20 @@ export function buildMenuIslandMap(gridW, gridH, rng) {
 
   ensureMapTilesets(map);
   ensureMapOverrideGrids(map);
+  ensureMapLayerTiles(map);
   ensurePathMaskGrid(map);
+
+  for (let y = 0; y < gridH; y += 1) {
+    for (let x = 0; x < gridW; x += 1) {
+      const elev = elevation[y][x];
+      if (elev >= 1) {
+        map.layerTiles[1][y][x] = { sheet: DEFAULT_TERRAIN_SHEET, frame: 10 };
+      }
+      if (elev >= 2) {
+        map.layerTiles[2][y][x] = { sheet: DEFAULT_TERRAIN_SHEET, frame: 15 };
+      }
+    }
+  }
 
   const decoOccupied = new Set([`${bx},${by}`]);
   if (warriorCell) {
@@ -225,6 +278,8 @@ export function buildMenuIslandMap(gridW, gridH, rng) {
     const cell = sheepFoot.splice(idx, 1)[0];
     if (cell) {
       map.decorations[cell.y][cell.x] = { sheet: SHEEP_IDLE_SHEET_KEY, frame: rng.integerInRange(0, 5) };
+      map.layerTiles[3][cell.y][cell.x] = map.decorations[cell.y][cell.x];
+      map.elevation[cell.y][cell.x] = 3;
       decoOccupied.add(`${cell.x},${cell.y}`);
     }
   }
@@ -245,6 +300,8 @@ export function buildMenuIslandMap(gridW, gridH, rng) {
     const t = plateauCells.splice(ti, 1)[0];
     if (t) {
       map.decorations[t.y][t.x] = { sheet: "blueTower", frame: 0 };
+      map.layerTiles[3][t.y][t.x] = map.decorations[t.y][t.x];
+      map.elevation[t.y][t.x] = 3;
       decoOccupied.add(`${t.x},${t.y}`);
       towerPlaced += 1;
     }
@@ -254,6 +311,8 @@ export function buildMenuIslandMap(gridW, gridH, rng) {
     if (spare.length > 0) {
       const t = spare[rng.integerInRange(0, spare.length - 1)];
       map.decorations[t.y][t.x] = { sheet: "blueTower", frame: 0 };
+      map.layerTiles[3][t.y][t.x] = map.decorations[t.y][t.x];
+      map.elevation[t.y][t.x] = 3;
     }
   }
 
@@ -266,77 +325,30 @@ export function buildMenuIslandMap(gridW, gridH, rng) {
  * @param {object} map
  */
 export function renderMenuTerrainBackdrop(scene, container, map) {
-  const layers = deriveLayers(map.elevation);
   const hasSheet = hasTinySwordsFolderHint(scene);
   ensureMapTilesets(map);
   ensureMapOverrideGrids(map);
+  ensureMapLayerTiles(map);
   ensurePathMaskGrid(map);
-  const shoreKey = map.tilesets.shore;
-  const plateauKey = map.tilesets.plateau;
 
-  if (hasSheet && scene.textures.exists("waterFoamSheet")) {
-    for (let y = 0; y < map.height; y += 1) {
-      for (let x = 0; x < map.width; x += 1) {
-        if (layers.waterFoam[y][x] !== 1) {
-          continue;
+  for (let y = 0; y < map.height; y += 1) {
+    for (let x = 0; x < map.width; x += 1) {
+      const px = x * TILE_SIZE;
+      const py = y * TILE_SIZE;
+      const elev = Math.max(0, Math.min(MAP_TILE_LAYER_COUNT - 1, Math.floor(map.elevation[y][x] ?? 0)));
+      if (!hasSheet) {
+        if (elev >= 1) {
+          const colors = [0x2d4f7d, 0x7fa05f, 0x8fb665, 0x9fc875];
+          const fallback = scene.add.rectangle(px + TILE_SIZE / 2, py + TILE_SIZE / 2, TILE_SIZE, TILE_SIZE, colors[elev] ?? colors[1]);
+          fallback.setOrigin(0.5, 0.5);
+          container.add(fallback);
         }
-        const px = x * TILE_SIZE;
-        const py = y * TILE_SIZE;
-        const foam = scene.add.sprite(px + TILE_SIZE / 2, py + TILE_SIZE / 2, "waterFoamSheet", 0);
-        foam.setAlpha(0.82);
-        container.add(foam);
-      }
-    }
-  }
-
-  for (let y = 0; y < map.height; y += 1) {
-    for (let x = 0; x < map.width; x += 1) {
-      if (layers.islandMask[y][x] !== 1) {
         continue;
       }
-      const px = x * TILE_SIZE;
-      const py = y * TILE_SIZE;
 
-      if (hasSheet) {
-        const elev = map.elevation[y][x];
-        const ov = normalizeTerrainTileOverride(map.tileOverrides[y][x]);
-        const frame =
-          elev < 2 && ov != null
-            ? ov.frame
-            : getShoreFrameIndex(layers.islandMask, x, y, map.width, map.height, shoreKey);
-        const sheetKey = elev < 2 && ov != null && scene.textures.exists(ov.sheet) ? ov.sheet : DEFAULT_TERRAIN_SHEET;
-        const spr = scene.add.sprite(px + TILE_SIZE / 2, py + TILE_SIZE / 2, sheetKey, frame ?? 0);
-        container.add(spr);
-      } else {
-        const fallback = scene.add.rectangle(px + TILE_SIZE / 2, py + TILE_SIZE / 2, TILE_SIZE, TILE_SIZE, 0x7fa05f);
-        fallback.setOrigin(0.5, 0.5);
-        container.add(fallback);
-      }
-    }
-  }
-
-  for (let y = 0; y < map.height; y += 1) {
-    for (let x = 0; x < map.width; x += 1) {
-      if (layers.highGround[y][x] !== 1) {
-        continue;
-      }
-      const px = x * TILE_SIZE;
-      const py = y * TILE_SIZE;
-      if (hasSheet) {
-        const elev = map.elevation[y][x];
-        const ov = normalizeTerrainTileOverride(map.tileOverrides[y][x]);
-        const frame =
-          elev === 2 && ov != null
-            ? ov.frame
-            : getHighGroundFrameIndex(layers.highGround, x, y, map.width, map.height, plateauKey);
-        const sheetKey = elev === 2 && ov != null && scene.textures.exists(ov.sheet) ? ov.sheet : DEFAULT_TERRAIN_SHEET;
-        const spr = scene.add.sprite(px + TILE_SIZE / 2, py + TILE_SIZE / 2, sheetKey, frame ?? 0);
-        spr.setAlpha(0.98);
-        container.add(spr);
-      } else {
-        const overlay = scene.add.rectangle(px + TILE_SIZE / 2, py + TILE_SIZE / 2, TILE_SIZE - 8, TILE_SIZE - 8, 0x8fb665, 0.55);
-        overlay.setOrigin(0.5, 0.5);
-        container.add(overlay);
+      for (let layer = 0; layer <= elev; layer += 1) {
+        const tile = map.layerTiles?.[layer]?.[y]?.[x] ?? null;
+        addLayerTileSprite(scene, container, tile, x, y, layer === 3 ? 12 : layer);
       }
     }
   }
@@ -359,41 +371,6 @@ export function renderMenuTerrainBackdrop(scene, container, map) {
           container.add(scene.add.image(pos.x, pos.y, "redBarracks"));
         } else {
           container.add(scene.add.rectangle(pos.x, pos.y, TILE_SIZE - 8, TILE_SIZE - 8, 0xb43b3b));
-        }
-      }
-    }
-  }
-
-  if (hasSheet) {
-    for (let y = 0; y < map.height; y += 1) {
-      for (let x = 0; x < map.width; x += 1) {
-        const dec = map.decorations[y][x];
-        if (dec == null || typeof dec !== "object" || typeof dec.sheet !== "string" || typeof dec.frame !== "number") {
-          continue;
-        }
-        if (!scene.textures.exists(dec.sheet)) {
-          continue;
-        }
-        const px = x * TILE_SIZE;
-        const py = y * TILE_SIZE;
-        if (dec.sheet === SHEEP_IDLE_SHEET_KEY) {
-          const spr = scene.add.sprite(px + TILE_SIZE / 2, py + TILE_SIZE / 2, dec.sheet, 0);
-          spr.setDisplaySize(64, 64);
-          spr.setDepth(12);
-          if (scene.anims.exists(SHEEP_IDLE_ANIM_KEY)) {
-            spr.play(SHEEP_IDLE_ANIM_KEY, false, Phaser.Math.Clamp(Math.floor(dec.frame), 0, 5));
-          }
-          container.add(spr);
-        } else if (DECORATION_IMAGE_KEYS.includes(dec.sheet)) {
-          const spr = scene.add.sprite(px + TILE_SIZE / 2, py + TILE_SIZE, dec.sheet);
-          spr.setOrigin(0.5, 1);
-          spr.setDisplaySize(128, 192);
-          spr.setDepth(12);
-          container.add(spr);
-        } else {
-          const spr = scene.add.sprite(px + TILE_SIZE / 2, py + TILE_SIZE / 2, dec.sheet, dec.frame);
-          spr.setDepth(12);
-          container.add(spr);
         }
       }
     }
