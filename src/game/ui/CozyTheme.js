@@ -70,6 +70,15 @@ export const cozyTheme = {
     lockLocked: "#ffe3a3",
     lockUnlocked: "#b7f7da",
   },
+  hudButton: {
+    primary: "#4f3f38",
+    primaryHover: "#6a5648",
+    primaryActive: "#8a6f58",
+    muted: "#453a42",
+    mutedHover: "#5e4e5d",
+    mutedActive: "#6d5b6b",
+    disabled: "#453a42",
+  },
 };
 
 /**
@@ -119,5 +128,54 @@ export function createCozyButton(scene, label, onClick, opts = {}) {
   button.on("pointerup", () => button.setStyle({ backgroundColor: hoverBg }));
   button.on("pointerover", () => button.setStyle({ backgroundColor: hoverBg }));
   button.on("pointerout", () => button.setStyle({ backgroundColor: baseBg }));
+  return button;
+}
+
+/**
+ * Compact in-game HUD button (left-aligned origin, cozy palette).
+ * @param {Phaser.Scene} scene
+ * @param {string} label
+ * @param {() => void} [onClick]
+ * @param {{ fontSize?: number, interactive?: boolean, variant?: "primary" | "muted", compact?: boolean, useHoverBackground?: boolean }} [opts]
+ */
+export function createHudButton(scene, label, onClick = null, opts = {}) {
+  const interactive = opts.interactive !== false;
+  const variant = opts.variant === "muted" ? "muted" : "primary";
+  const compact = opts.compact === true;
+  const useHover = opts.useHoverBackground !== false;
+  const fontSize = Number.isFinite(opts.fontSize) ? opts.fontSize : cozyTheme.typography.scale.md;
+  const baseBg = interactive
+    ? variant === "muted"
+      ? cozyTheme.hudButton.muted
+      : cozyTheme.hudButton.primary
+    : cozyTheme.hudButton.disabled;
+  const hoverBg = variant === "muted" ? cozyTheme.hudButton.mutedHover : cozyTheme.hudButton.primaryHover;
+  const activeBg = variant === "muted" ? cozyTheme.hudButton.mutedActive : cozyTheme.hudButton.primaryActive;
+  const padX = compact ? cozyTheme.spacing.sm : 10;
+  const padY = compact ? cozyTheme.spacing.xs + 2 : 6;
+  const button = scene.add.text(0, 0, label, {
+    fontFamily: cozyTheme.typography.bodyFamily,
+    fontSize: `${fontSize}px`,
+    color: cozyTheme.colors.textPrimary,
+    backgroundColor: baseBg,
+    padding: { x: padX, y: padY },
+  });
+  button.setOrigin(0, 0.5);
+  if (interactive) {
+    button.setInteractive({ useHandCursor: true });
+    if (typeof onClick === "function") {
+      button.on("pointerdown", () => {
+        if (useHover) {
+          button.setStyle({ backgroundColor: activeBg });
+        }
+        onClick();
+      });
+      if (useHover) {
+        button.on("pointerup", () => button.setStyle({ backgroundColor: hoverBg }));
+        button.on("pointerover", () => button.setStyle({ backgroundColor: hoverBg }));
+        button.on("pointerout", () => button.setStyle({ backgroundColor: baseBg }));
+      }
+    }
+  }
   return button;
 }

@@ -53,6 +53,7 @@ import {
   toWorldRange,
   towerCatalog,
 } from "../game/balance";
+import { getDisplaySettings } from "../game/settings/displaySettings.js";
 import { MapEditor } from "../game/editor/MapEditor";
 import { EditorPanel } from "../game/editor/EditorPanel";
 import { GRID_KEYBIND_ACTION_IDS, KeybindStore } from "../game/input/KeybindStore.js";
@@ -138,9 +139,6 @@ export class GameScene extends Phaser.Scene {
     this._runEndOverlayRoot = null;
     this._settingsReturnToPause = false;
     this._placementReturnMode = null;
-    this._orientationHintRoot = null;
-    this._orientationHintText = null;
-    this._dismissedOrientationHint = false;
     /** @type {Phaser.Tweens.Tween | null} */
     this._introCameraTween = null;
     this._introCameraPanActive = false;
@@ -163,8 +161,6 @@ export class GameScene extends Phaser.Scene {
     this._performance = { clearedWaves: 0, leaksInWave: 0, livesAtWaveStart: STARTING_LIVES, waveTimer: 0 };
     // On scene.restart(), old overlay references can briefly survive until recreated.
     // Clear them before the first resize/layout pass to avoid stale-child access.
-    this._orientationHintRoot = null;
-    this._orientationHintText = null;
 
     this.map = createFreshMap001();
     this.gameState = {
@@ -226,11 +222,9 @@ export class GameScene extends Phaser.Scene {
     this.keybindStore = new KeybindStore();
     this.hud = new Hud(this, {
       maxLives: STARTING_LIVES,
-      keybindStore: this.keybindStore,
       onMapEditorFromMenu: () => this.toggleMapEditorFromMenu(),
       onOpenSettings: () => this.openSettingsFromGame(),
       onMainMenu: () => this.backToMainMenu(),
-      onKeybindsChanged: () => {},
       onCycleGameSpeed: () => this.cycleGameSpeed(),
       onTogglePause: () => this.togglePause(),
     });
@@ -260,9 +254,10 @@ export class GameScene extends Phaser.Scene {
     this.bindInput();
     this.createPauseOverlay();
     this.createRunEndOverlay();
-    this.createOrientationHintOverlay();
     ensureUnitHpOverlay(this);
     this.syncHudForEditorMode({ clampCamera: false });
+    this.applyDefaultBlueBarracksSelection();
+    this.applyHudDisplayPreferences();
     this.updateHudActions();
     this.hud.render(
       this.gameState,
@@ -302,9 +297,6 @@ export class GameScene extends Phaser.Scene {
     this._pauseOverlayRoot = null;
     this._runEndOverlayRoot?.destroy(true);
     this._runEndOverlayRoot = null;
-    this._orientationHintRoot?.destroy(true);
-    this._orientationHintRoot = null;
-    this._orientationHintText = null;
     destroyUnitHpOverlay(this);
   }
 
@@ -617,6 +609,36 @@ export class GameScene extends Phaser.Scene {
    * @param {number} worldY
    * @returns {boolean}
    */
+  applyHudDisplayPreferences() {
+    const { hudScale } = getDisplaySettings();
+    this.hud?.setUiTransform?.({ scale: hudScale });
+    const overlayScale = Number.isFinite(hudScale) && hudScale > 0 ? hudScale : 1;
+    this._pauseOverlayRoot?.setScale(overlayScale);
+    this._runEndOverlayRoot?.setScale(overlayScale);
+    this._layoutPauseOverlay();
+    this._layoutRunEndOverlay();
+  }
+
+  applyDefaultBlueBarracksSelection() {
+    if (this.editor?.enabled) {
+      return;
+    }
+    const c = this.map?.points?.homeBarracks;
+    if (!c || !Number.isFinite(c.x) || !Number.isFinite(c.y)) {
+      return;
+    }
+    this.selectedBuilding = {
+      kind: "barracks",
+      label: "Blue Barracks",
+      cellX: c.x,
+      cellY: c.y,
+      hpCurrent: this.gameState.lives,
+      hpMax: STARTING_LIVES,
+    };
+    this.setHudActionMode("barracksMain");
+    this.redrawSelectionOutline();
+  }
+
   selectBarracksAtWorld(worldX, worldY) {
     const candidates = [
       {
@@ -1332,75 +1354,13 @@ export class GameScene extends Phaser.Scene {
     }
     this.hud?.setViewportMode?.(viewportProfile.isPortrait ? "portrait" : "landscape");
     this.hud?.layout?.(width, height);
-    this.layoutOrientationHint(width, height);
-    this.updateOrientationHint(viewportProfile);
+    this._layoutPauseOverlay();
+    this._layoutRunEndOverlay();
     if (!this._introCameraPanActive) {
       this._clampCameraScroll();
     } else {
       this._syncHudCameraTelemetry();
     }
-  }
-
-  createOrientationHintOverlay() {
-    const width = this.scale.width;
-    const root = this.add.container(0, 0);
-    const panel = this.add.rectangle(width * 0.5, 88, Math.min(640, width - 30), 56, cozyTheme.colors.surface, 0.94);
-    panel.setStrokeStyle(2, cozyTheme.colors.accent, 0.95);
-    const text = this.add.text(width * 0.5, 88, "", {
-      fontFamily: cozyTheme.typography.bodyFamily,
-      fontSize: "16px",
-      color: cozyTheme.colors.textPrimary,
-      align: "center",
-    }).setOrigin(0.5, 0.5);
-    const close = this.add.text(panel.x + panel.width * 0.5 - 18, panel.y, "x", {
-      fontFamily: cozyTheme.typography.bodyFamily,
-      fontSize: "20px",
-      color: cozyTheme.colors.textMuted,
-    }).setOrigin(0.5, 0.5);
-    close.setInteractive({ useHandCursor: true });
-    close.on("pointerdown", () => {
-      this._dismissedOrientationHint = true;
-      root.setVisible(false);
-    });
-    root.add([panel, text, close]);
-    root.setDepth(165);
-    root.setVisible(false);
-    this._attachOverlayToUiCamera(root);
-    this._orientationHintRoot = root;
-    this._orientationHintText = text;
-  }
-
-  layoutOrientationHint(width, _height) {
-    if (!this._orientationHintRoot) {
-      return;
-    }
-    const panel = this._orientationHintRoot.list[0];
-    const text = this._orientationHintRoot.list[1];
-    const close = this._orientationHintRoot.list[2];
-    if (!panel || !text || !close) {
-      return;
-    }
-    panel.setPosition(width * 0.5, 88);
-    panel.setSize(Math.min(640, width - 30), 56);
-    text.setPosition(width * 0.5, 88);
-    close.setPosition(panel.x + panel.width * 0.5 - 18, panel.y);
-  }
-
-  updateOrientationHint(profile) {
-    if (!this._orientationHintRoot || !this._orientationHintText) {
-      return;
-    }
-    if (profile.orientationMatchesPreference) {
-      this._orientationHintRoot.setVisible(false);
-      this._dismissedOrientationHint = false;
-      return;
-    }
-    if (this._dismissedOrientationHint) {
-      return;
-    }
-    const preferredLabel = profile.preferredOrientation === "portrait" ? "portrait" : "landscape";
-    this._orientationHintText.setText(`Recommended orientation: ${preferredLabel} for ${profile.deviceType}.`);
-    this._orientationHintRoot.setVisible(true);
   }
 
   /**
@@ -1641,16 +1601,6 @@ export class GameScene extends Phaser.Scene {
       if (!hud || !store) {
         return;
       }
-      if (hud.isRebindingKey()) {
-        return;
-      }
-      if (hud.isKeybindPanelOpen()) {
-        if (ev.keyCode === store.getCode("backOrClose") || ev.key === "Escape") {
-          hud.closeKeybindPanel();
-          ev.preventDefault();
-        }
-        return;
-      }
       if (hud.isMenuDropdownOpen()) {
         if (ev.keyCode === store.getCode("backOrClose") || ev.key === "Escape") {
           hud.closeMenuDropdown();
@@ -1724,55 +1674,109 @@ export class GameScene extends Phaser.Scene {
   createPauseOverlay() {
     this._pauseOverlayRoot?.destroy(true);
     this._pauseOverlayRoot = null;
-    const width = this.scale.width;
-    const height = this.scale.height;
-    const backdrop = this.add.rectangle(0, 0, width, height, cozyTheme.colors.overlay, 0.65).setOrigin(0, 0);
-    const panel = createCozyPanel(this, width * 0.5, height * 0.5, 460, 360);
-    const title = this.add.text(width * 0.5, height * 0.5 - 120, "Paused", {
-      fontFamily: "Georgia, serif",
+    this._pauseBackdrop = this.add.rectangle(0, 0, 100, 100, cozyTheme.colors.overlay, 0.65).setOrigin(0, 0);
+    this._pausePanel = createCozyPanel(this, 0, 0, 460, 360);
+    this._pauseTitle = this.add.text(0, 0, "Paused", {
+      fontFamily: cozyTheme.typography.titleFamily,
       fontSize: "48px",
       color: cozyTheme.colors.textPrimary,
     }).setOrigin(0.5, 0.5);
-    const resumeBtn = createCozyButton(this, "Resume", () => this.togglePause(), { width: 220, fontSize: 24 });
-    const settingsBtn = createCozyButton(this, "Settings", () => this.openSettingsFromGame(), { width: 220, fontSize: 22 });
-    const restartBtn = createCozyButton(this, "Restart", () => this.scene.restart(), { width: 220, fontSize: 22 });
-    const menuBtn = createCozyButton(this, "Main Menu", () => this.backToMainMenu(), { width: 220, fontSize: 22 });
-    resumeBtn.setPosition(width * 0.5, height * 0.5 - 35);
-    settingsBtn.setPosition(width * 0.5, height * 0.5 + 20);
-    restartBtn.setPosition(width * 0.5, height * 0.5 + 75);
-    menuBtn.setPosition(width * 0.5, height * 0.5 + 130);
-    this._pauseOverlayRoot = this.add.container(0, 0, [backdrop, panel, title, resumeBtn, settingsBtn, restartBtn, menuBtn]);
+    this._pauseResumeBtn = createCozyButton(this, "Resume", () => this.togglePause(), { width: 220, fontSize: 24 });
+    this._pauseSettingsBtn = createCozyButton(this, "Settings", () => this.openSettingsFromGame(), { width: 220, fontSize: 22 });
+    this._pauseRestartBtn = createCozyButton(this, "Restart", () => this.scene.restart(), { width: 220, fontSize: 22 });
+    this._pauseMenuBtn = createCozyButton(this, "Main Menu", () => this.backToMainMenu(), { width: 220, fontSize: 22 });
+    this._pauseOverlayRoot = this.add.container(0, 0, [
+      this._pauseBackdrop,
+      this._pausePanel,
+      this._pauseTitle,
+      this._pauseResumeBtn,
+      this._pauseSettingsBtn,
+      this._pauseRestartBtn,
+      this._pauseMenuBtn,
+    ]);
     this._pauseOverlayRoot.setDepth(180);
     this._pauseOverlayRoot.setVisible(false);
     this._attachOverlayToUiCamera(this._pauseOverlayRoot);
+    this._layoutPauseOverlay();
+  }
+
+  _layoutPauseOverlay() {
+    if (!this._pauseOverlayRoot || !this._pauseBackdrop) {
+      return;
+    }
+    const width = Math.max(1, this.scale.width);
+    const height = Math.max(1, this.scale.height);
+    const hudScale = getDisplaySettings().hudScale;
+    const overlayScale = Number.isFinite(hudScale) && hudScale > 0 ? hudScale : 1;
+    this._pauseOverlayRoot.setScale(overlayScale);
+    this._pauseBackdrop.setSize(width / overlayScale, height / overlayScale);
+    const cx = width / (2 * overlayScale);
+    const cy = height / (2 * overlayScale);
+    const panelW = Math.min(460, Math.round(width * 0.72 / overlayScale));
+    const panelH = Math.min(360, Math.round(height * 0.42 / overlayScale));
+    this._pausePanel.setPosition(cx, cy);
+    this._pausePanel.setSize(panelW, panelH);
+    this._pauseTitle.setPosition(cx, cy - panelH * 0.5 + 48);
+    this._pauseResumeBtn.setPosition(cx, cy - 35);
+    this._pauseSettingsBtn.setPosition(cx, cy + 20);
+    this._pauseRestartBtn.setPosition(cx, cy + 75);
+    this._pauseMenuBtn.setPosition(cx, cy + 130);
   }
 
   createRunEndOverlay() {
     this._runEndOverlayRoot?.destroy(true);
     this._runEndOverlayRoot = null;
-    const width = this.scale.width;
-    const height = this.scale.height;
-    const backdrop = this.add.rectangle(0, 0, width, height, cozyTheme.colors.overlay, 0.72).setOrigin(0, 0);
-    const panel = createCozyPanel(this, width * 0.5, height * 0.5, 620, 420);
-    this._runEndTitle = this.add.text(width * 0.5, height * 0.5 - 140, "Run Complete", {
-      fontFamily: "Georgia, serif",
+    this._runEndBackdrop = this.add.rectangle(0, 0, 100, 100, cozyTheme.colors.overlay, 0.72).setOrigin(0, 0);
+    this._runEndPanel = createCozyPanel(this, 0, 0, 620, 420);
+    this._runEndTitle = this.add.text(0, 0, "Run Complete", {
+      fontFamily: cozyTheme.typography.titleFamily,
       fontSize: "46px",
       color: cozyTheme.colors.textPrimary,
     }).setOrigin(0.5, 0.5);
-    this._runEndStats = this.add.text(width * 0.5, height * 0.5 - 40, "", {
-      fontFamily: "monospace",
+    this._runEndStats = this.add.text(0, 0, "", {
+      fontFamily: cozyTheme.typography.bodyFamily,
       fontSize: "20px",
       color: cozyTheme.colors.textMuted,
       align: "center",
     }).setOrigin(0.5, 0.5);
-    const retryBtn = createCozyButton(this, "Retry", () => this.scene.restart(), { width: 220, fontSize: 24 });
-    const menuBtn = createCozyButton(this, "Back to Menu", () => this.backToMainMenu(), { width: 220, fontSize: 24 });
-    retryBtn.setPosition(width * 0.5 - 120, height * 0.5 + 120);
-    menuBtn.setPosition(width * 0.5 + 120, height * 0.5 + 120);
-    this._runEndOverlayRoot = this.add.container(0, 0, [backdrop, panel, this._runEndTitle, this._runEndStats, retryBtn, menuBtn]);
+    this._runEndRetryBtn = createCozyButton(this, "Retry", () => this.scene.restart(), { width: 220, fontSize: 24 });
+    this._runEndMenuBtn = createCozyButton(this, "Back to Menu", () => this.backToMainMenu(), { width: 220, fontSize: 24 });
+    this._runEndOverlayRoot = this.add.container(0, 0, [
+      this._runEndBackdrop,
+      this._runEndPanel,
+      this._runEndTitle,
+      this._runEndStats,
+      this._runEndRetryBtn,
+      this._runEndMenuBtn,
+    ]);
     this._runEndOverlayRoot.setDepth(185);
     this._runEndOverlayRoot.setVisible(false);
     this._attachOverlayToUiCamera(this._runEndOverlayRoot);
+    this._layoutRunEndOverlay();
+  }
+
+  _layoutRunEndOverlay() {
+    if (!this._runEndOverlayRoot || !this._runEndBackdrop) {
+      return;
+    }
+    const width = Math.max(1, this.scale.width);
+    const height = Math.max(1, this.scale.height);
+    const hudScale = getDisplaySettings().hudScale;
+    const overlayScale = Number.isFinite(hudScale) && hudScale > 0 ? hudScale : 1;
+    this._runEndOverlayRoot.setScale(overlayScale);
+    this._runEndBackdrop.setSize(width / overlayScale, height / overlayScale);
+    const cx = width / (2 * overlayScale);
+    const cy = height / (2 * overlayScale);
+    const panelW = Math.min(620, Math.round(width * 0.86 / overlayScale));
+    const panelH = Math.min(420, Math.round(height * 0.48 / overlayScale));
+    this._runEndPanel.setPosition(cx, cy);
+    this._runEndPanel.setSize(panelW, panelH);
+    this._runEndTitle.setPosition(cx, cy - panelH * 0.5 + 56);
+    this._runEndStats.setPosition(cx, cy - 20);
+    const btnY = cy + panelH * 0.5 - 72;
+    const btnSpread = Math.min(120, panelW * 0.22);
+    this._runEndRetryBtn.setPosition(cx - btnSpread, btnY);
+    this._runEndMenuBtn.setPosition(cx + btnSpread, btnY);
   }
 
   /**
@@ -1796,9 +1800,6 @@ export class GameScene extends Phaser.Scene {
     if (this.hud?.isMenuDropdownOpen?.()) {
       this.hud.closeMenuDropdown();
     }
-    if (this.hud?.isKeybindPanelOpen?.()) {
-      this.hud.closeKeybindPanel();
-    }
     this.scene.pause();
     this.scene.launch("settings");
     this.scene.bringToTop("settings");
@@ -1809,6 +1810,8 @@ export class GameScene extends Phaser.Scene {
     this._pauseOverlayOpen = this._settingsReturnToPause;
     this._pauseOverlayRoot?.setVisible(this._pauseOverlayOpen);
     this._settingsReturnToPause = false;
+    this.applyHudDisplayPreferences();
+    this.handleResize({ width: this.scale.width, height: this.scale.height });
     this.hud?.render(
       this.gameState,
       this.towerSystem.towers.length,

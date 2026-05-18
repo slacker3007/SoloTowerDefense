@@ -1,13 +1,6 @@
 import Phaser from "phaser";
 import { getTowerRoleHudModel } from "../balance";
-import {
-  KEYBIND_ACTION_IDS,
-  KEYBIND_DESCRIPTIONS,
-  formatKeyLabel,
-  isModifierOnlyEvent,
-  keyCodeFromBrowserEvent,
-} from "../input/KeybindStore.js";
-import { cozyTheme } from "./CozyTheme";
+import { cozyTheme, createHudButton } from "./CozyTheme";
 
 /** Keep action rail chrome (one empty row) visible when no slots are configured. */
 const RESERVE_EMPTY_ACTION_RAIL = true;
@@ -27,11 +20,9 @@ export class Hud {
    * @param {Phaser.Scene} scene
    * @param {{
    *   maxLives?: number,
-   *   keybindStore?: import("../input/KeybindStore.js").KeybindStore | null,
    *   onMapEditorFromMenu?: () => void,
    *   onOpenSettings?: () => void,
    *   onMainMenu?: () => void,
-   *   onKeybindsChanged?: () => void,
    *   onCycleGameSpeed?: () => void,
   *   onTogglePause?: () => void,
    * }} [options]
@@ -39,22 +30,13 @@ export class Hud {
   constructor(scene, options = {}) {
     this.scene = scene;
     this.maxLives = typeof options.maxLives === "number" ? options.maxLives : 0;
-    /** @type {import("../input/KeybindStore.js").KeybindStore | null} */
-    this.keybindStore = options.keybindStore ?? null;
     this.onMapEditorFromMenu = typeof options.onMapEditorFromMenu === "function" ? options.onMapEditorFromMenu : () => {};
     this.onOpenSettings = typeof options.onOpenSettings === "function" ? options.onOpenSettings : () => {};
     this.onMainMenu = typeof options.onMainMenu === "function" ? options.onMainMenu : () => {};
-    this.onKeybindsChanged = typeof options.onKeybindsChanged === "function" ? options.onKeybindsChanged : () => {};
     this.onCycleGameSpeed = typeof options.onCycleGameSpeed === "function" ? options.onCycleGameSpeed : () => {};
     this.onTogglePause = typeof options.onTogglePause === "function" ? options.onTogglePause : () => {};
 
     this._menuDropdownOpen = false;
-    this._keybindPanelOpen = false;
-    /** @type {string | null} */
-    this._rebindingActionId = null;
-    /** @type {((ev: KeyboardEvent) => void) | null} */
-    this._rebindKeyHandler = null;
-    this._keybindFeedback = "";
 
     this.topBarHeight = 64;
     this.bottomBarHeight = 360;
@@ -175,72 +157,20 @@ export class Hud {
     this.menuBtnSettings.setPosition(14, 94);
     this.menuBtnMainMenu.setPosition(14, 158);
 
-    this.keybindBackdrop = scene.add.rectangle(0, 0, 800, 600, 0x000000, 0.55);
-    this.keybindBackdrop.setOrigin(0, 0);
-    this.keybindBackdrop.setInteractive();
-
-    this.keybindPanelBg = scene.add.rectangle(0, 0, 700, 440, this._hudColors.panelElevated, 0.98);
-    this.keybindPanelBg.setOrigin(0.5, 0.5);
-    this.keybindPanelBg.setStrokeStyle(2, this._hudColors.panelStroke, 1);
-
-    this.keybindTitle = scene.add.text(0, 0, "Keybindings", {
-      fontFamily: "monospace",
-      fontSize: "28px",
-      color: "#ffffff",
-    });
-    this.keybindTitle.setOrigin(0.5, 0);
-
-    /** @type {{ id: string, button: Phaser.GameObjects.Text }[]} */
-    this._keybindRowButtons = [];
-    for (const id of KEYBIND_ACTION_IDS) {
-      const button = this.createButton("", true, () => this.beginRebind(id));
-      button.setOrigin(0, 0.5);
-      this._keybindRowButtons.push({ id, button });
-    }
-
-    this.keybindBackBtn = this.createButton("Back", true, () => this.closeKeybindPanel());
-    this.keybindResetBtn = this.createButton("Reset defaults", true, () => {
-      this.keybindStore?.resetToDefaults();
-      this._keybindFeedback = "Reset to defaults.";
-      this.refreshKeybindRows();
-      this.onKeybindsChanged();
-    });
-    this.keybindFeedbackText = scene.add.text(0, 0, "", {
-      fontFamily: "monospace",
-      fontSize: "15px",
-      color: cozyTheme.colors.textMuted,
-      align: "center",
-    });
-    this.keybindFeedbackText.setOrigin(0.5, 0);
-
-    this.keybindPanelInner = scene.add.container(0, 0, [
-      this.keybindPanelBg,
-      this.keybindTitle,
-      ...this._keybindRowButtons.map((r) => r.button),
-      this.keybindBackBtn,
-      this.keybindResetBtn,
-      this.keybindFeedbackText,
-    ]);
-
-    this.keybindOverlayRoot = scene.add.container(0, 0, [this.keybindBackdrop, this.keybindPanelInner]);
-    this.keybindOverlayRoot.setVisible(false);
-
-    this.refreshKeybindRows();
-
     this.hpText = scene.add.text(0, 0, "", {
-      fontFamily: "monospace",
-      fontSize: "16px",
-      color: "#ffffff",
+      fontFamily: cozyTheme.typography.bodyFamily,
+      fontSize: "18px",
+      color: cozyTheme.hud.chipText,
     });
     this.goldText = scene.add.text(0, 0, "", {
-      fontFamily: "monospace",
-      fontSize: "16px",
-      color: "#ffffff",
+      fontFamily: cozyTheme.typography.bodyFamily,
+      fontSize: "18px",
+      color: cozyTheme.colors.textWarning,
     });
     this.towersText = scene.add.text(0, 0, "", {
-      fontFamily: "monospace",
-      fontSize: "16px",
-      color: "#ffffff",
+      fontFamily: cozyTheme.typography.bodyFamily,
+      fontSize: "18px",
+      color: cozyTheme.hud.chipText,
     });
     this.cameraTelemetryText = scene.add.text(0, 0, "", {
       fontFamily: "monospace",
@@ -485,11 +415,11 @@ export class Hud {
       this._actionHitZones.push(zone);
 
       const costText = this.scene.add.text(0, 0, "", {
-        fontFamily: "monospace",
+        fontFamily: cozyTheme.typography.bodyFamily,
         fontSize: "12px",
-        color: "#ffeaa0",
+        color: cozyTheme.colors.textWarning,
         backgroundColor: "#101824cc",
-        padding: { x: 4, y: 2 },
+        padding: { x: 5, y: 3 },
       });
       costText.setOrigin(1, 1);
       this._actionGridBackground.add(costText);
@@ -506,7 +436,7 @@ export class Hud {
       this._actionGridBackground.add(infoText);
       this._actionInfoTexts.push(infoText);
 
-      const infoZone = this.scene.add.zone(0, 0, 18, 18);
+      const infoZone = this.scene.add.zone(0, 0, 22, 22);
       infoZone.setOrigin(0.5, 0.5);
       this._actionGridBackground.add(infoZone);
       this._actionInfoHitZones.push(infoZone);
@@ -532,9 +462,9 @@ export class Hud {
     });
     this.tooltipDescriptionText.setOrigin(0, 0);
     this.tooltipCostText = scene.add.text(0, 0, "", {
-      fontFamily: "monospace",
+      fontFamily: cozyTheme.typography.bodyFamily,
       fontSize: "15px",
-      color: "#ffeaa0",
+      color: cozyTheme.colors.textWarning,
     });
     this.tooltipCostText.setOrigin(0, 0);
     this.tooltipWarningText = scene.add.text(0, 0, "", {
@@ -574,9 +504,9 @@ export class Hud {
     });
     this.detailsDescriptionText.setOrigin(0, 0);
     this.detailsCostText = scene.add.text(0, 0, "", {
-      fontFamily: "monospace",
+      fontFamily: cozyTheme.typography.bodyFamily,
       fontSize: "15px",
-      color: "#ffeaa0",
+      color: cozyTheme.colors.textWarning,
     });
     this.detailsCostText.setOrigin(0, 0);
     this.detailsWarningText = scene.add.text(0, 0, "", {
@@ -657,7 +587,6 @@ export class Hud {
       this._actionGridBackground,
       this.menuBackdrop,
       this.menuDropdownRoot,
-      this.keybindOverlayRoot,
       this.tooltipRoot,
       this.detailsRoot,
     ]);
@@ -834,106 +763,17 @@ export class Hud {
     this.layout();
   }
 
-  openKeybindPanel() {
-    if (!this.keybindStore) {
-      return;
-    }
-    this.closeMenuDropdown();
-    this._keybindFeedback = "";
-    this._keybindPanelOpen = true;
-    this.refreshKeybindRows();
-    this.applyMenuOverlayVisibility();
-    this.layout();
-  }
-
-  closeKeybindPanel() {
-    if (!this._keybindPanelOpen) {
-      return;
-    }
-    this.endRebind();
-    this._keybindPanelOpen = false;
-    this.applyMenuOverlayVisibility();
-    this.layout();
-  }
-
   isMenuDropdownOpen() {
     return this._menuDropdownOpen;
-  }
-
-  isKeybindPanelOpen() {
-    return this._keybindPanelOpen;
-  }
-
-  isRebindingKey() {
-    return this._rebindingActionId != null;
   }
 
   applyMenuOverlayVisibility() {
     const drop = Boolean(this._topVisible && this._menuDropdownOpen);
     this.menuBackdrop.setVisible(drop);
     this.menuDropdownRoot.setVisible(drop);
-    const keys = Boolean(this._keybindPanelOpen);
-    this.keybindOverlayRoot.setVisible(keys);
-  }
-
-  refreshKeybindRows() {
-    if (!this.keybindStore) {
-      return;
-    }
-    const codes = this.keybindStore.getCodes();
-    for (const { id, button } of this._keybindRowButtons) {
-      const desc = KEYBIND_DESCRIPTIONS[id] ?? id;
-      const keyLabel = formatKeyLabel(codes[id]);
-      button.setText(`${desc}   [${keyLabel}]   Click to rebind`);
-    }
-    this.keybindFeedbackText.setText(this._keybindFeedback);
-  }
-
-  /**
-   * @param {string} actionId
-   */
-  beginRebind(actionId) {
-    if (!this.keybindStore || this._rebindingActionId) {
-      return;
-    }
-    this._rebindingActionId = actionId;
-    this._rebindKeyHandler = (/** @type {KeyboardEvent} */ ev) => {
-      if (ev.key === "Escape") {
-        this.endRebind();
-        return;
-      }
-      if (isModifierOnlyEvent(ev)) {
-        return;
-      }
-      const code = keyCodeFromBrowserEvent(ev);
-      if (code == null) {
-        return;
-      }
-      ev.preventDefault();
-      const result = this.keybindStore.setBinding(actionId, code);
-      if (!result.ok) {
-        this._keybindFeedback = result.reason === "Key already used" ? "This key is already assigned." : result.reason;
-        this.refreshKeybindRows();
-        return;
-      }
-      this.endRebind();
-      this._keybindFeedback = "Keybinding saved.";
-      this.refreshKeybindRows();
-      this.onKeybindsChanged();
-    };
-    this.scene.input.keyboard?.on(Phaser.Input.Keyboard.Events.ANY_KEY_DOWN, this._rebindKeyHandler);
-  }
-
-  endRebind() {
-    if (this._rebindKeyHandler) {
-      this.scene.input.keyboard?.off(Phaser.Input.Keyboard.Events.ANY_KEY_DOWN, this._rebindKeyHandler);
-      this._rebindKeyHandler = null;
-    }
-    this._rebindingActionId = null;
   }
 
   dispose() {
-    this.endRebind();
     if (this._boundHudPointerMove) {
       this.scene.input.off("pointermove", this._boundHudPointerMove);
       this._boundHudPointerMove = null;
@@ -1114,28 +954,13 @@ export class Hud {
   }
 
   createButton(label, interactive, onClick = null, useHoverBackground = true) {
-    const baseBg = interactive ? "#384455" : "#303744";
-    const button = this.scene.add.text(0, 0, label, {
-      fontFamily: "monospace",
-      fontSize: "14px",
-      color: cozyTheme.colors.textPrimary,
-      backgroundColor: baseBg,
-      padding: { x: 10, y: 6 },
+    const compact = label.length <= 2 || label === "×";
+    return createHudButton(this.scene, label, onClick, {
+      interactive,
+      compact,
+      useHoverBackground,
+      fontSize: compact ? cozyTheme.typography.scale.sm : cozyTheme.typography.scale.md,
     });
-    button.setOrigin(0, 0.5);
-
-    if (interactive) {
-      button.setInteractive({ useHandCursor: true });
-      if (typeof onClick === "function") {
-        button.on("pointerdown", () => onClick());
-      }
-      if (useHoverBackground) {
-        button.on("pointerover", () => button.setStyle({ backgroundColor: "#4b5e78" }));
-        button.on("pointerout", () => button.setStyle({ backgroundColor: baseBg }));
-      }
-    }
-
-    return button;
   }
 
   createActionSlotBackground() {
@@ -1163,7 +988,7 @@ export class Hud {
 
       const panelPadding = 16;
       const gapSm = 8;
-      const controlRowH = 40;
+      const controlRowH = 44;
       const railInnerPad = 12;
       const cellGap = 8;
       const isWaveCtx = this._contextMode === "wave";
@@ -1227,14 +1052,14 @@ export class Hud {
       this._effectiveBottomChromeHeight = 0;
       this._effectiveRightChromeWidth = splitLandscape ? rightPanelW + panelPadding : 0;
 
-      const statFontSize = this.clamp(Math.round(topHeight * 0.34), 18, 22);
+      const statFontSize = this.clamp(Math.round(topHeight * 0.36), 19, 24);
       const buttonFontSize = this.clamp(Math.round(topHeight * 0.28), 14, 18);
       this.menuButton.setStyle({ fontSize: `${buttonFontSize}px`, padding: { x: 8, y: 8 } });
       this.speedButton.setStyle({ fontSize: "14px", padding: { x: 8, y: 8 } });
       this.pauseButton.setStyle({ fontSize: "14px", padding: { x: 8, y: 8 } });
       this.hpText.setStyle({ fontSize: `${statFontSize}px` });
       this.goldText.setStyle({ fontSize: `${statFontSize}px` });
-      this.towersText.setStyle({ fontSize: "18px" });
+      this.towersText.setStyle({ fontSize: `${statFontSize}px` });
       this.cameraTelemetryText.setStyle({ fontSize: `${this.clamp(Math.round(topHeight * 0.28), 12, 16)}px` });
 
       const landscapeContextScale = Number(cozyTheme.hud.landscapeContextScale) || 0.9;
@@ -1313,34 +1138,6 @@ export class Hud {
         this.menuBtnSettings.setPosition(14, itemStartY);
         this.menuBtnMainMenu.setPosition(14, itemStartY + itemGap);
       }
-
-      this.keybindBackdrop.setPosition(0, 0);
-      this.keybindBackdrop.setSize(rootWidth, rootHeight);
-      this.keybindPanelInner.setPosition(rootWidth / 2, rootHeight / 2);
-      const keybindPanelW = this.clamp(Math.round(rootWidth * 0.72), 680, 980);
-      const keybindPanelH = this.clamp(Math.round(rootHeight * 0.55), 420, 620);
-      const keybindTitleSize = this.clamp(Math.round(keybindPanelH * 0.08), 24, 40);
-      this.keybindPanelBg.setSize(keybindPanelW, keybindPanelH);
-      this.keybindTitle.setStyle({ fontSize: `${keybindTitleSize}px` });
-      this.keybindTitle.setPosition(0, -this.keybindPanelBg.height * 0.5 + 22);
-      const footerY = this.keybindPanelBg.height * 0.5 - 28;
-      const rowStartY = this.keybindTitle.y + Math.round(keybindPanelH * 0.1);
-      const rowCount = Math.max(1, this._keybindRowButtons.length);
-      const rowAvailable = Math.max(60, footerY - 28 - rowStartY);
-      const rowStep = Math.max(22, Math.floor(rowAvailable / rowCount));
-      const keybindRowSize = this.clamp(Math.round(rowStep * 0.42), 13, 24);
-      let rowY = rowStartY;
-      for (const { button } of this._keybindRowButtons) {
-        button.setStyle({ fontSize: `${keybindRowSize}px`, padding: { x: 12, y: 6 } });
-        button.setPosition(-this.keybindPanelBg.width * 0.5 + 16, rowY);
-        rowY += rowStep;
-      }
-      const footerSize = this.clamp(Math.round(keybindPanelH * 0.05), 18, 28);
-      this.keybindBackBtn.setStyle({ fontSize: `${footerSize}px`, padding: { x: 16, y: 10 } });
-      this.keybindResetBtn.setStyle({ fontSize: `${footerSize}px`, padding: { x: 16, y: 10 } });
-      this.keybindBackBtn.setPosition(-this.keybindPanelBg.width * 0.5 + 16, footerY);
-      this.keybindResetBtn.setPosition(this.keybindPanelBg.width * 0.5 - this.keybindResetBtn.width - 16, footerY);
-      this.keybindFeedbackText.setPosition(0, footerY - 42);
 
       const rightPadding = contentX + railContentW - 12;
       const statGap = 16;
@@ -1867,7 +1664,7 @@ export class Hud {
           .setAlpha(slot?.enabled === false ? 0.7 : 1);
         infoZone
           .setPosition(infoText.x, infoText.y)
-          .setSize(18, 18)
+          .setSize(22, 22)
           .setVisible(showInfo);
 
         if (currentIcon && showInlineLabel) {
@@ -1878,14 +1675,14 @@ export class Hud {
           button.setOrigin(0.5, 0.5);
         }
       }
+      for (const z of this._actionHitZones) {
+        this._actionGridBackground.bringToTop(z);
+      }
       for (const infoZone of this._actionInfoHitZones) {
         this._actionGridBackground.bringToTop(infoZone);
       }
       for (const costText of this._actionCostTexts) {
         this._actionGridBackground.bringToTop(costText);
-      }
-      for (const z of this._actionHitZones) {
-        this._actionGridBackground.bringToTop(z);
       }
       if (this.tooltipRoot.visible) {
         this.moveActionTooltip();
@@ -2077,12 +1874,15 @@ export class Hud {
   }
 
   isPointBlockedByHud(screenX, screenY) {
+    const rootScale = Number.isFinite(this.rootScale) && this.rootScale > 0 ? this.rootScale : 1;
+    const lx = (screenX - this.rootOffsetX) / rootScale;
+    const ly = (screenY - this.rootOffsetY) / rootScale;
     if (this._topVisible) {
       const inTopBar =
-        screenX >= this.topBackground.x &&
-        screenX <= this.topBackground.x + this.topBackground.width &&
-        screenY >= this.topBackground.y &&
-        screenY <= this.topBackground.y + this.topBackground.height;
+        lx >= this.topBackground.x &&
+        lx <= this.topBackground.x + this.topBackground.width &&
+        ly >= this.topBackground.y &&
+        ly <= this.topBackground.y + this.topBackground.height;
       if (inTopBar) {
         return true;
       }
@@ -2102,10 +1902,10 @@ export class Hud {
         continue;
       }
       const inRect =
-        screenX >= rect.x &&
-        screenX <= rect.x + rect.width &&
-        screenY >= rect.y &&
-        screenY <= rect.y + rect.height;
+        lx >= rect.x &&
+        lx <= rect.x + rect.width &&
+        ly >= rect.y &&
+        ly <= rect.y + rect.height;
       if (inRect) {
         return true;
       }
@@ -2125,6 +1925,8 @@ export class Hud {
     const hpCurrent = Math.max(0, Math.floor(Number(state.lives) || 0));
     const hpMax = Math.max(hpCurrent, Math.floor(Number(maxLives) || hpCurrent));
     this.hpText.setText(`❤ ${hpCurrent}/${hpMax}`);
+    const hpRatio = hpMax > 0 ? hpCurrent / hpMax : 1;
+    this.hpText.setColor(hpRatio <= 0.25 ? cozyTheme.colors.textDanger : cozyTheme.hud.chipText);
     this.updateGoldDelta(state.gold);
     this.goldText.setText(`💰 ${state.gold}`);
     this.towersText.setVisible(false);
@@ -2288,7 +2090,7 @@ export class Hud {
       } else {
         g.fillStyle(0x2c2438, 1);
         g.fillRoundedRect(px, py, pillW, innerH, radius);
-        g.lineStyle(1, 0x141018, 1);
+        g.lineStyle(2, this._hudColors.panelStroke, 0.85);
         g.strokeRoundedRect(px + 0.5, py + 0.5, pillW - 1, innerH - 1, radius);
       }
     }
