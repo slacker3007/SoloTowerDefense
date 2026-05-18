@@ -1,4 +1,5 @@
 import { TILE_SIZE } from "./constants";
+import { TERRAIN_TILESET_ASSETS } from "./generated/terrainTilesetCatalog.js";
 
 const tinySwordsRoot = "TinySwords";
 
@@ -13,47 +14,14 @@ const terrainResourcesRoot = `${tinySwordsRoot}/Terrain/Resources/Meat/Sheep`;
 export const SHEEP_IDLE_SHEET_KEY = "sheepIdleSheet";
 export const SHEEP_IDLE_ANIM_KEY = "sheep-idle";
 
+export const terrainSpriteSheets = TERRAIN_TILESET_ASSETS.map((asset) => ({
+  key: asset.key,
+  path: asset.path,
+  frameConfig: { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE },
+}));
+
 export const spriteSheets = [
-  {
-    key: "terrainColor1",
-    path: `${terrainRoot}/Tilemap_color1.png`,
-    frameConfig: { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE },
-  },
-  {
-    key: "terrainColor2",
-    path: `${terrainRoot}/Tilemap_color2.png`,
-    frameConfig: { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE },
-  },
-  {
-    key: "terrainColor3",
-    path: `${terrainRoot}/Tilemap_color3.png`,
-    frameConfig: { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE },
-  },
-  {
-    key: "terrainColor4",
-    path: `${terrainRoot}/Tilemap_color4.png`,
-    frameConfig: { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE },
-  },
-  {
-    key: "terrainColor5",
-    path: `${terrainRoot}/Tilemap_color5.png`,
-    frameConfig: { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE },
-  },
-  {
-    key: "terrainColor6",
-    path: `${terrainRoot}/Tilemap_color6.png`,
-    frameConfig: { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE },
-  },
-  {
-    key: "waterFoamSheet",
-    path: `${terrainRoot}/Water Foam.png`,
-    frameConfig: { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE },
-  },
-  {
-    key: "shadowSheet",
-    path: `${terrainRoot}/Shadow.png`,
-    frameConfig: { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE },
-  },
+  ...terrainSpriteSheets,
   {
     key: "woodTablePixelMap",
     path: `${tinySwordsRoot}/UI Elements/UI Elements/Wood Table/WoodTable.png`,

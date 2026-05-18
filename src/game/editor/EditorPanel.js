@@ -1,21 +1,13 @@
 import { frameIndexToSheetPixels } from "../maps/tileRules";
-import { DEFAULT_TERRAIN_SHEET, MAP_TILE_LAYER_COUNT, TERRAIN_TILE_SHEETS } from "../maps/tileOverrideSchema";
-
-const TINY_SWORDS_ROOT = "/TinySwords";
-const TINY_SWORDS_TILESET_BASE = `${TINY_SWORDS_ROOT}/Terrain/Tileset`;
-/** @type {Record<string, string>} */
-const TERRAIN_SHEET_URLS = {
-  terrainColor1: `${TINY_SWORDS_TILESET_BASE}/Tilemap_color1.png`,
-  terrainColor2: `${TINY_SWORDS_TILESET_BASE}/Tilemap_color2.png`,
-  terrainColor3: `${TINY_SWORDS_TILESET_BASE}/Tilemap_color3.png`,
-  terrainColor4: `${TINY_SWORDS_TILESET_BASE}/Tilemap_color4.png`,
-  terrainColor5: `${TINY_SWORDS_TILESET_BASE}/Tilemap_color5.png`,
-  terrainColor6: `${TINY_SWORDS_TILESET_BASE}/Tilemap_color6.png`,
-};
+import {
+  DEFAULT_TERRAIN_SHEET,
+  getTerrainTileSheet,
+  MAP_TILE_LAYER_COUNT,
+  TERRAIN_TILESET_ASSETS,
+} from "../maps/tileOverrideSchema";
 
 const TILE = 64;
-const TILEMAP_COLS = 9;
-const TILEMAP_ROWS = 6;
+const PICKER_WIDTH = 270;
 const THUMB = 28;
 
 /**
@@ -172,14 +164,14 @@ export class EditorPanel {
     pickerSec.appendChild(sheetLabel);
     const sheetRow = document.createElement("div");
     sheetRow.className = "editor-panel__btn-row editor-panel__sheet-row";
-    for (let i = 0; i < TERRAIN_TILE_SHEETS.length; i += 1) {
-      const key = TERRAIN_TILE_SHEETS[i];
+    for (const asset of TERRAIN_TILESET_ASSETS) {
       const b = document.createElement("button");
       b.type = "button";
       b.className = "editor-panel__btn editor-panel__btn--small";
-      b.textContent = `C${i + 1}`;
-      b.dataset.sheetKey = key;
-      b.addEventListener("click", () => this.editor.setPickerSheet(key));
+      b.textContent = asset.buttonLabel;
+      b.title = asset.label;
+      b.dataset.sheetKey = asset.key;
+      b.addEventListener("click", () => this.editor.setPickerSheet(asset.key));
       sheetRow.appendChild(b);
       this._sheetButtons.push(b);
     }
@@ -195,10 +187,8 @@ export class EditorPanel {
     pickerSec.appendChild(this._tilePickerHintEl);
     this.tilePickerCanvas = document.createElement("canvas");
     this.tilePickerCanvas.className = "tile-picker-canvas";
-    const pw = 270;
-    const ph = Math.round((pw * 384) / 576);
-    this.tilePickerCanvas.width = pw;
-    this.tilePickerCanvas.height = ph;
+    this.tilePickerCanvas.width = PICKER_WIDTH;
+    this.tilePickerCanvas.height = Math.round((PICKER_WIDTH * 384) / 576);
     pickerSec.appendChild(this.tilePickerCanvas);
     this._pickerMove = (ev) => this._onTilePickerMouse(ev, "move");
     this._pickerLeave = () => this._onTilePickerLeave();
@@ -403,6 +393,10 @@ export class EditorPanel {
     if (!this.tilePickerCanvas) {
       return;
     }
+    const asset = this._getPickerAsset();
+    if (!asset) {
+      return;
+    }
     const hasSel = this.editor.getSelectedCount() > 0;
     const brushMode = this.editor.editorMode === "map";
     if (!hasSel && !brushMode) {
@@ -415,15 +409,18 @@ export class EditorPanel {
     const my = ev.clientY - rect.top;
     const cw = this.tilePickerCanvas.width;
     const ch = this.tilePickerCanvas.height;
-    const cellW = cw / TILEMAP_COLS;
-    const cellH = ch / TILEMAP_ROWS;
-    const col = Math.max(0, Math.min(TILEMAP_COLS - 1, Math.floor(mx / cellW)));
-    const row = Math.max(0, Math.min(TILEMAP_ROWS - 1, Math.floor(my / cellH)));
+    const cellW = cw / asset.cols;
+    const cellH = ch / asset.rows;
+    const col = Math.max(0, Math.min(asset.cols - 1, Math.floor(mx / cellW)));
+    const row = Math.max(0, Math.min(asset.rows - 1, Math.floor(my / cellH)));
     if (kind === "move") {
       this._pickerHover = { col, row };
       this._redrawTilePicker();
     } else {
-      const frame = row * TILEMAP_COLS + col;
+      const frame = row * asset.cols + col;
+      if (frame >= asset.frameCount) {
+        return;
+      }
       this.editor.applyPickedTileFrame(frame);
     }
   }
@@ -437,8 +434,25 @@ export class EditorPanel {
     return this._tileImages.get(this.editor.pickerSheet) ?? this._tileImages.get(DEFAULT_TERRAIN_SHEET) ?? null;
   }
 
+  _getPickerAsset() {
+    return getTerrainTileSheet(this.editor.pickerSheet) ?? getTerrainTileSheet(DEFAULT_TERRAIN_SHEET);
+  }
+
   _getColor1Image() {
     return this._tileImages.get(DEFAULT_TERRAIN_SHEET) ?? null;
+  }
+
+  _resizeTilePickerCanvas() {
+    const asset = this._getPickerAsset();
+    const canvas = this.tilePickerCanvas;
+    if (!canvas || !asset) {
+      return;
+    }
+    const nextHeight = Math.max(1, Math.round((PICKER_WIDTH * asset.rows) / asset.cols));
+    if (canvas.width !== PICKER_WIDTH || canvas.height !== nextHeight) {
+      canvas.width = PICKER_WIDTH;
+      canvas.height = nextHeight;
+    }
   }
 
   _redrawTilePicker() {
@@ -446,6 +460,8 @@ export class EditorPanel {
     if (!canvas) {
       return;
     }
+    this._resizeTilePickerCanvas();
+    const asset = this._getPickerAsset();
     const ctx = canvas.getContext("2d");
     if (!ctx) {
       return;
@@ -453,17 +469,25 @@ export class EditorPanel {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     const disabled = this.editor.getSelectedCount() === 0 && this.editor.editorMode !== "map";
     const img = this._getPickerImage();
-    if (img) {
+    if (img && asset) {
       ctx.globalAlpha = disabled ? 0.35 : 1;
-      ctx.drawImage(img, 0, 0, 576, 384, 0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, asset.width, asset.height, 0, 0, canvas.width, canvas.height);
       ctx.globalAlpha = 1;
     } else {
       ctx.fillStyle = "#2a3548";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
-    const cellW = canvas.width / TILEMAP_COLS;
-    const cellH = canvas.height / TILEMAP_ROWS;
-    if (this._pickerHover && !disabled) {
+    if (!asset) {
+      return;
+    }
+    const cellW = canvas.width / asset.cols;
+    const cellH = canvas.height / asset.rows;
+    if (
+      this._pickerHover &&
+      this._pickerHover.col < asset.cols &&
+      this._pickerHover.row < asset.rows &&
+      !disabled
+    ) {
       ctx.strokeStyle = "#5cb3ff";
       ctx.lineWidth = 2;
       ctx.strokeRect(this._pickerHover.col * cellW + 1, this._pickerHover.row * cellH + 1, cellW - 2, cellH - 2);
@@ -476,18 +500,24 @@ export class EditorPanel {
       if (v != null && typeof v === "object" && v.sheet === this.editor.pickerSheet && typeof v.frame === "number") {
         highlightFrame = v.frame;
       }
-      if (highlightFrame != null) {
+      if (highlightFrame != null && highlightFrame >= 0 && highlightFrame < asset.frameCount) {
         ctx.strokeStyle = "#f5d742";
         ctx.lineWidth = 2;
-        const c = highlightFrame % TILEMAP_COLS;
-        const r = Math.floor(highlightFrame / TILEMAP_COLS);
+        const c = highlightFrame % asset.cols;
+        const r = Math.floor(highlightFrame / asset.cols);
         ctx.strokeRect(c * cellW + 1, r * cellH + 1, cellW - 2, cellH - 2);
       }
     }
   }
 
   _loadTilemapImages() {
-    let remaining = TERRAIN_TILE_SHEETS.length;
+    let remaining = TERRAIN_TILESET_ASSETS.length;
+    if (remaining === 0) {
+      this._redrawThumbs();
+      this._redrawTilePicker();
+      this.refresh();
+      return;
+    }
     const onOneDone = () => {
       remaining -= 1;
       if (remaining <= 0) {
@@ -497,22 +527,17 @@ export class EditorPanel {
       }
     };
 
-    for (const key of TERRAIN_TILE_SHEETS) {
-      const src = TERRAIN_SHEET_URLS[key];
-      if (!src) {
-        onOneDone();
-        continue;
-      }
+    for (const asset of TERRAIN_TILESET_ASSETS) {
       const img = new Image();
       img.crossOrigin = "anonymous";
       img.onload = () => {
-        this._tileImages.set(key, img);
+        this._tileImages.set(asset.key, img);
         onOneDone();
       };
       img.onerror = () => {
         onOneDone();
       };
-      img.src = src;
+      img.src = asset.url;
     }
   }
 
@@ -533,7 +558,11 @@ export class EditorPanel {
     if (!img || !Number.isFinite(frame)) {
       return;
     }
-    const { sx, sy } = frameIndexToSheetPixels(frame);
+    const asset = getTerrainTileSheet(sheetKey) ?? getTerrainTileSheet(DEFAULT_TERRAIN_SHEET);
+    if (asset && (frame < 0 || frame >= asset.frameCount)) {
+      return;
+    }
+    const { sx, sy } = frameIndexToSheetPixels(frame, asset?.cols ?? 9);
     ctx.drawImage(img, sx, sy, TILE, TILE, 0, 0, THUMB, THUMB);
   }
 
@@ -628,9 +657,8 @@ export class EditorPanel {
       .join(" · ");
 
     if (this._pickerHeadingEl) {
-      const idx = TERRAIN_TILE_SHEETS.indexOf(e.pickerSheet);
-      const n = idx >= 0 ? idx + 1 : 1;
-      this._pickerHeadingEl.textContent = `Tile picker (Tilemap color ${n})`;
+      const asset = getTerrainTileSheet(e.pickerSheet);
+      this._pickerHeadingEl.textContent = `Tile picker${asset ? ` (${asset.label})` : ""}`;
     }
 
     for (const b of this.toolButtons) {
@@ -661,10 +689,7 @@ export class EditorPanel {
 
     for (const btn of this._sheetButtons) {
       const key = btn.dataset.sheetKey;
-      btn.classList.toggle(
-        "editor-panel__btn--primary",
-        key === e.pickerSheet && TERRAIN_TILE_SHEETS.includes(e.pickerSheet),
-      );
+      btn.classList.toggle("editor-panel__btn--primary", key === e.pickerSheet);
     }
     this._redrawThumbs();
     this._redrawTilePicker();

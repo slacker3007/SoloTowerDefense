@@ -1,8 +1,20 @@
+import { TERRAIN_TILESET_ASSETS, TERRAIN_TILESET_BY_KEY } from "../generated/terrainTilesetCatalog.js";
+
 /** Default sheet for legacy numeric terrain overrides in JSON. */
 export const DEFAULT_TERRAIN_SHEET = "terrainColor1";
 
 /** Spritesheet keys for TinySwords terrain tilemaps (editor picker). */
-export const TERRAIN_TILE_SHEETS = ["terrainColor1", "terrainColor2", "terrainColor3", "terrainColor4", "terrainColor5", "terrainColor6"];
+export const TERRAIN_TILE_SHEETS = TERRAIN_TILESET_ASSETS.map((asset) => asset.key);
+
+/** Metadata for TinySwords terrain tilemaps (editor picker). */
+export { TERRAIN_TILESET_ASSETS, TERRAIN_TILESET_BY_KEY };
+
+/**
+ * @param {string} key
+ */
+export function getTerrainTileSheet(key) {
+  return TERRAIN_TILESET_BY_KEY[key] ?? null;
+}
 
 /** Numbered map editor terrain layers: 0 water, 1-3 ground levels. */
 export const MAP_TILE_LAYER_COUNT = 4;

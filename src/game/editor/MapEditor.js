@@ -11,13 +11,13 @@ import {
 } from "../maps/mapUtils";
 import {
   cloneLayerTile,
+  DEFAULT_TERRAIN_SHEET,
+  getTerrainTileSheet,
   MAP_TILE_LAYER_COUNT,
   normalizeLayerTile,
-  TERRAIN_TILE_SHEETS,
 } from "../maps/tileOverrideSchema";
 
 const MAP_JSON_VERSION = 1;
-const DEFAULT_PICKER_SHEET = "terrainColor1";
 const MAP_STORAGE_KEY = "solo-td:map-editor:map001";
 
 export class MapEditor {
@@ -56,7 +56,7 @@ export class MapEditor {
     /** @type {{ x: number, y: number } | null} */
     this.selectedCell = null;
     this.selectedCellKeys = new Set();
-    this.pickerSheet = DEFAULT_PICKER_SHEET;
+    this.pickerSheet = DEFAULT_TERRAIN_SHEET;
 
     this.isDirty = false;
     this.lastSavedAt = null;
@@ -218,7 +218,12 @@ export class MapEditor {
     if (!Number.isFinite(frame)) {
       return;
     }
-    this.pickerFrame = frame;
+    const nextFrame = Math.floor(frame);
+    const sheet = getTerrainTileSheet(this.pickerSheet);
+    if (nextFrame < 0 || (sheet && nextFrame >= sheet.frameCount)) {
+      return;
+    }
+    this.pickerFrame = nextFrame;
     this.tool = "brush";
     this.editorMode = "map";
     this._notifyChange();
@@ -310,10 +315,15 @@ export class MapEditor {
    * @param {string} sheetKey terrain tilemap key
    */
   setPickerSheet(sheetKey) {
-    if (TERRAIN_TILE_SHEETS.includes(sheetKey)) {
-      this.pickerSheet = sheetKey;
-      this._notifyChange();
+    const sheet = getTerrainTileSheet(sheetKey);
+    if (!sheet) {
+      return;
     }
+    this.pickerSheet = sheet.key;
+    if (this.pickerFrame >= sheet.frameCount) {
+      this.pickerFrame = 0;
+    }
+    this._notifyChange();
   }
 
   clearSelection() {
@@ -352,14 +362,19 @@ export class MapEditor {
     if (!Number.isFinite(frame)) {
       return;
     }
-    this.setBrushTileFrame(frame);
+    const nextFrame = Math.floor(frame);
+    const sheet = getTerrainTileSheet(this.pickerSheet);
+    if (!sheet || nextFrame < 0 || nextFrame >= sheet.frameCount) {
+      return;
+    }
+    this.setBrushTileFrame(nextFrame);
     if (this.getSelectedCount() === 0) {
       return;
     }
     ensureMapLayerTiles(this.map);
 
     for (const { x, y } of this.getSelectedCells()) {
-      this._setLayerTileAt(x, y, { sheet: this.pickerSheet, frame });
+      this._setLayerTileAt(x, y, { sheet: this.pickerSheet, frame: nextFrame });
     }
 
     this.scene.redrawTerrain();
