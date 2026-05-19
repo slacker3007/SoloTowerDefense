@@ -1,6 +1,15 @@
 import Phaser from "phaser";
 import { getTowerRoleHudModel } from "../balance";
 import { cozyTheme, createHudButton } from "./CozyTheme";
+import { formatKeyLabel, GRID_KEYBIND_ACTION_IDS } from "../input/KeybindStore.js";
+import {
+  createBottomBarChrome,
+  createFantasyActionSlot,
+  createFantasyButton,
+  darkFantasyPalette,
+  drawStonePanel,
+  drawVerticalDivider,
+} from "./FantasyHudChrome.js";
 
 /** When false, wave/tower context panel is hidden; only the action rail shows. */
 const SHOW_CONTEXT_PANEL = false;
@@ -9,6 +18,8 @@ const ACTION_GRID_COLS = 10;
 const ACTION_GRID_ROWS = 1;
 
 const DETAILS_CLOSE_ICON_KEY = "detailsCloseIcon09";
+/** Padding for floating editor menu (no top bar). */
+const FLOATING_MENU_PAD = 8;
 
 /** Discrete pills for wave spawn/clear progress bar. */
 const WAVE_PROGRESS_SEGMENT_COUNT = 8;
@@ -28,10 +39,12 @@ export class Hud {
    *   onMainMenu?: () => void,
    *   onCycleGameSpeed?: () => void,
   *   onTogglePause?: () => void,
+   *   keybindStore?: import("../input/KeybindStore.js").KeybindStore,
    * }} [options]
    */
   constructor(scene, options = {}) {
     this.scene = scene;
+    this.keybindStore = options.keybindStore ?? null;
     this.maxLives = typeof options.maxLives === "number" ? options.maxLives : 0;
     this.onMapEditorFromMenu = typeof options.onMapEditorFromMenu === "function" ? options.onMapEditorFromMenu : () => {};
     this.onOpenSettings = typeof options.onOpenSettings === "function" ? options.onOpenSettings : () => {};
@@ -69,14 +82,23 @@ export class Hud {
     this._actionHitZones = [];
     this._actionGridBackground = null;
     this._actionIcons = [];
-    this._actionAccentFrames = [];
+    this._actionSlotFrames = [];
+    /** @type {import("./FantasyHudChrome.js").ReturnType<createFantasyButton>[]} */
+    this._leftUtilityButtons = [];
+    /** @type {import("./FantasyHudChrome.js").ReturnType<createFantasyButton>[]} */
+    this._rightUtilityButtons = [];
+    this._bottomSpeedButton = null;
+    this._bottomPauseButton = null;
+    this._bottomTrayBounds = { x: 0, y: 0, width: 0, height: 0 };
+    this._goldBarScreenPos = null;
+    this._bottomMenuAnchor = null;
     this._actionCostTexts = [];
     this._actionInfoTexts = [];
     this._actionInfoHitZones = [];
     this._actionSlotConfigs = Array.from({ length: ACTION_SLOT_COUNT }, () => null);
     this._hoveredActionIndex = -1;
     this._tooltipAnchor = { x: 0, y: 0 };
-    this._topVisible = true;
+    this._topVisible = false;
     this._bottomVisible = true;
     this._detailsSlotIndex = -1;
     this._detailsCloseWorldBlockFrame = -1;
@@ -90,18 +112,42 @@ export class Hud {
 
     this.topBackground = scene.add.rectangle(0, 0, scene.scale.width, this.topBarHeight, this._hudColors.topBar, 0.93);
     this.topBackground.setOrigin(0, 0);
+    this.topBackground.setVisible(false);
 
-    this.bottomBackground = scene.add.rectangle(
-      0,
-      0,
-      scene.scale.width,
-      this.bottomBarHeight,
-      this._hudColors.bottomBar,
-      0.95,
-    );
-    this.bottomBackground.setOrigin(0, 0);
+    const menuKeybindLabel = this._menuKeybindLabel();
+    this._bottomChrome = createBottomBarChrome(scene);
+    this._leftUtilityButtons = [
+      createFantasyButton(scene, {
+        label: "☰",
+        keybindLabel: menuKeybindLabel,
+        keybindCorner: "top",
+        onClick: () => this.toggleMenuDropdown(),
+      }),
+      createFantasyButton(scene, { label: "⚙", onClick: () => this.onOpenSettings() }),
+      createFantasyButton(scene, { label: "✦", interactive: false }),
+      createFantasyButton(scene, { label: "≡", interactive: false }),
+    ];
+    this._rightUtilityButtons = [
+      createFantasyButton(scene, { label: "x1", onClick: () => this.onCycleGameSpeed() }),
+      createFantasyButton(scene, { label: "⏸", onClick: () => this.onTogglePause() }),
+      createFantasyButton(scene, { label: "◎", interactive: false }),
+    ];
+    this._bottomSpeedButton = this._rightUtilityButtons[0];
+    this._bottomPauseButton = this._rightUtilityButtons[1];
+    for (const btn of this._leftUtilityButtons) {
+      this._bottomChrome.leftRail.add(btn.container);
+    }
+    for (const btn of this._rightUtilityButtons) {
+      this._bottomChrome.rightRail.add(btn.container);
+    }
 
-    this.menuButton = this.createButton("☰", true, () => this.toggleMenuDropdown());
+    this._editorMenuButton = createFantasyButton(scene, {
+      label: "☰",
+      keybindLabel: menuKeybindLabel,
+      keybindCorner: "top",
+      onClick: () => this.toggleMenuDropdown(),
+    });
+    this.menuButton = this._editorMenuButton.container;
     this.speedButton = this.createButton("x1", true, () => this.onCycleGameSpeed());
     this.pauseButton = this.createButton("Pause", true, () => this.onTogglePause());
 
@@ -355,13 +401,11 @@ export class Hud {
 
     this._actionGridBackground = this.createActionSlotBackground();
 
-    const actionSlotCell = 60;
+    const actionSlotCell = cozyTheme.darkFantasy.slotSize;
     for (let i = 0; i < ACTION_SLOT_COUNT; i += 1) {
-      const accent = this.scene.add.rectangle(0, 0, actionSlotCell - 8, actionSlotCell - 8, this._hudColors.actionFrame, 0.65);
-      accent.setOrigin(0.5, 0.5);
-      accent.setStrokeStyle(2, this._hudColors.chipStroke, 0.9);
-      this._actionGridBackground.add(accent);
-      this._actionAccentFrames.push(accent);
+      const slotFrame = createFantasyActionSlot(this.scene, actionSlotCell, "");
+      this._actionGridBackground.add(slotFrame.container);
+      this._actionSlotFrames.push(slotFrame);
 
       const button = this.createButton("", false, null, false);
       button.setOrigin(0.5, 0.5);
@@ -378,18 +422,18 @@ export class Hud {
         fontFamily: cozyTheme.typography.bodyFamily,
         fontSize: "12px",
         color: cozyTheme.colors.textWarning,
-        backgroundColor: "#101824cc",
+        backgroundColor: darkFantasyPalette.costBadgeBg,
         padding: { x: 5, y: 3 },
       });
-      costText.setOrigin(1, 1);
+      costText.setOrigin(0, 0);
       this._actionGridBackground.add(costText);
       this._actionCostTexts.push(costText);
 
       const infoText = this.scene.add.text(0, 0, "i", {
         fontFamily: "monospace",
         fontSize: "12px",
-        color: "#d7e2ff",
-        backgroundColor: "#172131dd",
+        color: darkFantasyPalette.textPrimary,
+        backgroundColor: darkFantasyPalette.infoBadgeBg,
         padding: { x: 4, y: 1 },
       });
       infoText.setOrigin(0.5, 0.5);
@@ -403,6 +447,8 @@ export class Hud {
 
       this._actionIcons.push(null);
     }
+
+    this._bottomChrome.actionHost.add(this._actionGridBackground);
 
     this.tooltipBackground = scene.add.rectangle(0, 0, 300, 120, this._hudColors.tooltipBg, 0.96);
     this.tooltipBackground.setOrigin(0, 0);
@@ -501,7 +547,7 @@ export class Hud {
 
     this.root.add([
       this.topBackground,
-      this.bottomBackground,
+      this._bottomChrome.root,
       this.menuButton,
       this.speedButton,
       this.pauseButton,
@@ -537,7 +583,6 @@ export class Hud {
       this.towerRangeTrack,
       this.towerRangeFill,
       this.towerEffectText,
-      this._actionGridBackground,
       this.menuBackdrop,
       this.menuDropdownRoot,
       this.tooltipRoot,
@@ -545,7 +590,6 @@ export class Hud {
     ]);
 
     this.topUiObjects = [
-      this.topBackground,
       this.menuButton,
       this.speedButton,
       this.pauseButton,
@@ -555,7 +599,7 @@ export class Hud {
       this.towersText,
     ];
     this.bottomUiObjects = [
-      this.bottomBackground,
+      this._bottomChrome.root,
       this.contextPanelFrame,
       this.contextTitleText,
       this.contextSubtitleText,
@@ -582,7 +626,6 @@ export class Hud {
       this.towerRangeTrack,
       this.towerRangeFill,
       this.towerEffectText,
-      this._actionGridBackground,
     ];
     this.uiObjects = [
       ...this.topUiObjects,
@@ -591,9 +634,42 @@ export class Hud {
     this.layout();
   }
 
+  _menuKeybindLabel() {
+    if (!this.keybindStore) {
+      return "";
+    }
+    return formatKeyLabel(this.keybindStore.getCode("backOrClose"));
+  }
+
+  _refreshMenuKeybindLabels() {
+    const label = this._menuKeybindLabel();
+    this._editorMenuButton?.setKeybindLabel?.(label);
+    this._leftUtilityButtons[0]?.setKeybindLabel?.(label);
+  }
+
+  /**
+   * @param {import("./FantasyHudChrome.js").ReturnType<createFantasyActionSlot>} slotFrame
+   */
+  _syncActionSlotKeybindLayer(slotFrame, slotLeft, slotTop, contentCellW, contentCellH, visible) {
+    const keybindText = slotFrame?.keybindText;
+    if (!keybindText) {
+      return;
+    }
+    const grid = this._actionGridBackground;
+    if (keybindText.parentContainer === slotFrame.container) {
+      slotFrame.container.remove(keybindText);
+      grid.add(keybindText);
+    }
+    keybindText.setOrigin(1, 1);
+    keybindText.setPosition(slotLeft + contentCellW - 4, slotTop + contentCellH - 3);
+    keybindText.setVisible(Boolean(visible && keybindText.text));
+  }
+
   _getVisiblePanelRects() {
     const rects = [];
-    if (this._bottomVisible && this._actionStripBounds?.width > 0) {
+    if (this._bottomVisible && this._bottomTrayBounds?.width > 0) {
+      rects.push(this._bottomTrayBounds);
+    } else if (this._bottomVisible && this._actionStripBounds?.width > 0) {
       rects.push(this._actionStripBounds);
     }
     return rects;
@@ -619,7 +695,9 @@ export class Hud {
   }
 
   applyMenuOverlayVisibility() {
-    const drop = Boolean(this._topVisible && this._menuDropdownOpen);
+    const drop = Boolean(
+      this._menuDropdownOpen && (this._topVisible || this._bottomVisible),
+    );
     this.menuBackdrop.setVisible(drop);
     this.menuDropdownRoot.setVisible(drop);
   }
@@ -669,12 +747,25 @@ export class Hud {
       infoZone.disableInteractive();
       return;
     }
+    const slotFrame = this._actionSlotFrames[index];
     const canClick = Boolean(slot.enabled && typeof slot.onClick === "function");
     if (!canClick) {
       zone.disableInteractive();
     } else {
       zone.setInteractive({ useHandCursor: true });
-      zone.on("pointerdown", () => slot.onClick());
+      zone.on("pointerdown", () => {
+        slotFrame?.setState("pressed");
+        slot.onClick();
+      });
+      zone.on("pointerup", () => slotFrame?.setState("hover"));
+      zone.on("pointerover", (pointer) => {
+        slotFrame?.setState("hover");
+        this.showActionTooltip(index, pointer);
+      });
+      zone.on("pointerout", () => {
+        slotFrame?.setState("regular");
+        this.hideActionTooltip();
+      });
     }
     const canShowInfo = slot.showInfoButton !== false && this.hasActionTooltip(slot);
     if (!canShowInfo) {
@@ -810,6 +901,100 @@ export class Hud {
     return this.scene.add.container(0, 0);
   }
 
+  /**
+   * @param {number} contentX
+   * @param {number} bottomY
+   * @param {number} railContentW
+   * @param {number} actionCell
+   * @param {number} cellGap
+   * @param {number} railInnerPad
+   */
+  _layoutFantasyBottomBar(contentX, bottomY, railContentW, actionCell, cellGap, railInnerPad) {
+    const df = cozyTheme.darkFantasy;
+    const trayW = railContentW;
+
+    const leftRailW = 4 * df.sideButtonW + 3 * df.sideButtonGap;
+    const rightRailW = 3 * df.sideButtonW + 2 * df.sideButtonGap;
+    const barsRowH = df.barHeight;
+    const actionRowH = railInnerPad * 2 + actionCell;
+    const innerContentH = barsRowH + df.barsToSlotsGap + actionRowH;
+    const trayH = df.trayPad * 2 + innerContentH;
+    const dividerH = innerContentH;
+
+    const centerX =
+      df.trayPad + leftRailW + df.railGap + df.dividerW + df.railGap;
+    const centerW = Math.max(
+      120,
+      trayW - centerX - df.railGap - df.dividerW - df.railGap - rightRailW - df.trayPad,
+    );
+
+    this.bottomBarHeight = trayH;
+    this._bottomTrayBounds = { x: contentX, y: bottomY, width: trayW, height: trayH };
+
+    this._bottomChrome.root.setPosition(contentX, bottomY);
+    this._bottomChrome.root.setVisible(this._bottomVisible);
+
+    drawStonePanel(this._bottomChrome.frameG, trayW, trayH);
+
+    const trayInnerX = df.trayPad;
+    const trayInnerY = df.trayPad;
+    const actionRowY = barsRowH + df.barsToSlotsGap;
+
+    this._bottomChrome.leftRail.setPosition(trayInnerX, trayInnerY + actionRowY);
+    let lx = 0;
+    for (const btn of this._leftUtilityButtons) {
+      btn.container.setPosition(lx, 0);
+      lx += df.sideButtonW + df.sideButtonGap;
+    }
+
+    const leftDivX = trayInnerX + leftRailW + df.railGap;
+    drawVerticalDivider(this._bottomChrome.leftDivider, dividerH);
+    this._bottomChrome.leftDivider.setPosition(leftDivX, trayInnerY);
+
+    this._bottomChrome.centerPanel.setPosition(centerX, trayInnerY);
+
+    const barW = Math.min(df.resourceBarWidth, Math.floor((centerW - df.barsGap) / 2));
+    this._bottomChrome.livesBar.container.setPosition(0, 0);
+    this._bottomChrome.goldBar.container.setPosition(barW + df.barsGap, 0);
+
+    this._bottomChrome.pageSelector.container.setPosition(0, actionRowY);
+    const actionHostX = this._bottomChrome.pageSelector.width + 4;
+    this._bottomChrome.actionHost.setPosition(actionHostX, actionRowY);
+
+    const rightDivX = centerX + centerW + df.railGap;
+    drawVerticalDivider(this._bottomChrome.rightDivider, dividerH);
+    this._bottomChrome.rightDivider.setPosition(rightDivX, trayInnerY);
+
+    this._bottomChrome.rightRail.setPosition(rightDivX + df.dividerW + df.railGap, trayInnerY + actionRowY);
+    let rx = 0;
+    for (const btn of this._rightUtilityButtons) {
+      btn.container.setPosition(rx, 0);
+      rx += df.sideButtonW + df.sideButtonGap;
+    }
+
+    const gridCols = ACTION_GRID_COLS;
+    const railW = gridCols * (actionCell + cellGap) - cellGap + 2 * railInnerPad;
+    const railH = railInnerPad * 2 + actionCell;
+    this._actionGridBackground.setScale(1);
+    this._actionGridBackground.setPosition(0, 0);
+    this._actionStripBounds = {
+      x: contentX + centerX + actionHostX,
+      y: bottomY + trayInnerY + actionRowY,
+      width: railW,
+      height: railH,
+    };
+
+    const goldBarScreenX = contentX + centerX + barW + df.barsGap;
+    const goldBarScreenY = bottomY + trayInnerY;
+    this._goldBarScreenPos = { x: goldBarScreenX, y: goldBarScreenY };
+
+    const menuBtnScreenX = contentX + trayInnerX + df.sideButtonW / 2;
+    const menuBtnScreenY = bottomY + trayInnerY + actionRowY + df.sideButtonH / 2;
+    this._bottomMenuAnchor = { x: menuBtnScreenX, y: menuBtnScreenY };
+
+    return { trayH, centerX, trayInnerY, actionRowY, actionHostX };
+  }
+
   clamp(value, min, max) {
     return Math.max(min, Math.min(max, value));
   }
@@ -832,8 +1017,9 @@ export class Hud {
       const panelPadding = 16;
       const gapSm = 8;
       const controlRowH = 44;
-      const railInnerPad = 12;
-      const cellGap = 8;
+      const df = cozyTheme.darkFantasy;
+      const railInnerPad = df.railInnerPad;
+      const cellGap = df.slotGap;
       const isWaveCtx = SHOW_CONTEXT_PANEL && this._contextMode === "wave";
       const isTowerCtx = SHOW_CONTEXT_PANEL && this._contextMode === "tower";
       const rightPanelW = SHOW_CONTEXT_PANEL && splitLandscape
@@ -849,32 +1035,40 @@ export class Hud {
       const maxRailW = railContentW - panelPadding * 2;
       const actionCell = this.clamp(
         Math.floor((maxRailW - 2 * railInnerPad - (ACTION_GRID_COLS - 1) * cellGap) / ACTION_GRID_COLS),
-        52,
-        64,
+        cozyTheme.darkFantasy.slotSize,
+        cozyTheme.darkFantasy.slotSize + 8,
       );
       const railRowsEst = this._bottomVisible ? ACTION_GRID_ROWS : 0;
       const actionStripH = this._bottomVisible
         ? railInnerPad * 2 + railRowsEst * (actionCell + cellGap) - cellGap
         : 0;
+      const fantasyTrayEst =
+        df.trayPad * 2 +
+        df.barHeight +
+        df.barsToSlotsGap +
+        railInnerPad * 2 +
+        actionCell;
       let totalBottom =
         panelPadding * 2 +
         waveStripH +
         (waveStripH ? gapSm : 0) +
         towerSummaryEstimate +
         (towerSummaryEstimate ? gapSm : 0) +
-        actionStripH +
+        fantasyTrayEst +
         gapSm +
         controlRowH;
       const bottomHeight = splitLandscape
-        ? this.clamp(actionStripH + panelPadding * 2 + 12, 96, 150)
-        : this.clamp(totalBottom, isPortrait ? 200 : 160, Math.round(rootHeight * (isPortrait ? 0.32 : 0.38)));
+        ? this.clamp(fantasyTrayEst + panelPadding * 2 + 12, fantasyTrayEst, 120)
+        : this.clamp(
+            totalBottom,
+            fantasyTrayEst,
+            Math.round(rootHeight * (isPortrait ? 0.18 : 0.16)),
+          );
       this.bottomBarHeight = bottomHeight;
       this._effectiveBottomChromeHeight = 0;
       this._effectiveRightChromeWidth = splitLandscape ? rightPanelW + panelPadding : 0;
 
       const statFontSize = this.clamp(Math.round(topHeight * 0.36), 19, 24);
-      const buttonFontSize = this.clamp(Math.round(topHeight * 0.28), 14, 18);
-      this.menuButton.setStyle({ fontSize: `${buttonFontSize}px`, padding: { x: 8, y: 8 } });
       this.speedButton.setStyle({ fontSize: "14px", padding: { x: 8, y: 8 } });
       this.pauseButton.setStyle({ fontSize: "14px", padding: { x: 8, y: 8 } });
       this.hpText.setStyle({ fontSize: `${statFontSize}px` });
@@ -913,36 +1107,34 @@ export class Hud {
       this.towerRangeText.setStyle({ fontSize: `${contextInfoSize}px` });
       this.towerEffectText.setStyle({ fontSize: `${contextSubSize}px` });
 
-      this.topBackground.setSize(contentWidth, this.topBarHeight);
-      this.topBackground.setPosition(contentX, 0);
+      this.topBackground.setVisible(false);
       const activeBottomHeight = this._bottomVisible ? this.bottomBarHeight : 0;
-      this.bottomBackground.setSize(railContentW, activeBottomHeight);
-      this.bottomBackground.setPosition(contentX, Math.max(0, rootHeight - activeBottomHeight));
-      this.bottomBackground.setVisible(false);
 
       const centerY = this.topBarHeight / 2;
-      const leftPadding = contentX + 8;
-      this.menuButton.setPosition(leftPadding, centerY);
-      this.speedButton.setPosition(this.menuButton.x + this.menuButton.width + gapSm, centerY);
+      const useBottomResources = this._bottomVisible;
+      this.hpText.setVisible(this._topVisible && !useBottomResources);
+      this.goldText.setVisible(this._topVisible && !useBottomResources);
+      this.speedButton.setVisible(this._topVisible && !useBottomResources);
+      this.pauseButton.setVisible(this._topVisible && !useBottomResources);
+      const leftPadding = contentX + FLOATING_MENU_PAD;
+      if (this._topVisible) {
+        this.menuButton.setPosition(leftPadding, FLOATING_MENU_PAD);
+      }
+      this.speedButton.setPosition(leftPadding + (this._editorMenuButton?.width ?? 36) + gapSm, centerY);
       this.pauseButton.setPosition(this.speedButton.x + this.speedButton.width + gapSm, centerY);
 
       const menuPad = 8;
-      this.menuBackdrop.setPosition(contentX, this.topBarHeight);
-      this.menuBackdrop.setSize(contentWidth, Math.max(0, rootHeight - this.topBarHeight));
-
-      const dropY = this.menuButton.y + Math.round(this.menuButton.height * 0.5) + menuPad;
-      this.menuDropdownRoot.setPosition(this.menuButton.x, dropY);
       const menuWidth = this.clamp(Math.round(contentWidth * 0.5), 280, 380);
       const showMapEditor = this.isDebugPanelVisible();
       const menuRowCount = showMapEditor ? 3 : 2;
       const menuHeight = this.clamp(
-        Math.round(this.topBarHeight * (menuRowCount === 3 ? 2.8 : 1.95)),
+        menuRowCount === 3 ? 150 : 110,
         menuRowCount === 3 ? 130 : 96,
         menuRowCount === 3 ? 200 : 160,
       );
-      const menuItemFontSize = this.clamp(Math.round(this.topBarHeight * 0.42), 18, 30);
+      const menuItemFontSize = 20;
       const menuItemPadX = this.clamp(Math.round(menuWidth * 0.05), 12, 20);
-      const menuItemPadY = this.clamp(Math.round(this.topBarHeight * 0.22), 8, 14);
+      const menuItemPadY = 10;
       this.menuDropdownBg.setSize(menuWidth, menuHeight);
       this.menuBtnMapEditor.setStyle({ fontSize: `${menuItemFontSize}px`, padding: { x: menuItemPadX, y: menuItemPadY } });
       this.menuBtnSettings.setStyle({ fontSize: `${menuItemFontSize}px`, padding: { x: menuItemPadX, y: menuItemPadY } });
@@ -959,23 +1151,75 @@ export class Hud {
         this.menuBtnMainMenu.setPosition(14, itemStartY + itemGap);
       }
 
+      const positionMenuDropdown = () => {
+        if (this._topVisible) {
+          this.menuBackdrop.setPosition(contentX, 0);
+          this.menuBackdrop.setSize(contentWidth, rootHeight);
+          const menuH = this._editorMenuButton?.height ?? df.sideButtonH;
+          const dropY = this.menuButton.y + menuH + menuPad;
+          this.menuDropdownRoot.setPosition(this.menuButton.x, dropY);
+        } else if (this._bottomMenuAnchor) {
+          this.menuBackdrop.setPosition(contentX, 0);
+          this.menuBackdrop.setSize(contentWidth, rootHeight);
+          const anchor = this._bottomMenuAnchor;
+          const dropY = anchor.y - menuHeight - menuPad;
+          this.menuDropdownRoot.setPosition(
+            this.clamp(anchor.x, contentX + 8, contentX + contentWidth - menuWidth - 8),
+            Math.max(8, dropY),
+          );
+        }
+      };
+
       const rightPadding = contentX + railContentW - 12;
       const statGap = 16;
       this.towersText.setPosition(rightPadding, centerY);
       this.hpText.setOrigin(1, 0.5);
       this.goldText.setPosition(rightPadding, centerY);
       this.hpText.setPosition(this.goldText.x - statGap - this.hpText.width, centerY);
-      this.goldDeltaText.setPosition(this.goldText.x + 8, centerY - Math.max(10, Math.round(topHeight * 0.28)));
+      if (this._goldBarScreenPos && useBottomResources) {
+        this.goldDeltaText.setPosition(
+          this._goldBarScreenPos.x + this._bottomChrome.goldBar.width + 8,
+          this._goldBarScreenPos.y + this._bottomChrome.goldBar.height / 2,
+        );
+      } else {
+        this.goldDeltaText.setPosition(this.goldText.x + 8, centerY - Math.max(10, Math.round(topHeight * 0.28)));
+      }
       this.cameraTelemetryText.setOrigin(0, 0.5);
-      const cameraTextLeft = this.pauseButton.x + this.pauseButton.width + gapSm + 6;
-      const cameraTextRight = this.hpText.x - this.hpText.width - gapSm;
+      const cameraAnchor =
+        useBottomResources && this._bottomMenuAnchor
+          ? {
+              x: this._bottomMenuAnchor.x - df.sideButtonW / 2,
+              width: df.sideButtonW,
+              y: this._bottomMenuAnchor.y,
+            }
+          : this.pauseButton;
+      const cameraTextLeft = cameraAnchor.x + cameraAnchor.width + gapSm + 6;
+      const cameraTextRight = useBottomResources
+        ? rightPadding - statGap
+        : this.hpText.x - gapSm;
       const cameraTextX = this.clamp(cameraTextLeft, cameraTextLeft, Math.max(cameraTextLeft, cameraTextRight));
-      this.cameraTelemetryText.setPosition(cameraTextX, centerY);
+      const cameraTextY =
+        useBottomResources && this._bottomMenuAnchor ? this._bottomMenuAnchor.y : centerY;
+      this.cameraTelemetryText.setPosition(cameraTextX, cameraTextY);
       const debugPad = 8;
-      this.debugPanelRoot.setPosition(contentX + debugPad, this.topBarHeight + debugPad);
+      const debugTop =
+        (this._topVisible ? (this._editorMenuButton?.height ?? df.sideButtonH) + FLOATING_MENU_PAD : 0) +
+        debugPad;
+      this.debugPanelRoot.setPosition(contentX + debugPad, debugTop);
       this._refreshDebugTelemetryText();
 
-      const bottomY = Math.max(0, rootHeight - activeBottomHeight);
+      let bottomY = Math.max(0, rootHeight - activeBottomHeight);
+      if (this._bottomVisible) {
+        this._layoutFantasyBottomBar(contentX, bottomY, railContentW, actionCell, cellGap, railInnerPad);
+        bottomY = Math.max(0, rootHeight - this.bottomBarHeight);
+        if (bottomY !== Math.max(0, rootHeight - activeBottomHeight)) {
+          this._layoutFantasyBottomBar(contentX, bottomY, railContentW, actionCell, cellGap, railInnerPad);
+        }
+      } else {
+        this._bottomChrome.root.setVisible(false);
+        this._bottomTrayBounds = { x: 0, y: 0, width: 0, height: 0 };
+      }
+      positionMenuDropdown();
       const contextPanelW = splitLandscape ? rightPanelW - panelPadding : railContentW - panelPadding * 2;
       const contextPad = 12;
       let yCursor = bottomY + panelPadding;
@@ -1215,34 +1459,6 @@ export class Hud {
       const contentCellW = actionCell;
       const contentCellH = actionCell;
       const actionFontSize = 14;
-      const gridBottomLimit = bottomY + activeBottomHeight - controlRowH - panelPadding;
-      const gridCols = ACTION_GRID_COLS;
-      const railRows = this._bottomVisible ? ACTION_GRID_ROWS : 0;
-      let railW = gridCols * (actionCell + cellGap) - cellGap + 2 * railInnerPad;
-      let railH = railInnerPad * 2 + railRows * (actionCell + cellGap) - cellGap;
-      let stripTop = yCursor;
-      let railX = contentX;
-      if (this._bottomVisible) {
-        let stripTopCandidate = gridBottomLimit - railH;
-        if (stripTopCandidate < yCursor) {
-          stripTopCandidate = yCursor;
-        }
-        stripTop = stripTopCandidate;
-        if (stripTop + railH > gridBottomLimit) {
-          railH = Math.max(railInnerPad * 2 + actionCell, gridBottomLimit - stripTop);
-        }
-        railX = contentX + Math.round((railContentW - railW) * 0.5);
-        this._actionGridBackground.setScale(1);
-        this._actionGridBackground.setPosition(railX, stripTop);
-      } else {
-        this._actionGridBackground.setPosition(contentX, stripTop);
-      }
-      this._actionStripBounds = {
-        x: railX,
-        y: stripTop,
-        width: railW,
-        height: railH,
-      };
 
       const edgeRects = this._getVisiblePanelRects();
       this._effectiveRightChromeWidth = 0;
@@ -1270,15 +1486,19 @@ export class Hud {
       for (let i = 0; i < this._actionButtons.length; i += 1) {
         const slot = this._actionSlotConfigs[i];
         const isEmptyFrame = !slot;
-        let x = 0;
-        let y = 0;
+        let slotLeft = 0;
+        let slotTop = 0;
+        let centerX = 0;
+        let centerY = 0;
         if (this._bottomVisible) {
           const col = i;
-          x = railInnerPad + col * (contentCellW + cellGap) + contentCellW / 2;
-          y = railInnerPad + contentCellH / 2;
+          slotLeft = railInnerPad + col * (contentCellW + cellGap);
+          slotTop = railInnerPad;
+          centerX = slotLeft + contentCellW / 2;
+          centerY = slotTop + contentCellH / 2;
         }
         const icon = this._actionIcons[i];
-        const accent = this._actionAccentFrames[i];
+        const slotFrame = this._actionSlotFrames[i];
         const costText = this._actionCostTexts[i];
         const infoText = this._actionInfoTexts[i];
         const infoZone = this._actionInfoHitZones[i];
@@ -1301,43 +1521,57 @@ export class Hud {
         const currentIcon = this._actionIcons[i];
         const iconSize = Math.round(Math.min(contentCellW, contentCellH) * 0.75);
         const accentColor = Number.isFinite(slot?.accentColor) ? slot.accentColor : 0x6f99c9;
-        const accentInner = Math.max(40, contentCellW - 8);
-        if (isEmptyFrame) {
-          accent
-            .setSize(accentInner, accentInner)
-            .setPosition(x, y)
-            .setVisible(this._bottomVisible)
-            .setFillStyle(this._hudColors.actionFrame, 0.14)
-            .setStrokeStyle(2, this._hudColors.chipStroke, 0.4);
-        } else {
-          accent
-            .setSize(accentInner, accentInner)
-            .setPosition(x, y)
-            .setVisible(this._bottomVisible)
-            .setFillStyle(accentColor, slot?.enabled === false ? 0.18 : 0.34)
-            .setStrokeStyle(2, accentColor, slot?.enabled === false ? 0.35 : 0.85);
+        if (slotFrame) {
+          if (slotFrame.size !== contentCellW) {
+            slotFrame.setSize(contentCellW);
+          }
+          const actionId = GRID_KEYBIND_ACTION_IDS[i];
+          if (actionId && this.keybindStore && slot) {
+            slotFrame.setKeybindLabel(formatKeyLabel(this.keybindStore.getCode(actionId)));
+          } else {
+            slotFrame.setKeybindLabel("");
+          }
+          this._syncActionSlotKeybindLayer(
+            slotFrame,
+            slotLeft,
+            slotTop,
+            contentCellW,
+            contentCellH,
+            this._bottomVisible && Boolean(slot),
+          );
+          slotFrame.container
+            .setPosition(slotLeft, slotTop)
+            .setVisible(this._bottomVisible);
+          if (isEmptyFrame) {
+            slotFrame.setEmpty(true);
+            slotFrame.setState("regular");
+          } else {
+            slotFrame.setEmpty(false);
+            slotFrame.setGlowColor(accentColor, slot?.enabled === false ? 0.18 : 0.34);
+            slotFrame.setState("regular");
+          }
         }
         if (currentIcon) {
           const offsetX = slot?.iconOffsetX ?? 0;
           const offsetY = slot?.iconOffsetY ?? 0;
           currentIcon
             .setVisible(Boolean(slot))
-            .setPosition(x + offsetX, y + offsetY)
+            .setPosition(centerX + offsetX, centerY + offsetY)
             .setDisplaySize(iconSize, iconSize)
             .setAlpha(slot?.enabled === false ? 0.5 : 1);
         }
 
         const button = this._actionButtons[i];
         const hitZone = this._actionHitZones[i];
-        const hitSize = Math.max(56, contentCellW);
+        const hitSize = contentCellW;
         hitZone
-          .setPosition(x, y)
+          .setPosition(centerX, centerY)
           .setSize(hitSize, hitSize)
           .setVisible(Boolean(slot));
 
         const showInlineLabel = Boolean(slot?.label) && this._hoveredActionIndex === i && !this.hasActionTooltip(slot);
         button
-          .setPosition(x, y)
+          .setPosition(centerX, centerY)
           .setVisible(Boolean(slot))
           .setText(showInlineLabel ? slot.label : "")
           .setStyle({ fontSize: `${actionFontSize}px`, padding: { x: 6, y: 5 } });
@@ -1345,7 +1579,7 @@ export class Hud {
         if (slot && slot.cost != null) {
           costText
             .setVisible(true)
-            .setPosition(x + (contentCellW / 2) - 3, y + (contentCellH / 2) - 3)
+            .setPosition(slotLeft + 4, slotTop + 4)
             .setText(`${slot.cost}g`)
             .setAlpha(slot.enabled === false ? 0.7 : 1);
         } else {
@@ -1355,7 +1589,7 @@ export class Hud {
         const showInfo = Boolean(slot && slot.showInfoButton !== false && this.hasActionTooltip(slot));
         infoText
           .setVisible(showInfo)
-          .setPosition(x + (contentCellW / 2) - 10, y - (contentCellH / 2) + 10)
+          .setPosition(centerX + contentCellW / 2 - 10, centerY - contentCellH / 2 + 10)
           .setAlpha(slot?.enabled === false ? 0.7 : 1);
         infoZone
           .setPosition(infoText.x, infoText.y)
@@ -1364,7 +1598,7 @@ export class Hud {
 
         if (currentIcon && showInlineLabel) {
           button.setOrigin(1, 0.5);
-          button.setX(x - (iconSize / 2) - 8);
+          button.setX(centerX - iconSize / 2 - 8);
           button.setStyle({ fontSize: `13px`, color: "#ffffff", stroke: "#000000", strokeThickness: 3 });
         } else {
           button.setOrigin(0.5, 0.5);
@@ -1376,8 +1610,17 @@ export class Hud {
       for (const infoZone of this._actionInfoHitZones) {
         this._actionGridBackground.bringToTop(infoZone);
       }
+      for (const slotFrame of this._actionSlotFrames) {
+        const keybindText = slotFrame?.keybindText;
+        if (keybindText?.visible) {
+          this._actionGridBackground.bringToTop(keybindText);
+        }
+      }
       for (const costText of this._actionCostTexts) {
         this._actionGridBackground.bringToTop(costText);
+      }
+      for (const infoText of this._actionInfoTexts) {
+        this._actionGridBackground.bringToTop(infoText);
       }
       if (this.tooltipRoot.visible) {
         this.moveActionTooltip();
@@ -1403,6 +1646,7 @@ export class Hud {
   }
 
   applyVisibilityState() {
+    this.topBackground.setVisible(false);
     for (const obj of this.topUiObjects) {
       obj.setVisible(this._topVisible);
     }
@@ -1441,8 +1685,12 @@ export class Hud {
     this.towerRangeTrack.setVisible(showTowerPanel);
     this.towerRangeFill.setVisible(showTowerPanel);
     this.towerEffectText.setVisible(showTowerPanel && (this.towerEffectText.text?.length ?? 0) > 0);
-    this.speedButton.setVisible(this._topVisible);
-    this.pauseButton.setVisible(this._topVisible);
+    const useBottomResources = this._bottomVisible;
+    this.speedButton.setVisible(this._topVisible && !useBottomResources);
+    this.pauseButton.setVisible(this._topVisible && !useBottomResources);
+    this.hpText.setVisible(this._topVisible && !useBottomResources);
+    this.goldText.setVisible(this._topVisible && !useBottomResources);
+    this._bottomChrome?.root?.setVisible(this._bottomVisible);
     if (!this._bottomVisible) {
       this.hideActionTooltip();
       this.hideActionDetails();
@@ -1464,7 +1712,6 @@ export class Hud {
         infoZone.disableInteractive();
       }
     }
-    this.bottomBackground.setVisible(false);
     this.detailsRoot.setVisible(this._bottomVisible && this._detailsSlotIndex >= 0);
   }
 
@@ -1555,8 +1802,10 @@ export class Hud {
   }
 
   getOcclusionMargins() {
+    const df = cozyTheme.darkFantasy;
+    const floatingMenuH = (this._editorMenuButton?.height ?? df.sideButtonH) + FLOATING_MENU_PAD;
     return {
-      top: this._topVisible ? this.topBarHeight : 0,
+      top: this._topVisible ? floatingMenuH : 0,
       bottom: this._bottomVisible ? this._effectiveBottomChromeHeight : 0,
       left: this._bottomVisible ? this._effectiveLeftChromeWidth : 0,
       right: this._bottomVisible ? this._effectiveRightChromeWidth : 0,
@@ -1567,13 +1816,15 @@ export class Hud {
     const rootScale = Number.isFinite(this.rootScale) && this.rootScale > 0 ? this.rootScale : 1;
     const lx = (screenX - this.rootOffsetX) / rootScale;
     const ly = (screenY - this.rootOffsetY) / rootScale;
-    if (this._topVisible) {
-      const inTopBar =
-        lx >= this.topBackground.x &&
-        lx <= this.topBackground.x + this.topBackground.width &&
-        ly >= this.topBackground.y &&
-        ly <= this.topBackground.y + this.topBackground.height;
-      if (inTopBar) {
+    if (this._topVisible && this.menuButton?.visible) {
+      const menuW = this._editorMenuButton?.width ?? cozyTheme.darkFantasy.sideButtonW;
+      const menuH = this._editorMenuButton?.height ?? cozyTheme.darkFantasy.sideButtonH;
+      const inMenu =
+        lx >= this.menuButton.x &&
+        lx <= this.menuButton.x + menuW &&
+        ly >= this.menuButton.y &&
+        ly <= this.menuButton.y + menuH;
+      if (inMenu) {
         return true;
       }
     }
@@ -1604,6 +1855,7 @@ export class Hud {
   }
 
   render(state, towerCount = 0, maxLives = this.maxLives, selectedBuilding = null, waveInfo = null) {
+    this._refreshMenuKeybindLabels();
     this._selectedBuilding = selectedBuilding;
     this._waveInfo = waveInfo;
     const rawSpeed = Number(state.gameSpeed);
@@ -1611,12 +1863,20 @@ export class Hud {
       Number.isFinite(rawSpeed) ? Math.max(1, Math.min(3, Math.round(rawSpeed))) : 1;
     this.speedButton.setText(`x${gameSpeed}`);
     this.applySpeedButtonStyle(gameSpeed);
+    this._bottomSpeedButton?.setLabel(`x${gameSpeed}`);
     this.pauseButton.setText(state.paused ? "Resume" : "Pause");
+    this._bottomPauseButton?.setLabel(state.paused ? "▶" : "⏸");
     const hpCurrent = Math.max(0, Math.floor(Number(state.lives) || 0));
     const hpMax = Math.max(hpCurrent, Math.floor(Number(maxLives) || hpCurrent));
     this.hpText.setText(`❤ ${hpCurrent}/${hpMax}`);
     const hpRatio = hpMax > 0 ? hpCurrent / hpMax : 1;
     this.hpText.setColor(hpRatio <= 0.25 ? cozyTheme.colors.textDanger : cozyTheme.hud.chipText);
+    this._bottomChrome?.livesBar?.setRatio(hpRatio);
+    this._bottomChrome?.livesBar?.setLabel(`${hpCurrent}/${hpMax}`);
+    const goldAmount = Math.floor(Number(state.gold) || 0);
+    const goldRatio = goldAmount <= 0 ? 0 : Math.min(1, goldAmount / 999);
+    this._bottomChrome?.goldBar?.setRatio(goldRatio);
+    this._bottomChrome?.goldBar?.setLabel(`💰 ${goldAmount}`);
     this.updateGoldDelta(state.gold);
     this.goldText.setText(`💰 ${state.gold}`);
     this.towersText.setVisible(false);

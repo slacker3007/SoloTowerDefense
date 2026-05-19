@@ -79,6 +79,27 @@ export const cozyTheme = {
     mutedActive: "#6d5b6b",
     disabled: "#453a42",
   },
+  darkFantasy: {
+    sideButtonW: 36,
+    sideButtonH: 36,
+    sideButtonGap: 4,
+    sideButtonFontSize: 16,
+    slotSize: 48,
+    slotGap: 6,
+    barHeight: 14,
+    resourceBarWidth: 110,
+    barLabelFontSize: 11,
+    keybindFontSize: 10,
+    trayPad: 6,
+    railGap: 6,
+    railInnerPad: 6,
+    barsToSlotsGap: 4,
+    dividerW: 3,
+    pageSelectorW: 22,
+    pageSelectorH: 48,
+    barsGap: 8,
+    minTrayHeight: 0,
+  },
 };
 
 /**

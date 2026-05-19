@@ -1,5 +1,7 @@
 # Selected-Building Action Grid
 
+In-game action slots render inside the dark-fantasy bottom bar (`FantasyHudChrome.js` procedural frames). Per-slot overlays: gold cost top-left, keybind numeral bottom-right (1–9 and 0), info `i` top-right. Slot data and placement rules below are unchanged.
+
 This document defines the selected-building HUD action panel as a fixed outer frame of `6x5` cells with an interactive inner grid of `4x3` cells.
 
 ## Coordinate Systems

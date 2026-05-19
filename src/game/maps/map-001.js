@@ -4,10 +4,12 @@ import { buildDefaultPathMask, pathMaskFromLegacyEnemyPath, tryParsePathMaskFrom
 import {
   ensureMapLayerTiles,
   ensureMapOverrideGrids,
+  ensureMapPlacementGrids,
   ensureMapTilesets,
   ensurePathMaskGrid,
   syncBarracksPointsFromBuildings,
 } from "./mapUtils";
+import { normalizeAssetPlacement } from "./placementSchema";
 import { normalizeTerrainTileOverride } from "./tileOverrideSchema";
 
 /** Build a runtime map object from serialized editor/export JSON. */
@@ -28,6 +30,8 @@ function mapFromSerialized(data) {
   const buildings = Array.isArray(d.buildings) ? /** @type {(string | null)[][]} */ (d.buildings) : [];
   const tileOv = Array.isArray(d.tileOverrides) ? /** @type {unknown[][]} */ (d.tileOverrides) : [];
   const dec = Array.isArray(d.decorations) ? /** @type {unknown[][]} */ (d.decorations) : [];
+  const rawUnits = Array.isArray(d.unitPlacements) ? /** @type {unknown[][]} */ (d.unitPlacements) : [];
+  const rawUi = Array.isArray(d.uiPlacements) ? /** @type {unknown[][]} */ (d.uiPlacements) : [];
   const rawPathMask = d.pathMask;
   const rawEnemyPath = d.enemyPath;
 
@@ -60,6 +64,12 @@ function mapFromSerialized(data) {
         return null;
       }),
     ),
+    unitPlacements:
+      rawUnits.length === height
+        ? rawUnits.map((row) => row.map((v) => normalizeAssetPlacement(v)))
+        : undefined,
+    uiPlacements:
+      rawUi.length === height ? rawUi.map((row) => row.map((v) => normalizeAssetPlacement(v))) : undefined,
     tilesets: { shore: "default", plateau: "rocks" },
   };
 
@@ -77,6 +87,7 @@ function mapFromSerialized(data) {
   ensureMapTilesets(map);
   ensureMapOverrideGrids(map);
   ensureMapLayerTiles(map);
+  ensureMapPlacementGrids(map);
   syncBarracksPointsFromBuildings(map);
 
   const pm = tryParsePathMaskFromJson(rawPathMask, width, height);

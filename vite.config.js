@@ -7,7 +7,17 @@ import { cp, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const tinySwordsDir = path.join(__dirname, "TinySwords");
 const terrainTilesetDir = path.join(tinySwordsDir, "Terrain", "Tileset");
+const buildingsDir = path.join(tinySwordsDir, "Buildings");
 const terrainTilesetCatalogFile = path.join(__dirname, "src", "game", "generated", "terrainTilesetCatalog.js");
+const buildingCatalogFile = path.join(__dirname, "src", "game", "generated", "buildingCatalog.js");
+const propCatalogFile = path.join(__dirname, "src", "game", "generated", "propCatalog.js");
+const unitCatalogFile = path.join(__dirname, "src", "game", "generated", "unitCatalog.js");
+const uiCatalogFile = path.join(__dirname, "src", "game", "generated", "uiCatalog.js");
+const propsDecorationsDir = path.join(tinySwordsDir, "Terrain", "Decorations");
+const propsResourcesDir = path.join(tinySwordsDir, "Terrain", "Resources");
+const propsParticleDir = path.join(tinySwordsDir, "Particle FX");
+const unitsDir = path.join(tinySwordsDir, "Units");
+const uiElementsDir = path.join(tinySwordsDir, "UI Elements");
 const terrainTileSize = 64;
 const imageExts = new Set([".png", ".jpg", ".jpeg", ".webp", ".gif"]);
 const legacyTerrainKeys = new Map([
@@ -19,6 +29,23 @@ const legacyTerrainKeys = new Map([
   ["Tilemap_color6.png", "terrainColor6"],
   ["Water Foam.png", "waterFoamSheet"],
   ["Shadow.png", "shadowSheet"],
+]);
+/** Relative to `TinySwords/Buildings/` — stable Phaser + map keys. */
+const legacyBuildingKeys = new Map([
+  ["Blue Buildings/Barracks.png", "barracks_blue"],
+  ["Red Buildings/Barracks.png", "barracks_red"],
+  ["Blue Buildings/House2.png", "blueHouse2"],
+  ["Red Buildings/House2.png", "redHouse2"],
+  ["Blue Buildings/Tower.png", "blueTower"],
+  ["Elemental Buildings notog/archer_tower.png", "tower_archer_building"],
+  ["Elemental Buildings notog/lightning_tower.png", "tower_lightning_building"],
+  ["Elemental Buildings notog/earth_tower.png", "tower_earth_building"],
+  ["Elemental Buildings notog/fire_tower.png", "tower_fire_building"],
+  ["Elemental Buildings notog/holy_tower.png", "tower_holy_building"],
+  ["Elemental Buildings notog/ice_tower.png", "tower_ice_building"],
+  ["Elemental Buildings notog/dark_tower.png", "tower_dark_building"],
+  ["Elemental Buildings notog/nature_tower.png", "tower_nature_building"],
+  ["Elemental Buildings notog/necro_tower.png", "tower_necro_building"],
 ]);
 
 const mimeByExt = {
@@ -197,34 +224,350 @@ async function generateTerrainTilesetCatalog() {
   await writeFile(terrainTilesetCatalogFile, contents, "utf8");
 }
 
+function toBuildingKey(relativePath, usedKeys) {
+  const normalized = relativePath.replace(/\\/g, "/");
+  const legacy = legacyBuildingKeys.get(normalized);
+  const parts = normalized.replace(/\.[^.]+$/, "").split("/");
+  const base =
+    legacy ??
+    `building${parts
+      .map((part) =>
+        part
+          .replace(/[^a-zA-Z0-9]+(.)/g, (_match, chr) => chr.toUpperCase())
+          .replace(/^[^a-zA-Z]+/, "")
+          .replace(/^[a-z]/, (chr) => chr.toUpperCase()),
+      )
+      .join("")}`;
+  let key = base || "building";
+  let suffix = 2;
+  while (usedKeys.has(key)) {
+    key = `${base}${suffix}`;
+    suffix += 1;
+  }
+  usedKeys.add(key);
+  return key;
+}
+
+function shouldSkipAssetFile(fileName) {
+  if (/\.aseprite$/i.test(fileName)) {
+    return true;
+  }
+  if (/_Highlight(\.[^.]+)?$/i.test(fileName)) {
+    return true;
+  }
+  return false;
+}
+
+function detectFrameLayout(size) {
+  const { width, height } = size;
+  if (width % terrainTileSize === 0 && height % terrainTileSize === 0 && (width > terrainTileSize || height > terrainTileSize)) {
+    const cols = width / terrainTileSize;
+    const rows = height / terrainTileSize;
+    return {
+      frameW: terrainTileSize,
+      frameH: terrainTileSize,
+      cols,
+      rows,
+      frameCount: cols * rows,
+    };
+  }
+  return { frameW: width, frameH: height, cols: 1, rows: 1, frameCount: 1 };
+}
+
+function toCatalogKey(prefix, relativePath, usedKeys) {
+  const parts = relativePath
+    .replace(/\.[^.]+$/, "")
+    .split("/")
+    .flatMap((part) =>
+      part
+        .replace(/[^a-zA-Z0-9]+(.)/g, (_match, chr) => chr.toUpperCase())
+        .replace(/^[^a-zA-Z]+/, "")
+        .split(/(?=[A-Z])/),
+    )
+    .filter(Boolean);
+  const base = `${prefix}${parts.map((p) => p.replace(/^[a-z]/, (c) => c.toUpperCase())).join("")}`;
+  let key = base || prefix;
+  let suffix = 2;
+  while (usedKeys.has(key)) {
+    key = `${base}${suffix}`;
+    suffix += 1;
+  }
+  usedKeys.add(key);
+  return key;
+}
+
+async function walkImageFiles(dir, baseDir, out) {
+  let entries;
+  try {
+    entries = await readdir(dir, { withFileTypes: true });
+  } catch {
+    return;
+  }
+  for (const entry of entries) {
+    const abs = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      await walkImageFiles(abs, baseDir, out);
+      continue;
+    }
+    if (!entry.isFile() || shouldSkipAssetFile(entry.name)) {
+      continue;
+    }
+    const ext = path.extname(entry.name).toLowerCase();
+    if (!imageExts.has(ext)) {
+      continue;
+    }
+    const relativePath = path.relative(baseDir, abs).replace(/\\/g, "/");
+    out.push({ abs, relativePath, fileName: entry.name, ext });
+  }
+}
+
+async function walkBuildingImages(dir, baseDir, out) {
+  await walkImageFiles(dir, baseDir, out);
+}
+
+async function scanBuildings() {
+  const files = [];
+  await walkBuildingImages(buildingsDir, buildingsDir, files);
+  files.sort((a, b) => {
+    const aLegacy = legacyBuildingKeys.has(a.relativePath)
+      ? [...legacyBuildingKeys.keys()].indexOf(a.relativePath)
+      : Number.POSITIVE_INFINITY;
+    const bLegacy = legacyBuildingKeys.has(b.relativePath)
+      ? [...legacyBuildingKeys.keys()].indexOf(b.relativePath)
+      : Number.POSITIVE_INFINITY;
+    if (aLegacy !== bLegacy) {
+      return aLegacy - bLegacy;
+    }
+    return a.relativePath.localeCompare(b.relativePath);
+  });
+  const usedKeys = new Set();
+  const assets = [];
+  for (const file of files) {
+    const buffer = await readFile(file.abs);
+    const size = readImageSize(buffer, file.ext) ?? { width: 64, height: 64 };
+    const slash = file.relativePath.indexOf("/");
+    const category = slash >= 0 ? file.relativePath.slice(0, slash) : "Buildings";
+    const urlPath = file.relativePath.split("/").map(encodeURIComponent).join("/");
+    assets.push({
+      key: toBuildingKey(file.relativePath, usedKeys),
+      fileName: file.fileName,
+      relativePath: file.relativePath,
+      label: toLabel(file.fileName),
+      category,
+      path: `TinySwords/Buildings/${file.relativePath}`,
+      url: `/TinySwords/Buildings/${urlPath}`,
+      width: size.width,
+      height: size.height,
+    });
+  }
+  return assets;
+}
+
+async function generateBuildingCatalog() {
+  const assets = await scanBuildings();
+  const contents =
+    `// This file is generated by vite.config.js from TinySwords/Buildings.\n` +
+    `// Do not edit by hand.\n\n` +
+    `export const BUILDING_ASSETS = ${JSON.stringify(assets, null, 2)};\n\n` +
+    `export const BUILDING_BY_KEY = Object.freeze(Object.fromEntries(BUILDING_ASSETS.map((asset) => [asset.key, asset])));\n`;
+  await mkdir(path.dirname(buildingCatalogFile), { recursive: true });
+  await writeFile(buildingCatalogFile, contents, "utf8");
+}
+
+/**
+ * @param {{ dir: string, tinyBase: string, urlBase: string }[]} roots
+ * @param {string} keyPrefix
+ */
+async function scanImageAssetsFromRoots(roots, keyPrefix) {
+  const usedKeys = new Set();
+  const assets = [];
+  for (const root of roots) {
+    if (!fs.existsSync(root.dir)) {
+      continue;
+    }
+    const files = [];
+    await walkImageFiles(root.dir, root.dir, files);
+    for (const file of files) {
+      const buffer = await readFile(file.abs);
+      const size = readImageSize(buffer, file.ext) ?? { width: 64, height: 64 };
+      const frames = detectFrameLayout(size);
+      const slash = file.relativePath.indexOf("/");
+      const category = slash >= 0 ? file.relativePath.slice(0, slash) : "Root";
+      const urlPath = file.relativePath.split("/").map(encodeURIComponent).join("/");
+      assets.push({
+        key: toCatalogKey(keyPrefix, `${root.tinyBase}/${file.relativePath}`, usedKeys),
+        fileName: file.fileName,
+        relativePath: file.relativePath,
+        label: toLabel(file.fileName),
+        category,
+        path: `${root.tinyBase}/${file.relativePath}`,
+        url: `${root.urlBase}${urlPath}`,
+        width: size.width,
+        height: size.height,
+        frameW: frames.frameW,
+        frameH: frames.frameH,
+        cols: frames.cols,
+        rows: frames.rows,
+        frameCount: frames.frameCount,
+      });
+    }
+  }
+  assets.sort((a, b) => a.path.localeCompare(b.path));
+  return assets;
+}
+
+async function scanProps() {
+  const roots = [
+    {
+      dir: propsDecorationsDir,
+      tinyBase: "TinySwords/Terrain/Decorations",
+      urlBase: "/TinySwords/Terrain/Decorations/",
+    },
+    {
+      dir: propsResourcesDir,
+      tinyBase: "TinySwords/Terrain/Resources",
+      urlBase: "/TinySwords/Terrain/Resources/",
+    },
+    {
+      dir: propsParticleDir,
+      tinyBase: "TinySwords/Particle FX",
+      urlBase: "/TinySwords/Particle FX/",
+    },
+  ];
+  return scanImageAssetsFromRoots(roots, "prop");
+}
+
+async function scanUnits() {
+  const assets = await scanImageAssetsFromRoots(
+    [{ dir: unitsDir, tinyBase: "TinySwords/Units", urlBase: "/TinySwords/Units/" }],
+    "unit",
+  );
+  return assets.map((asset) => {
+    const faction = asset.category.replace(/\s+Units$/i, "") || asset.category;
+    return { ...asset, faction };
+  });
+}
+
+async function scanUi() {
+  const files = [];
+  await walkImageFiles(uiElementsDir, uiElementsDir, files);
+  files.sort((a, b) => a.relativePath.localeCompare(b.relativePath));
+  const usedKeys = new Set();
+  const assets = [];
+  for (const file of files) {
+    const buffer = await readFile(file.abs);
+    const size = readImageSize(buffer, file.ext) ?? { width: 64, height: 64 };
+    const frames = detectFrameLayout(size);
+    const parts = file.relativePath.split("/");
+    const category = parts.length > 1 ? parts[0] : "UI";
+    const urlPath = file.relativePath.split("/").map(encodeURIComponent).join("/");
+    assets.push({
+      key: toCatalogKey("ui", file.relativePath, usedKeys),
+      fileName: file.fileName,
+      relativePath: file.relativePath,
+      label: toLabel(file.fileName),
+      category,
+      path: `TinySwords/UI Elements/${file.relativePath}`,
+      url: `/TinySwords/UI Elements/${urlPath}`,
+      width: size.width,
+      height: size.height,
+      frameW: frames.frameW,
+      frameH: frames.frameH,
+      cols: frames.cols,
+      rows: frames.rows,
+      frameCount: frames.frameCount,
+    });
+  }
+  return assets;
+}
+
+async function writeCatalogModule(filePath, exportName, byKeyName, assets, comment) {
+  const contents =
+    `// ${comment}\n` +
+    `// Do not edit by hand.\n\n` +
+    `export const ${exportName} = ${JSON.stringify(assets, null, 2)};\n\n` +
+    `export const ${byKeyName} = Object.freeze(Object.fromEntries(${exportName}.map((asset) => [asset.key, asset])));\n`;
+  await mkdir(path.dirname(filePath), { recursive: true });
+  await writeFile(filePath, contents, "utf8");
+}
+
+async function generatePropCatalog() {
+  await writeCatalogModule(
+    propCatalogFile,
+    "PROP_ASSETS",
+    "PROP_BY_KEY",
+    await scanProps(),
+    "Generated by vite.config.js from TinySwords decorations, resources, and Particle FX.",
+  );
+}
+
+async function generateUnitCatalog() {
+  await writeCatalogModule(
+    unitCatalogFile,
+    "UNIT_ASSETS",
+    "UNIT_BY_KEY",
+    await scanUnits(),
+    "Generated by vite.config.js from TinySwords/Units.",
+  );
+}
+
+async function generateUiCatalog() {
+  await writeCatalogModule(
+    uiCatalogFile,
+    "UI_ASSETS",
+    "UI_BY_KEY",
+    await scanUi(),
+    "Generated by vite.config.js from TinySwords/UI Elements.",
+  );
+}
+
+async function generateAllCatalogs() {
+  await generateTerrainTilesetCatalog();
+  await generateBuildingCatalog();
+  await generatePropCatalog();
+  await generateUnitCatalog();
+  await generateUiCatalog();
+}
+
+function isUnderDir(filePath, dirPath) {
+  const rel = path.relative(dirPath, filePath);
+  return rel !== "" && !rel.startsWith("..") && !path.isAbsolute(rel);
+}
+
 /** Serves and copies repo-root TinySwords/ so Phaser URLs stay TinySwords/... */
 function tinySwordsPublic() {
   return {
     name: "tinyswords-static",
     async buildStart() {
-      await generateTerrainTilesetCatalog();
+      await generateAllCatalogs();
     },
     async configureServer(server) {
-      await generateTerrainTilesetCatalog();
-      server.watcher.add(terrainTilesetDir);
-      server.watcher.on("add", async (file) => {
-        if (path.dirname(file) === terrainTilesetDir && imageExts.has(path.extname(file).toLowerCase())) {
-          await generateTerrainTilesetCatalog();
-          server.ws.send({ type: "full-reload" });
+      await generateAllCatalogs();
+      const watchDirs = [
+        terrainTilesetDir,
+        buildingsDir,
+        propsDecorationsDir,
+        propsResourcesDir,
+        propsParticleDir,
+        unitsDir,
+        uiElementsDir,
+      ];
+      for (const dir of watchDirs) {
+        if (fs.existsSync(dir)) {
+          server.watcher.add(dir);
         }
-      });
-      server.watcher.on("unlink", async (file) => {
-        if (path.dirname(file) === terrainTilesetDir && imageExts.has(path.extname(file).toLowerCase())) {
-          await generateTerrainTilesetCatalog();
-          server.ws.send({ type: "full-reload" });
+      }
+      const onAssetTreeChange = async (file) => {
+        const ext = path.extname(file).toLowerCase();
+        if (!imageExts.has(ext)) {
+          return;
         }
-      });
-      server.watcher.on("change", async (file) => {
-        if (path.dirname(file) === terrainTilesetDir && imageExts.has(path.extname(file).toLowerCase())) {
-          await generateTerrainTilesetCatalog();
-          server.ws.send({ type: "full-reload" });
-        }
-      });
+        await generateAllCatalogs();
+        server.ws.send({ type: "full-reload" });
+      };
+      server.watcher.on("add", onAssetTreeChange);
+      server.watcher.on("unlink", onAssetTreeChange);
+      server.watcher.on("change", onAssetTreeChange);
       server.middlewares.use((req, res, next) => {
         const rawUrl = req.url?.split("?")[0] ?? "";
         if (!rawUrl.startsWith("/TinySwords/")) {

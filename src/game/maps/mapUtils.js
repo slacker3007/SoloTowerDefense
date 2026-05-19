@@ -6,6 +6,7 @@ import {
   normalizeLayerTile,
   normalizeTerrainTileOverride,
 } from "./tileOverrideSchema";
+import { cloneAssetPlacement, normalizeAssetPlacement } from "./placementSchema";
 
 /**
  * @param {{ tilesets?: { shore?: string, plateau?: string } }} map
@@ -36,6 +37,25 @@ export function ensureMapOverrideGrids(map) {
   for (let y = 0; y < map.height; y += 1) {
     for (let x = 0; x < map.width; x += 1) {
       map.tileOverrides[y][x] = normalizeTerrainTileOverride(map.tileOverrides[y][x]);
+    }
+  }
+}
+
+/**
+ * @param {*} map
+ */
+export function ensureMapPlacementGrids(map) {
+  ensureMapOverrideGrids(map);
+  if (!map.unitPlacements || !Array.isArray(map.unitPlacements) || map.unitPlacements.length !== map.height) {
+    map.unitPlacements = createNullGrid(map.height, map.width);
+  }
+  if (!map.uiPlacements || !Array.isArray(map.uiPlacements) || map.uiPlacements.length !== map.height) {
+    map.uiPlacements = createNullGrid(map.height, map.width);
+  }
+  for (let y = 0; y < map.height; y += 1) {
+    for (let x = 0; x < map.width; x += 1) {
+      map.unitPlacements[y][x] = normalizeAssetPlacement(map.unitPlacements[y][x]);
+      map.uiPlacements[y][x] = normalizeAssetPlacement(map.uiPlacements[y][x]);
     }
   }
 }
@@ -154,8 +174,10 @@ export function copyMapStateFrom(target, source) {
   ensureMapTilesets(source);
   ensureMapOverrideGrids(source);
   ensureMapLayerTiles(source);
+  ensureMapPlacementGrids(source);
   ensureMapOverrideGrids(target);
   ensureMapLayerTiles(target);
+  ensureMapPlacementGrids(target);
   target.id = source.id;
   target.bgColor = source.bgColor;
   target.points = {
@@ -173,6 +195,8 @@ export function copyMapStateFrom(target, source) {
       );
       const dec = source.decorations[y][x];
       target.decorations[y][x] = dec && typeof dec === "object" ? { sheet: dec.sheet, frame: dec.frame } : null;
+      target.unitPlacements[y][x] = cloneAssetPlacement(normalizeAssetPlacement(source.unitPlacements?.[y]?.[x]));
+      target.uiPlacements[y][x] = cloneAssetPlacement(normalizeAssetPlacement(source.uiPlacements?.[y]?.[x]));
       for (let layer = 0; layer < MAP_TILE_LAYER_COUNT; layer += 1) {
         target.layerTiles[layer][y][x] = cloneLayerTile(normalizeLayerTile(source.layerTiles[layer][y][x]));
       }

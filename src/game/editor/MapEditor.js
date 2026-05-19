@@ -4,11 +4,17 @@ import {
   copyMapStateFrom,
   ensureMapLayerTiles,
   ensureMapOverrideGrids,
+  ensureMapPlacementGrids,
   ensureMapTilesets,
   ensurePathMaskGrid,
   recomputeCellElevationFromLayerTiles,
   syncBarracksPointsFromBuildings,
 } from "../maps/mapUtils";
+import { getBuildingAsset } from "../buildings/buildingCatalog";
+import { getPropAsset, PROP_ASSETS } from "../props/propCatalog";
+import { getUnitAsset, UNIT_ASSETS } from "../units/unitCatalog";
+import { getUiAsset, UI_ASSETS } from "../ui/uiCatalog";
+import { cloneAssetPlacement, normalizeAssetPlacement } from "../maps/placementSchema";
 import {
   cloneLayerTile,
   DEFAULT_TERRAIN_SHEET,
@@ -32,14 +38,15 @@ export class MapEditor {
     ensureMapTilesets(this.map);
     ensureMapOverrideGrids(this.map);
     ensureMapLayerTiles(this.map);
+    ensureMapPlacementGrids(this.map);
     ensurePathMaskGrid(this.map);
 
     this.enabled = false;
-    /** @type {"map" | "objects"} */
-    this.editorMode = "map";
+    /** @type {"terrain" | "buildings" | "props" | "units" | "ui" | "gameplay"} */
+    this.editorMode = "terrain";
     /** @type {0 | 1 | 2 | 3} */
     this.activeLayer = 0;
-    /** @type {"brush" | "moveBuilding" | "select" | "pathMask" | "placeBuilding"} */
+    /** @type {"brush" | "moveBuilding" | "select" | "pathMask" | "placeBuilding" | "placeProp" | "placeUnit" | "placeUi" | "stairs" | "deleteBuilding"} */
     this.tool = "brush";
     /** When true, path mask brush erases (sets 0). */
     this.pathMaskErase = false;
@@ -49,8 +56,18 @@ export class MapEditor {
     this.pickerFrame = 0;
     /** Building key for place-building tool (`barracks_blue`, `barracks_red`, etc.). */
     this.placeBuildingType = "barracks_blue";
+    this.placePropType = PROP_ASSETS[0]?.key ?? "";
+    this.placeUnitType = UNIT_ASSETS[0]?.key ?? "";
+    this.placeUiType = UI_ASSETS[0]?.key ?? "";
+    this.propEraser = false;
+    this.unitEraser = false;
+    this.uiEraser = false;
     /** @type {{ x: number, y: number } | null} */
     this.movePickCell = null;
+    /** @type {{ x: number, y: number } | null} */
+    this.unitPickCell = null;
+    /** @type {{ x: number, y: number } | null} */
+    this.uiPickCell = null;
     /** @type {string} */
     this.moveStatus = "";
     /** @type {{ x: number, y: number } | null} */
@@ -120,8 +137,26 @@ export class MapEditor {
     return this.movePickCell ? { ...this.movePickCell } : null;
   }
 
+  getUnitPickCell() {
+    return this.unitPickCell ? { ...this.unitPickCell } : null;
+  }
+
+  getUiPickCell() {
+    return this.uiPickCell ? { ...this.uiPickCell } : null;
+  }
+
   getMoveStatus() {
     return this.moveStatus;
+  }
+
+  _normalizeEditorMode(mode) {
+    if (mode === "map") {
+      return "terrain";
+    }
+    if (mode === "objects") {
+      return "gameplay";
+    }
+    return mode;
   }
 
   /**
@@ -178,18 +213,51 @@ export class MapEditor {
   }
 
   /**
-   * @param {"map" | "objects"} mode
+   * @param {"terrain" | "buildings" | "props" | "units" | "ui" | "gameplay" | "map" | "objects"} mode
    */
   setEditorMode(mode) {
-    this.editorMode = mode;
-    if (mode === "map") {
+    const next = this._normalizeEditorMode(mode);
+    this.editorMode = next;
+    this.unitPickCell = null;
+    this.uiPickCell = null;
+    if (next === "terrain") {
       this.tool = "brush";
       this.movePickCell = null;
       this.moveStatus = "";
-    } else {
+    } else if (next === "buildings") {
       this.tool = "placeBuilding";
       this.movePickCell = null;
-      this.moveStatus = "Place: drag to stamp building";
+      const asset = getBuildingAsset(this.placeBuildingType);
+      this.moveStatus = asset ? `Place: ${asset.label}` : "Place: drag to stamp building";
+    } else if (next === "props") {
+      this.tool = "placeProp";
+      this.movePickCell = null;
+      const asset = getPropAsset(this.placePropType);
+      this.moveStatus = asset ? `Prop: ${asset.label}` : "Prop: drag on map";
+    } else if (next === "units") {
+      this.tool = "placeUnit";
+      this.movePickCell = null;
+      const asset = getUnitAsset(this.placeUnitType);
+      this.moveStatus = asset ? `Unit: ${asset.label}` : "Unit: drag on map";
+    } else if (next === "ui") {
+      this.tool = "placeUi";
+      this.movePickCell = null;
+      const asset = getUiAsset(this.placeUiType);
+      this.moveStatus = asset ? `UI: ${asset.label}` : "UI: drag on map";
+    } else {
+      this.tool = this.tool === "placeBuilding" ? "pathMask" : this.tool;
+      if (this.tool === "pathMask" || this.tool === "moveBuilding" || this.tool === "deleteBuilding") {
+        this.movePickCell = null;
+      }
+      if (this.tool === "moveBuilding") {
+        this.moveStatus = "Move: click a building";
+      } else if (this.tool === "deleteBuilding") {
+        this.moveStatus = "Delete: click a building";
+      } else if (this.tool === "pathMask") {
+        this.moveStatus = "";
+      } else if (this.tool === "stairs") {
+        this.moveStatus = "Stairs: click land cells to toggle";
+      }
     }
     this._notifyChange();
     this.scene.redrawTerrain();
@@ -202,7 +270,7 @@ export class MapEditor {
     }
     this.activeLayer = /** @type {0 | 1 | 2 | 3} */ (nextLayer);
     this.tool = "brush";
-    this.editorMode = "map";
+    this.editorMode = "terrain";
     this._notifyChange();
   }
 
@@ -225,7 +293,7 @@ export class MapEditor {
     }
     this.pickerFrame = nextFrame;
     this.tool = "brush";
-    this.editorMode = "map";
+    this.editorMode = "terrain";
     this._notifyChange();
   }
 
@@ -233,26 +301,139 @@ export class MapEditor {
    * @param {string} buildingType
    */
   setPlaceBuildingType(buildingType) {
-    this.placeBuildingType = buildingType;
+    const asset = getBuildingAsset(buildingType);
+    if (!asset) {
+      return;
+    }
+    this.placeBuildingType = asset.key;
     this.tool = "placeBuilding";
-    this.editorMode = "objects";
+    this.editorMode = "buildings";
     this.movePickCell = null;
-    this.moveStatus = `Place: ${buildingType}`;
+    this.moveStatus = `Place: ${asset.label}`;
     this._notifyChange();
+  }
+
+  setPlacePropType(propKey) {
+    const asset = getPropAsset(propKey);
+    if (!asset) {
+      return;
+    }
+    this.placePropType = asset.key;
+    this.tool = "placeProp";
+    this.editorMode = "props";
+    this.moveStatus = `Prop: ${asset.label}`;
+    this._notifyChange();
+  }
+
+  setPlaceUnitType(unitKey) {
+    const asset = getUnitAsset(unitKey);
+    if (!asset) {
+      return;
+    }
+    this.placeUnitType = asset.key;
+    this.tool = "placeUnit";
+    this.editorMode = "units";
+    this.unitPickCell = null;
+    this.moveStatus = `Unit: ${asset.label}`;
+    this._notifyChange();
+  }
+
+  setPlaceUiType(uiKey) {
+    const asset = getUiAsset(uiKey);
+    if (!asset) {
+      return;
+    }
+    this.placeUiType = asset.key;
+    this.tool = "placeUi";
+    this.editorMode = "ui";
+    this.uiPickCell = null;
+    this.moveStatus = `UI: ${asset.label}`;
+    this._notifyChange();
+  }
+
+  setPropEraser(erase) {
+    this.propEraser = Boolean(erase);
+    this._notifyChange();
+  }
+
+  setUnitEraser(erase) {
+    this.unitEraser = Boolean(erase);
+    this._notifyChange();
+  }
+
+  setUiEraser(erase) {
+    this.uiEraser = Boolean(erase);
+    this._notifyChange();
+  }
+
+  /**
+   * @param {string} shore
+   */
+  setTilesetShore(shore) {
+    ensureMapTilesets(this.map);
+    this.map.tilesets.shore = shore;
+    this._markDirty();
+    this.scene.redrawTerrain();
+  }
+
+  /**
+   * @param {string} plateau
+   */
+  setTilesetPlateau(plateau) {
+    ensureMapTilesets(this.map);
+    this.map.tilesets.plateau = plateau;
+    this._markDirty();
+    this.scene.redrawTerrain();
+  }
+
+  setStairsBrush() {
+    this.tool = "stairs";
+    this.editorMode = "gameplay";
+    this.moveStatus = "Stairs: click land cells to toggle";
+    this._notifyChange();
+    this.scene.redrawTerrain();
+  }
+
+  setDeleteBuildingTool() {
+    this.tool = "deleteBuilding";
+    this.editorMode = "gameplay";
+    this.movePickCell = null;
+    this.moveStatus = "Delete: click a building";
+    this._notifyChange();
+    this.scene.redrawTerrain();
   }
 
   setTool(tool) {
     this.tool = tool;
     if (tool === "moveBuilding") {
-      this.editorMode = "objects";
+      this.editorMode = "gameplay";
       this.movePickCell = null;
-      this.moveStatus = "Move: click a barracks";
+      this.moveStatus = "Move: click a building";
+    } else if (tool === "deleteBuilding") {
+      this.editorMode = "gameplay";
+      this.moveStatus = "Delete: click a building";
     } else if (tool === "placeBuilding") {
-      this.editorMode = "objects";
-      this.moveStatus = `Place: ${this.placeBuildingType}`;
+      this.editorMode = "buildings";
+      const asset = getBuildingAsset(this.placeBuildingType);
+      this.moveStatus = asset ? `Place: ${asset.label}` : `Place: ${this.placeBuildingType}`;
+    } else if (tool === "placeProp") {
+      this.editorMode = "props";
+      const asset = getPropAsset(this.placePropType);
+      this.moveStatus = asset ? `Prop: ${asset.label}` : "";
+    } else if (tool === "placeUnit") {
+      this.editorMode = "units";
+      const asset = getUnitAsset(this.placeUnitType);
+      this.moveStatus = asset ? `Unit: ${asset.label}` : "";
+    } else if (tool === "placeUi") {
+      this.editorMode = "ui";
+      const asset = getUiAsset(this.placeUiType);
+      this.moveStatus = asset ? `UI: ${asset.label}` : "";
     } else if (tool === "pathMask") {
-      this.editorMode = "objects";
+      this.editorMode = "gameplay";
       this.moveStatus = "";
+    } else if (tool === "stairs") {
+      this.editorMode = "gameplay";
+      this.moveStatus = "Stairs: click land cells to toggle";
     } else if (tool === "select") {
       this.moveStatus = "Select: click cells (Shift to add)";
     } else {
@@ -265,7 +446,7 @@ export class MapEditor {
   setMoveBuildingTool() {
     this.tool = "moveBuilding";
     this.movePickCell = null;
-    this.moveStatus = "Move: click a barracks";
+    this.moveStatus = "Move: click a building";
     this._notifyChange();
     this.scene.redrawTerrain();
   }
@@ -695,6 +876,44 @@ export class MapEditor {
       }
     }
 
+    ensureMapPlacementGrids(this.map);
+    const rowUnits = d.unitPlacements;
+    const rowUi = d.uiPlacements;
+    if (Array.isArray(rowUnits) && rowUnits.length === this.map.height) {
+      for (let y = 0; y < this.map.height; y += 1) {
+        const row = rowUnits[y];
+        if (!Array.isArray(row) || row.length !== this.map.width) {
+          return false;
+        }
+        for (let x = 0; x < this.map.width; x += 1) {
+          this.map.unitPlacements[y][x] = normalizeAssetPlacement(row[x]);
+        }
+      }
+    } else {
+      for (let y = 0; y < this.map.height; y += 1) {
+        for (let x = 0; x < this.map.width; x += 1) {
+          this.map.unitPlacements[y][x] = null;
+        }
+      }
+    }
+    if (Array.isArray(rowUi) && rowUi.length === this.map.height) {
+      for (let y = 0; y < this.map.height; y += 1) {
+        const row = rowUi[y];
+        if (!Array.isArray(row) || row.length !== this.map.width) {
+          return false;
+        }
+        for (let x = 0; x < this.map.width; x += 1) {
+          this.map.uiPlacements[y][x] = normalizeAssetPlacement(row[x]);
+        }
+      }
+    } else {
+      for (let y = 0; y < this.map.height; y += 1) {
+        for (let x = 0; x < this.map.width; x += 1) {
+          this.map.uiPlacements[y][x] = null;
+        }
+      }
+    }
+
     if (Array.isArray(d.layerTiles) && d.layerTiles.length === MAP_TILE_LAYER_COUNT) {
       this.map.layerTiles = d.layerTiles;
     } else {
@@ -760,6 +979,7 @@ export class MapEditor {
   _buildSerializableMapPayload() {
     ensurePathMaskGrid(this.map);
     ensureMapLayerTiles(this.map);
+    ensureMapPlacementGrids(this.map);
     return {
       id: this.map.id,
       version: MAP_JSON_VERSION,
@@ -781,6 +1001,20 @@ export class MapEditor {
         grid.map((row) => row.map((cell) => cloneLayerTile(normalizeLayerTile(cell)))),
       ),
       pathMask: this.map.pathMask.map((row) => [...row]),
+      decorations: this.map.decorations.map((row) =>
+        row.map((cell) => {
+          if (cell == null) {
+            return null;
+          }
+          return { sheet: cell.sheet, frame: cell.frame };
+        }),
+      ),
+      unitPlacements: this.map.unitPlacements.map((row) =>
+        row.map((cell) => cloneAssetPlacement(normalizeAssetPlacement(cell))),
+      ),
+      uiPlacements: this.map.uiPlacements.map((row) =>
+        row.map((cell) => cloneAssetPlacement(normalizeAssetPlacement(cell))),
+      ),
     };
   }
 
@@ -816,8 +1050,51 @@ export class MapEditor {
     }
 
     if (this.tool === "placeBuilding") {
+      const hasBuilding = this.map.buildings[cell.y][cell.x] != null;
+      if (hasBuilding || this.movePickCell != null) {
+        this._handleMoveBuildingClick(cell.x, cell.y);
+        return true;
+      }
       this._isPainting = true;
       this._applyPlaceBuildingAt(cell.x, cell.y);
+      return true;
+    }
+
+    if (this.tool === "placeProp") {
+      this._isPainting = true;
+      this._applyPlacePropAt(cell.x, cell.y);
+      return true;
+    }
+
+    if (this.tool === "placeUnit") {
+      const hasUnit = this.map.unitPlacements[cell.y][cell.x] != null;
+      if (hasUnit || this.unitPickCell != null) {
+        this._handleUnitPlacementClick(cell.x, cell.y);
+        return true;
+      }
+      this._isPainting = true;
+      this._applyPlaceUnitAt(cell.x, cell.y);
+      return true;
+    }
+
+    if (this.tool === "placeUi") {
+      const hasUi = this.map.uiPlacements[cell.y][cell.x] != null;
+      if (hasUi || this.uiPickCell != null) {
+        this._handleUiPlacementClick(cell.x, cell.y);
+        return true;
+      }
+      this._isPainting = true;
+      this._applyPlaceUiAt(cell.x, cell.y);
+      return true;
+    }
+
+    if (this.tool === "stairs") {
+      this._toggleStairsAt(cell.x, cell.y);
+      return true;
+    }
+
+    if (this.tool === "deleteBuilding") {
+      this._deleteBuildingAt(cell.x, cell.y);
       return true;
     }
 
@@ -846,9 +1123,39 @@ export class MapEditor {
       return true;
     }
     if (this._isPainting && this.tool === "placeBuilding" && pointer.leftButtonDown()) {
+      if (this.movePickCell != null) {
+        return true;
+      }
       const cell = this.scene.pointerToCell(pointer);
       if (cell) {
         this._applyPlaceBuildingAt(cell.x, cell.y);
+      }
+      return true;
+    }
+    if (this._isPainting && this.tool === "placeProp" && pointer.leftButtonDown()) {
+      const cell = this.scene.pointerToCell(pointer);
+      if (cell) {
+        this._applyPlacePropAt(cell.x, cell.y);
+      }
+      return true;
+    }
+    if (this._isPainting && this.tool === "placeUnit" && pointer.leftButtonDown()) {
+      if (this.unitPickCell != null) {
+        return true;
+      }
+      const cell = this.scene.pointerToCell(pointer);
+      if (cell) {
+        this._applyPlaceUnitAt(cell.x, cell.y);
+      }
+      return true;
+    }
+    if (this._isPainting && this.tool === "placeUi" && pointer.leftButtonDown()) {
+      if (this.uiPickCell != null) {
+        return true;
+      }
+      const cell = this.scene.pointerToCell(pointer);
+      if (cell) {
+        this._applyPlaceUiAt(cell.x, cell.y);
       }
       return true;
     }
@@ -879,7 +1186,7 @@ export class MapEditor {
   }
 
   _applyPaintAt(x, y) {
-    if (this.editorMode !== "map" || this.map.buildings[y][x] != null) {
+    if (this.editorMode !== "terrain" || this.map.buildings[y][x] != null) {
       return;
     }
 
@@ -922,6 +1229,196 @@ export class MapEditor {
     this.scene.syncEnemyBarracksTargets();
   }
 
+  _isLandCell(x, y) {
+    return this.map.elevation[y][x] >= 1 && this.map.stairs[y][x] !== 1;
+  }
+
+  _applyPlacePropAt(x, y) {
+    ensureMapPlacementGrids(this.map);
+    if (!this._isLandCell(x, y)) {
+      return;
+    }
+    if (this.propEraser) {
+      this.map.decorations[y][x] = null;
+    } else {
+      const key = this.placePropType;
+      if (!key) {
+        return;
+      }
+      this.map.decorations[y][x] = { sheet: key, frame: 0 };
+    }
+    this.scene.redrawTerrain();
+    this._markDirty();
+  }
+
+  _applyPlaceUnitAt(x, y) {
+    ensureMapPlacementGrids(this.map);
+    if (!this._isLandCell(x, y)) {
+      return;
+    }
+    if (this.unitEraser) {
+      this.map.unitPlacements[y][x] = null;
+    } else {
+      const key = this.placeUnitType;
+      if (!key) {
+        return;
+      }
+      this.map.unitPlacements[y][x] = { assetKey: key, frame: 0 };
+    }
+    this.scene.redrawTerrain();
+    this._markDirty();
+  }
+
+  _applyPlaceUiAt(x, y) {
+    ensureMapPlacementGrids(this.map);
+    if (!this._isLandCell(x, y)) {
+      return;
+    }
+    if (this.uiEraser) {
+      this.map.uiPlacements[y][x] = null;
+    } else {
+      const key = this.placeUiType;
+      if (!key) {
+        return;
+      }
+      this.map.uiPlacements[y][x] = { assetKey: key, frame: 0 };
+    }
+    this.scene.redrawTerrain();
+    this._markDirty();
+  }
+
+  _toggleStairsAt(x, y) {
+    if (this.map.elevation[y][x] < 1) {
+      return;
+    }
+    this.map.stairs[y][x] = this.map.stairs[y][x] === 1 ? 0 : 1;
+    this.scene.redrawTerrain();
+    this._markDirty();
+  }
+
+  _deleteBuildingAt(x, y) {
+    if (this.map.buildings[y][x] == null) {
+      this.moveStatus = "Delete: no building on cell";
+      this._notifyChange();
+      return;
+    }
+    this.map.buildings[y][x] = null;
+    syncBarracksPointsFromBuildings(this.map);
+    this.moveStatus = `Delete: cleared (${x}, ${y})`;
+    this.scene.redrawTerrain();
+    this.scene.syncEnemyBarracksTargets();
+    this._markDirty();
+  }
+
+  _getPickCell(kind) {
+    if (kind === "units") {
+      return this.unitPickCell;
+    }
+    if (kind === "ui") {
+      return this.uiPickCell;
+    }
+    return this.movePickCell;
+  }
+
+  _setPickCell(kind, cell) {
+    if (kind === "units") {
+      this.unitPickCell = cell;
+    } else if (kind === "ui") {
+      this.uiPickCell = cell;
+    } else {
+      this.movePickCell = cell;
+    }
+  }
+
+  /**
+   * @param {"units" | "ui"} kind
+   * @param {number} x
+   * @param {number} y
+   * @param {{ assetKey: string, frame: number }[][]} grid
+   */
+  _handleAssetPlacementClick(kind, x, y, grid) {
+    const pick = this._getPickCell(kind);
+    const occupied = grid[y][x] != null;
+
+    if (pick == null) {
+      if (!occupied) {
+        this.moveStatus = `Move: click a placed ${kind === "units" ? "unit" : "UI marker"}`;
+        this._notifyChange();
+        return;
+      }
+      this._setPickCell(kind, { x, y });
+      const cell = grid[y][x];
+      if (cell && typeof cell.assetKey === "string") {
+        if (kind === "units") {
+          this.placeUnitType = cell.assetKey;
+        } else {
+          this.placeUiType = cell.assetKey;
+        }
+      }
+      this.moveStatus = `Move: picked (${x}, ${y}) — click destination`;
+      this._notifyChange();
+      this.scene.redrawTerrain();
+      return;
+    }
+
+    const from = pick;
+    const moving = grid[from.y][from.x];
+    if (moving == null) {
+      this._setPickCell(kind, null);
+      this.moveStatus = "Move: selection missing, pick again";
+      this._notifyChange();
+      this.scene.redrawTerrain();
+      return;
+    }
+
+    if (x === from.x && y === from.y) {
+      this._setPickCell(kind, null);
+      this.moveStatus = "Move: selection cleared";
+      this._notifyChange();
+      this.scene.redrawTerrain();
+      return;
+    }
+
+    if (grid[y][x] != null) {
+      this._setPickCell(kind, { x, y });
+      const cell = grid[y][x];
+      if (cell && typeof cell.assetKey === "string") {
+        if (kind === "units") {
+          this.placeUnitType = cell.assetKey;
+        } else {
+          this.placeUiType = cell.assetKey;
+        }
+      }
+      this.moveStatus = `Move: picked (${x}, ${y}) — click destination`;
+      this._notifyChange();
+      this.scene.redrawTerrain();
+      return;
+    }
+
+    if (!this._isLandCell(x, y)) {
+      this.moveStatus = "Move blocked: destination must be land without stairs";
+      this._notifyChange();
+      return;
+    }
+
+    grid[from.y][from.x] = null;
+    grid[y][x] = cloneAssetPlacement(moving);
+    this._setPickCell(kind, null);
+    this.moveStatus = `Move complete: (${from.x}, ${from.y}) -> (${x}, ${y})`;
+    this.scene.redrawTerrain();
+    this._markDirty();
+  }
+
+  _handleUnitPlacementClick(x, y) {
+    ensureMapPlacementGrids(this.map);
+    this._handleAssetPlacementClick("units", x, y, this.map.unitPlacements);
+  }
+
+  _handleUiPlacementClick(x, y) {
+    ensureMapPlacementGrids(this.map);
+    this._handleAssetPlacementClick("ui", x, y, this.map.uiPlacements);
+  }
+
   _handleMoveBuildingClick(x, y) {
     const b = this.map.buildings[y][x];
 
@@ -932,6 +1429,9 @@ export class MapEditor {
         return;
       }
       this.movePickCell = { x, y };
+      if (typeof b === "string") {
+        this.placeBuildingType = b;
+      }
       this.moveStatus = `Move: picked (${x}, ${y}) — click destination`;
       this._notifyChange();
       this.scene.redrawTerrain();
@@ -957,6 +1457,17 @@ export class MapEditor {
     }
 
     if (this.map.buildings[y][x] != null) {
+      if (x !== from.x || y !== from.y) {
+        const picked = this.map.buildings[y][x];
+        this.movePickCell = { x, y };
+        if (typeof picked === "string") {
+          this.placeBuildingType = picked;
+        }
+        this.moveStatus = `Move: picked (${x}, ${y}) — click destination`;
+        this._notifyChange();
+        this.scene.redrawTerrain();
+        return;
+      }
       this.moveStatus = "Move blocked: destination has a building";
       this._notifyChange();
       return;

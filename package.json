@@ -13,7 +13,8 @@
     "survival:sim:unlimited": "node scripts/survival-sim.js --unlimited",
     "survival:sim:unlimited-progression": "node scripts/survival-sim.js --unlimited --progression",
     "campaign:gold-sim": "node scripts/campaign-kill-gold-sim.mjs",
-    "map:set-default": "node scripts/set-map-default.mjs"
+    "map:set-default": "node scripts/set-map-default.mjs",
+    "assets:sync-tinyswords": "node scripts/sync-tinyswords.mjs"
   },
   "dependencies": {
     "phaser": "^3.90.0"

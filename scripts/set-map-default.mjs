@@ -7,11 +7,12 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { normalizeTerrainTileOverride } from "../src/game/maps/tileOverrideSchema.js";
+import { normalizeLayerTile, normalizeTerrainTileOverride } from "../src/game/maps/tileOverrideSchema.js";
 
 /** Keep in sync with src/game/constants.js (avoid importing constants.js — it pulls balance). */
 const GRID_COLS = 20;
 const GRID_ROWS = 25;
+const MAP_TILE_LAYER_COUNT = 4;
 
 const MAP_JSON_VERSION = 1;
 
@@ -100,8 +101,8 @@ function validateAndBuildOutput(data) {
       const ev = rowE[x];
       const st = rowS[x];
       const bd = rowB[x];
-      if (typeof ev !== "number" || ev < 0 || ev > 2 || !Number.isFinite(ev)) {
-        fail(`Invalid elevation at (${x},${y}): ${String(ev)}`);
+      if (typeof ev !== "number" || ev < 0 || ev >= MAP_TILE_LAYER_COUNT || !Number.isFinite(ev)) {
+        fail(`Invalid elevation at (${x},${y}): ${String(ev)} (expected 0..${MAP_TILE_LAYER_COUNT - 1})`);
       }
       if (st !== 0 && st !== 1) {
         fail(`Invalid stairs at (${x},${y}): expected 0 or 1, got ${String(st)}`);
@@ -218,7 +219,35 @@ function validateAndBuildOutput(data) {
   }
   const pathMask = pm.map((row) => [...row]);
 
-  return {
+  /** @type {({ sheet: string, frame: number } | null)[][][] | undefined} */
+  let layerTiles;
+  if (Array.isArray(d.layerTiles) && d.layerTiles.length === MAP_TILE_LAYER_COUNT) {
+    layerTiles = [];
+    for (let layer = 0; layer < MAP_TILE_LAYER_COUNT; layer += 1) {
+      const grid = d.layerTiles[layer];
+      if (!Array.isArray(grid) || grid.length !== h) {
+        fail(`layerTiles[${layer}] must be a 2D array with height ${h}.`);
+      }
+      layerTiles.push([]);
+      for (let y = 0; y < h; y += 1) {
+        const row = grid[y];
+        if (!Array.isArray(row) || row.length !== w) {
+          fail(`layerTiles[${layer}][${y}] must be an array of length ${w}.`);
+        }
+        layerTiles[layer].push([]);
+        for (let x = 0; x < w; x += 1) {
+          const v = row[x];
+          const tile = normalizeLayerTile(v);
+          if (v != null && tile === null) {
+            fail(`Invalid layerTiles[${layer}][${y}][${x}].`);
+          }
+          layerTiles[layer][y].push(tile);
+        }
+      }
+    }
+  }
+
+  const out = {
     id,
     version: MAP_JSON_VERSION,
     width: w,
@@ -233,6 +262,10 @@ function validateAndBuildOutput(data) {
     decorations,
     pathMask,
   };
+  if (layerTiles) {
+    out.layerTiles = layerTiles;
+  }
+  return out;
 }
 
 const inputPath = process.argv[2];
@@ -254,6 +287,10 @@ try {
   fail(`Invalid JSON: ${/** @type {Error} */ (err).message}`);
 }
 
-const out = validateAndBuildOutput(parsed);
+const root = parsed && typeof parsed === "object" ? /** @type {Record<string, unknown>} */ (parsed) : null;
+const mapData =
+  root?.map && typeof root.map === "object" ? /** @type {Record<string, unknown>} */ (root.map) : root;
+
+const out = validateAndBuildOutput(mapData);
 writeFileSync(DEST, `${JSON.stringify(out, null, 2)}\n`, "utf8");
 console.log(`Wrote ${DEST}`);

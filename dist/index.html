@@ -73,6 +73,37 @@
       .editor-panel {
         padding: 12px 14px 24px;
         font-size: 13px;
+        overflow-y: auto;
+        max-height: 100%;
+      }
+      .editor-panel__search {
+        width: 100%;
+        box-sizing: border-box;
+        margin-bottom: 8px;
+        padding: 6px 8px;
+        border: 1px solid #3a4a66;
+        border-radius: 4px;
+        background: #141c2c;
+        color: #e8ecf4;
+        font: inherit;
+        font-size: 12px;
+      }
+      .editor-panel__select {
+        margin-left: 4px;
+        padding: 4px 6px;
+        border: 1px solid #3a4a66;
+        border-radius: 4px;
+        background: #141c2c;
+        color: #e8ecf4;
+        font: inherit;
+        font-size: 11px;
+      }
+      .editor-building-group summary {
+        cursor: pointer;
+        list-style: none;
+      }
+      .editor-building-group summary::-webkit-details-marker {
+        display: none;
       }
       .editor-panel__title {
         margin: 0 0 6px;
@@ -87,11 +118,18 @@
       }
       .editor-panel__tabs {
         display: flex;
+        flex-wrap: wrap;
         gap: 6px;
         margin-bottom: 12px;
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: #121820;
+        padding-bottom: 4px;
       }
       .editor-panel__tab {
-        flex: 1;
+        flex: 1 1 calc(33% - 6px);
+        min-width: 72px;
         padding: 8px 10px;
         border: 1px solid #3a4a66;
         border-radius: 4px;
@@ -194,6 +232,68 @@
         image-rendering: pixelated;
         background: #0d1118;
       }
+      .editor-building-grid {
+        max-height: min(52vh, 420px);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        padding-right: 4px;
+      }
+      .editor-building-group {
+        margin-bottom: 12px;
+      }
+      .editor-building-group__title {
+        margin: 0 0 6px;
+        font-size: 11px;
+        font-weight: 600;
+        color: #9aa8c4;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .editor-building-grid__items {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 6px;
+      }
+      .editor-building-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        padding: 6px 4px;
+        border: 1px solid #2f3d56;
+        border-radius: 4px;
+        background: #141c2c;
+        cursor: pointer;
+        color: #c8d4ec;
+        font: inherit;
+        font-size: 10px;
+      }
+      .editor-building-item:hover {
+        border-color: #5cb3ff;
+        background: #1a2838;
+      }
+      .editor-building-item--selected {
+        border-color: #5cb3ff;
+        background: #1a3048;
+        box-shadow: 0 0 0 1px #5cb3ff;
+      }
+      .editor-building-item img {
+        display: block;
+        width: 100%;
+        max-width: 72px;
+        max-height: 72px;
+        object-fit: contain;
+        image-rendering: pixelated;
+        pointer-events: none;
+      }
+      .editor-building-item__label {
+        line-height: 1.2;
+        text-align: center;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        max-width: 100%;
+      }
       .editor-panel__btn-row {
         display: flex;
         flex-wrap: wrap;
@@ -282,7 +382,7 @@
         color: #8a96ac;
       }
     </style>
-    <script type="module" crossorigin src="./assets/index-DsnHuzde.js"></script>
+    <script type="module" crossorigin src="./assets/index-B1sG4tqN.js"></script>
   </head>
   <body>
     <div id="game-root">

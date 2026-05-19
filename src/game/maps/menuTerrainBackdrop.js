@@ -4,6 +4,7 @@ import { hasTinySwordsFolderHint, SHEEP_IDLE_ANIM_KEY, SHEEP_IDLE_SHEET_KEY } fr
 import { createElevation, createNullGrid, createStringGrid } from "./elevation";
 import { cellToWorld } from "./tileRules";
 import { ensureMapLayerTiles, ensureMapOverrideGrids, ensureMapTilesets, ensurePathMaskGrid } from "./mapUtils";
+import { addBuildingToContainer } from "../buildings/buildingCatalog";
 import {
   DECORATION_IMAGE_KEYS,
   DEFAULT_TERRAIN_SHEET,
@@ -360,19 +361,7 @@ export function renderMenuTerrainBackdrop(scene, container, map) {
         continue;
       }
       const pos = cellToWorld(x, y);
-      if (key === "barracks_blue") {
-        if (hasSheet && scene.textures.exists("blueBarracks")) {
-          container.add(scene.add.image(pos.x, pos.y, "blueBarracks"));
-        } else {
-          container.add(scene.add.rectangle(pos.x, pos.y, TILE_SIZE - 8, TILE_SIZE - 8, 0x355bb7));
-        }
-      } else if (key === "barracks_red") {
-        if (hasSheet && scene.textures.exists("redBarracks")) {
-          container.add(scene.add.image(pos.x, pos.y, "redBarracks"));
-        } else {
-          container.add(scene.add.rectangle(pos.x, pos.y, TILE_SIZE - 8, TILE_SIZE - 8, 0xb43b3b));
-        }
-      }
+      addBuildingToContainer(scene, container, key, pos.x, pos.y);
     }
   }
 }

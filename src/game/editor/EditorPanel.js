@@ -1,3 +1,7 @@
+import { BUILDING_ASSETS, getBuildingAsset } from "../buildings/buildingCatalog";
+import { getPropAsset, PROP_ASSETS } from "../props/propCatalog";
+import { getUnitAsset, UNIT_ASSETS } from "../units/unitCatalog";
+import { getUiAsset, UI_ASSETS } from "../ui/uiCatalog";
 import { frameIndexToSheetPixels } from "../maps/tileRules";
 import {
   DEFAULT_TERRAIN_SHEET,
@@ -48,7 +52,23 @@ export class EditorPanel {
     /** @type {HTMLElement | null} */
     this._mapPanelEl = null;
     /** @type {HTMLElement | null} */
-    this._objectsPanelEl = null;
+    this._propsPanelEl = null;
+    /** @type {HTMLElement | null} */
+    this._unitsPanelEl = null;
+    /** @type {HTMLElement | null} */
+    this._uiPanelEl = null;
+    /** @type {HTMLElement | null} */
+    this._gameplayPanelEl = null;
+    /** @type {Map<string, HTMLInputElement>} */
+    this._assetSearchInputs = new Map();
+    /** @type {Map<string, { buttons: HTMLButtonElement[], getSelectedKey: () => string }>} */
+    this._assetPickers = new Map();
+    /** @type {HTMLSelectElement | null} */
+    this._shoreSelect = null;
+    /** @type {HTMLSelectElement | null} */
+    this._plateauSelect = null;
+    /** @type {HTMLElement | null} */
+    this._buildingsPanelEl = null;
     /** @type {HTMLButtonElement[]} */
     this._layerButtons = [];
     /** @type {HTMLButtonElement[]} */
@@ -90,37 +110,69 @@ export class EditorPanel {
     const hint = document.createElement("p");
     hint.className = "editor-panel__hint";
     hint.textContent =
-      "E close · Map: layer + asset, drag to paint · Objects: buildings & path · Ctrl+S save";
+      "E close · 1-4 layers · 5 move · 6 select · 7 path · Ctrl+S save · Terrain tab: select cells for bulk path";
 
     const tabRow = document.createElement("div");
     tabRow.className = "editor-panel__tabs";
-    const mapTabBtn = document.createElement("button");
-    mapTabBtn.type = "button";
-    mapTabBtn.className = "editor-panel__tab editor-panel__tab--active";
-    mapTabBtn.textContent = "Map";
-    const objectsTabBtn = document.createElement("button");
-    objectsTabBtn.type = "button";
-    objectsTabBtn.className = "editor-panel__tab";
-    objectsTabBtn.textContent = "Objects";
-    tabRow.appendChild(mapTabBtn);
-    tabRow.appendChild(objectsTabBtn);
+    const tabDefs = [
+      ["terrain", "Terrain"],
+      ["buildings", "Buildings"],
+      ["props", "Props"],
+      ["units", "Units"],
+      ["ui", "UI"],
+      ["gameplay", "Gameplay"],
+    ];
+    /** @type {Map<string, HTMLButtonElement>} */
+    const tabButtons = new Map();
+    for (const [mode, label] of tabDefs) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "editor-panel__tab";
+      btn.textContent = label;
+      tabRow.appendChild(btn);
+      tabButtons.set(mode, btn);
+    }
+    tabButtons.get("terrain")?.classList.add("editor-panel__tab--active");
 
     this._mapPanelEl = document.createElement("div");
     this._mapPanelEl.className = "editor-panel__tab-panel";
-    this._objectsPanelEl = document.createElement("div");
-    this._objectsPanelEl.className = "editor-panel__tab-panel";
-    this._objectsPanelEl.hidden = true;
+    this._buildingsPanelEl = document.createElement("div");
+    this._buildingsPanelEl.className = "editor-panel__tab-panel";
+    this._buildingsPanelEl.hidden = true;
+    this._propsPanelEl = document.createElement("div");
+    this._propsPanelEl.className = "editor-panel__tab-panel";
+    this._propsPanelEl.hidden = true;
+    this._unitsPanelEl = document.createElement("div");
+    this._unitsPanelEl.className = "editor-panel__tab-panel";
+    this._unitsPanelEl.hidden = true;
+    this._uiPanelEl = document.createElement("div");
+    this._uiPanelEl.className = "editor-panel__tab-panel";
+    this._uiPanelEl.hidden = true;
+    this._gameplayPanelEl = document.createElement("div");
+    this._gameplayPanelEl.className = "editor-panel__tab-panel";
+    this._gameplayPanelEl.hidden = true;
+
+    const panels = new Map([
+      ["terrain", this._mapPanelEl],
+      ["buildings", this._buildingsPanelEl],
+      ["props", this._propsPanelEl],
+      ["units", this._unitsPanelEl],
+      ["ui", this._uiPanelEl],
+      ["gameplay", this._gameplayPanelEl],
+    ]);
 
     const switchTab = (mode) => {
-      const isMap = mode === "map";
-      mapTabBtn.classList.toggle("editor-panel__tab--active", isMap);
-      objectsTabBtn.classList.toggle("editor-panel__tab--active", !isMap);
-      this._mapPanelEl.hidden = !isMap;
-      this._objectsPanelEl.hidden = isMap;
-      this.editor.setEditorMode(isMap ? "map" : "objects");
+      for (const [m, btn] of tabButtons) {
+        btn.classList.toggle("editor-panel__tab--active", m === mode);
+      }
+      for (const [m, panel] of panels) {
+        panel.hidden = m !== mode;
+      }
+      this.editor.setEditorMode(mode);
     };
-    mapTabBtn.addEventListener("click", () => switchTab("map"));
-    objectsTabBtn.addEventListener("click", () => switchTab("objects"));
+    for (const [mode, btn] of tabButtons) {
+      btn.addEventListener("click", () => switchTab(mode));
+    }
 
     const layerSec = document.createElement("section");
     layerSec.className = "editor-panel__section";
@@ -168,8 +220,8 @@ export class EditorPanel {
       const b = document.createElement("button");
       b.type = "button";
       b.className = "editor-panel__btn editor-panel__btn--small";
-      b.textContent = asset.buttonLabel;
-      b.title = asset.label;
+      b.textContent = asset.label.length > 14 ? asset.buttonLabel : asset.label;
+      b.title = `${asset.label} (${asset.buttonLabel})`;
       b.dataset.sheetKey = asset.key;
       b.addEventListener("click", () => this.editor.setPickerSheet(asset.key));
       sheetRow.appendChild(b);
@@ -245,30 +297,54 @@ export class EditorPanel {
     this._mapPanelEl.appendChild(pickerSec);
     this._mapPanelEl.appendChild(advSec);
 
-    const objToolsSec = document.createElement("section");
-    objToolsSec.className = "editor-panel__section";
-    const objH = document.createElement("h3");
-    objH.textContent = "Place building";
-    objToolsSec.appendChild(objH);
-    const placeRow = document.createElement("div");
-    placeRow.className = "editor-panel__btn-row";
-    const mkPlace = (label, type) => {
-      const b = document.createElement("button");
-      b.type = "button";
-      b.className = "editor-panel__btn editor-panel__btn--small editor-place-btn";
-      b.textContent = label;
-      b.dataset.buildingType = type;
-      b.addEventListener("click", () => this.editor.setPlaceBuildingType(type));
-      placeRow.appendChild(b);
-      this._placeBuildingButtons.push(b);
-    };
-    mkPlace("Blue barracks", "barracks_blue");
-    mkPlace("Red barracks", "barracks_red");
-    objToolsSec.appendChild(placeRow);
-    const objHint = document.createElement("p");
-    objHint.className = "editor-panel__picker-hint";
-    objHint.textContent = "Select a building, then drag on land cells to stamp.";
-    objToolsSec.appendChild(objHint);
+    this._buildAssetPickerPanel(this._buildingsPanelEl, {
+      tabId: "buildings",
+      title: "Building assets",
+      hint: "Click a placed building to move it, or drag on empty land to place.",
+      assets: BUILDING_ASSETS,
+      getSelectedKey: () => this.editor.placeBuildingType,
+      onSelect: (key) => this.editor.setPlaceBuildingType(key),
+      registerButton: (btn) => this._placeBuildingButtons.push(btn),
+    });
+    this._buildAssetPickerPanel(this._propsPanelEl, {
+      tabId: "props",
+      title: "Props & resources",
+      hint: "Drag on land to place. Enable eraser to remove props.",
+      assets: PROP_ASSETS,
+      getSelectedKey: () => this.editor.placePropType,
+      onSelect: (key) => this.editor.setPlacePropType(key),
+      eraser: {
+        get: () => this.editor.propEraser,
+        set: (v) => this.editor.setPropEraser(v),
+        label: "Prop eraser",
+      },
+    });
+    this._buildAssetPickerPanel(this._unitsPanelEl, {
+      tabId: "units",
+      title: "Unit sprites",
+      hint: "Drag on land to place. Click placed unit to move. Decorative only.",
+      assets: UNIT_ASSETS,
+      getSelectedKey: () => this.editor.placeUnitType,
+      onSelect: (key) => this.editor.setPlaceUnitType(key),
+      eraser: {
+        get: () => this.editor.unitEraser,
+        set: (v) => this.editor.setUnitEraser(v),
+        label: "Unit eraser",
+      },
+    });
+    this._buildAssetPickerPanel(this._uiPanelEl, {
+      tabId: "ui",
+      title: "UI elements",
+      hint: "Drag on land to place UI markers. Click placed marker to move.",
+      assets: UI_ASSETS,
+      getSelectedKey: () => this.editor.placeUiType,
+      onSelect: (key) => this.editor.setPlaceUiType(key),
+      eraser: {
+        get: () => this.editor.uiEraser,
+        set: (v) => this.editor.setUiEraser(v),
+        label: "UI eraser",
+      },
+    });
 
     const objToolSec = document.createElement("section");
     objToolSec.className = "editor-panel__section";
@@ -289,6 +365,18 @@ export class EditorPanel {
     pathBtn.textContent = "Path mask";
     pathBtn.addEventListener("click", () => this.editor.setPathMaskBrush());
     objToolRow.appendChild(pathBtn);
+    const delBtn = document.createElement("button");
+    delBtn.type = "button";
+    delBtn.className = "editor-panel__btn editor-panel__btn--small editor-tool-btn";
+    delBtn.textContent = "Delete building";
+    delBtn.addEventListener("click", () => this.editor.setDeleteBuildingTool());
+    objToolRow.appendChild(delBtn);
+    const stairsBtn = document.createElement("button");
+    stairsBtn.type = "button";
+    stairsBtn.className = "editor-panel__btn editor-panel__btn--small editor-tool-btn";
+    stairsBtn.textContent = "Stairs";
+    stairsBtn.addEventListener("click", () => this.editor.setStairsBrush());
+    objToolRow.appendChild(stairsBtn);
     objToolSec.appendChild(objToolRow);
 
     const pathSec = document.createElement("div");
@@ -319,11 +407,43 @@ export class EditorPanel {
     objToolSec.appendChild(eraseLabel);
     const pathHint = document.createElement("p");
     pathHint.className = "editor-panel__picker-hint";
-    pathHint.textContent = "Paint enemy route cells connecting barracks.";
+    pathHint.textContent =
+      "Paint enemy route cells connecting barracks. Select cells on the Terrain tab, then use bulk path buttons below.";
     objToolSec.appendChild(pathHint);
 
-    this._objectsPanelEl.appendChild(objToolsSec);
-    this._objectsPanelEl.appendChild(objToolSec);
+    const metaSec = document.createElement("div");
+    metaSec.className = "editor-panel__btn-row";
+    const shoreLabel = document.createElement("label");
+    shoreLabel.textContent = "Shore ";
+    const shoreSelect = document.createElement("select");
+    shoreSelect.className = "editor-panel__select";
+    for (const value of ["default", "sand", "rocks"]) {
+      const opt = document.createElement("option");
+      opt.value = value;
+      opt.textContent = value;
+      shoreSelect.appendChild(opt);
+    }
+    shoreSelect.addEventListener("change", () => this.editor.setTilesetShore(shoreSelect.value));
+    shoreLabel.appendChild(shoreSelect);
+    const plateauLabel = document.createElement("label");
+    plateauLabel.textContent = " Plateau ";
+    const plateauSelect = document.createElement("select");
+    plateauSelect.className = "editor-panel__select";
+    for (const value of ["rocks", "default"]) {
+      const opt = document.createElement("option");
+      opt.value = value;
+      opt.textContent = value;
+      plateauSelect.appendChild(opt);
+    }
+    plateauSelect.addEventListener("change", () => this.editor.setTilesetPlateau(plateauSelect.value));
+    plateauLabel.appendChild(plateauSelect);
+    metaSec.appendChild(shoreLabel);
+    metaSec.appendChild(plateauLabel);
+    objToolSec.appendChild(metaSec);
+    this._shoreSelect = shoreSelect;
+    this._plateauSelect = plateauSelect;
+
+    this._gameplayPanelEl.appendChild(objToolSec);
     const fileSec = document.createElement("section");
     fileSec.className = "editor-panel__section";
     const fileLabel = document.createElement("h3");
@@ -378,11 +498,122 @@ export class EditorPanel {
     mount.appendChild(hint);
     mount.appendChild(tabRow);
     mount.appendChild(this._mapPanelEl);
-    mount.appendChild(this._objectsPanelEl);
+    mount.appendChild(this._buildingsPanelEl);
+    mount.appendChild(this._propsPanelEl);
+    mount.appendChild(this._unitsPanelEl);
+    mount.appendChild(this._uiPanelEl);
+    mount.appendChild(this._gameplayPanelEl);
     mount.appendChild(fileSec);
     mount.appendChild(this.statusEl);
 
     this.root = mount;
+  }
+
+  /**
+   * @param {HTMLElement} panelEl
+   * @param {{
+   *   tabId: string,
+   *   title: string,
+   *   hint: string,
+   *   assets: Array<{ key: string, label: string, category: string, url: string }>,
+   *   getSelectedKey: () => string,
+   *   onSelect: (key: string) => void,
+   *   registerButton?: (btn: HTMLButtonElement) => void,
+   *   eraser?: { get: () => boolean, set: (v: boolean) => void, label: string },
+   * }} config
+   */
+  _buildAssetPickerPanel(panelEl, config) {
+    const sec = document.createElement("section");
+    sec.className = "editor-panel__section";
+    const h = document.createElement("h3");
+    h.textContent = config.title;
+    sec.appendChild(h);
+    const hint = document.createElement("p");
+    hint.className = "editor-panel__picker-hint";
+    hint.textContent = config.hint;
+    sec.appendChild(hint);
+
+    if (config.eraser) {
+      const eraseLabel = document.createElement("label");
+      eraseLabel.className = "role-radio";
+      eraseLabel.style.cssText = "width:100%;margin-bottom:6px;display:block;";
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.addEventListener("change", () => config.eraser?.set(Boolean(cb.checked)));
+      eraseLabel.appendChild(cb);
+      eraseLabel.appendChild(document.createTextNode(` ${config.eraser.label}`));
+      sec.appendChild(eraseLabel);
+    }
+
+    const search = document.createElement("input");
+    search.type = "search";
+    search.className = "editor-panel__search";
+    search.placeholder = "Search assets…";
+    sec.appendChild(search);
+    this._assetSearchInputs.set(config.tabId, search);
+
+    const grid = document.createElement("div");
+    grid.className = "editor-building-grid editor-asset-grid";
+    const byCategory = new Map();
+    for (const asset of config.assets) {
+      if (!byCategory.has(asset.category)) {
+        byCategory.set(asset.category, []);
+      }
+      byCategory.get(asset.category).push(asset);
+    }
+
+    const buttons = [];
+    for (const [category, assets] of byCategory) {
+      const details = document.createElement("details");
+      details.className = "editor-building-group";
+      details.open = true;
+      const summary = document.createElement("summary");
+      summary.className = "editor-building-group__title";
+      summary.textContent = category;
+      details.appendChild(summary);
+      const groupGrid = document.createElement("div");
+      groupGrid.className = "editor-building-grid__items";
+      for (const asset of assets) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "editor-building-item editor-asset-item";
+        btn.dataset.assetKey = asset.key;
+        btn.dataset.searchText = `${category} ${asset.label}`.toLowerCase();
+        btn.title = `${category} · ${asset.label}`;
+        const img = document.createElement("img");
+        img.src = asset.url;
+        img.alt = asset.label;
+        img.loading = "lazy";
+        btn.appendChild(img);
+        const cap = document.createElement("span");
+        cap.className = "editor-building-item__label";
+        cap.textContent = asset.label;
+        btn.appendChild(cap);
+        btn.addEventListener("click", () => config.onSelect(asset.key));
+        groupGrid.appendChild(btn);
+        buttons.push(btn);
+        config.registerButton?.(btn);
+      }
+      details.appendChild(groupGrid);
+      grid.appendChild(details);
+    }
+    sec.appendChild(grid);
+    panelEl.appendChild(sec);
+
+    const applyFilter = () => {
+      const q = search.value.trim().toLowerCase();
+      for (const btn of buttons) {
+        const text = btn.dataset.searchText ?? "";
+        btn.hidden = q.length > 0 && !text.includes(q);
+      }
+      for (const details of grid.querySelectorAll("details.editor-building-group")) {
+        const visible = details.querySelectorAll(".editor-asset-item:not([hidden])").length > 0;
+        details.hidden = !visible;
+      }
+    };
+    search.addEventListener("input", applyFilter);
+
+    this._assetPickers.set(config.tabId, { buttons, getSelectedKey: config.getSelectedKey });
   }
 
   /**
@@ -398,7 +629,7 @@ export class EditorPanel {
       return;
     }
     const hasSel = this.editor.getSelectedCount() > 0;
-    const brushMode = this.editor.editorMode === "map";
+    const brushMode = this.editor.editorMode === "terrain";
     if (!hasSel && !brushMode) {
       this._pickerHover = null;
       this._redrawTilePicker();
@@ -467,7 +698,7 @@ export class EditorPanel {
       return;
     }
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    const disabled = this.editor.getSelectedCount() === 0 && this.editor.editorMode !== "map";
+    const disabled = this.editor.getSelectedCount() === 0 && this.editor.editorMode !== "terrain";
     const img = this._getPickerImage();
     if (img && asset) {
       ctx.globalAlpha = disabled ? 0.35 : 1;
@@ -615,12 +846,12 @@ export class EditorPanel {
 
     const e = this.editor;
     const layerNames = ["water", "ground 1", "ground 2", "ground 3"];
-    const layerLabel = e.editorMode === "map" ? `Layer: ${e.activeLayer} (${layerNames[e.activeLayer] ?? "?"})` : "";
+    const layerLabel = e.editorMode === "terrain" ? `Layer: ${e.activeLayer} (${layerNames[e.activeLayer] ?? "?"})` : "";
 
     let moveLine = "";
     if (e.tool === "moveBuilding") {
       const picked = e.getMovePickCell();
-      moveLine = e.getMoveStatus() || (picked ? `Move: picked (${picked.x}, ${picked.y}) — click destination` : "Move: click a barracks");
+      moveLine = e.getMoveStatus() || (picked ? `Move: picked (${picked.x}, ${picked.y}) — click destination` : "Move: click a building");
     }
 
     let selLine = "";
@@ -640,8 +871,44 @@ export class EditorPanel {
 
     let placeLine = "";
     if (e.tool === "placeBuilding") {
-      placeLine = `Place: ${e.placeBuildingType} (drag on map)`;
+      const picked = e.getMovePickCell();
+      if (picked) {
+        placeLine = e.getMoveStatus() || `Move: picked (${picked.x}, ${picked.y}) — click destination`;
+      } else {
+        const building = getBuildingAsset(e.placeBuildingType);
+        placeLine = building
+          ? `Place: ${building.label} (drag on empty land · click building to move)`
+          : `Place: ${e.placeBuildingType} (drag on empty land · click building to move)`;
+      }
     }
+
+    let propLine = "";
+    if (e.tool === "placeProp") {
+      const asset = getPropAsset(e.placePropType);
+      propLine = asset ? `Prop: ${asset.label}` : "";
+    }
+    let unitLine = "";
+    if (e.tool === "placeUnit") {
+      const picked = e.getUnitPickCell();
+      if (picked) {
+        unitLine = e.getMoveStatus() || `Move: picked (${picked.x}, ${picked.y})`;
+      } else {
+        const asset = getUnitAsset(e.placeUnitType);
+        unitLine = asset ? `Unit: ${asset.label}` : "";
+      }
+    }
+    let uiLine = "";
+    if (e.tool === "placeUi") {
+      const picked = e.getUiPickCell();
+      if (picked) {
+        uiLine = e.getMoveStatus() || `Move: picked (${picked.x}, ${picked.y})`;
+      } else {
+        const asset = getUiAsset(e.placeUiType);
+        uiLine = asset ? `UI: ${asset.label}` : "";
+      }
+    }
+
+    const pickerLine = e.editorMode === "terrain" ? `Picker: ${e.pickerSheet} #${e.pickerFrame}` : "";
 
     this.statusEl.textContent = [
       `Mode: ${e.editorMode}`,
@@ -651,7 +918,10 @@ export class EditorPanel {
       selLine,
       pathLine,
       placeLine,
-      `Picker: ${e.pickerSheet} #${e.pickerFrame}`,
+      propLine,
+      unitLine,
+      uiLine,
+      pickerLine,
     ]
       .filter(Boolean)
       .join(" · ");
@@ -664,12 +934,32 @@ export class EditorPanel {
     for (const b of this.toolButtons) {
       b.classList.remove("editor-tool-btn--active");
     }
-    if (this.root && e.editorMode === "objects") {
+    if (this.root && e.editorMode === "gameplay") {
       const toolBtns = this.root.querySelectorAll(".editor-tool-btn");
       for (const btn of toolBtns) {
-        const isMove = e.tool === "moveBuilding" && btn.textContent === "Move building";
-        const isPath = e.tool === "pathMask" && btn.textContent === "Path mask";
-        btn.classList.toggle("editor-tool-btn--active", isMove || isPath);
+        const label = btn.textContent ?? "";
+        const isMove = e.tool === "moveBuilding" && label === "Move building";
+        const isPath = e.tool === "pathMask" && label === "Path mask";
+        const isDel = e.tool === "deleteBuilding" && label === "Delete building";
+        const isStairs = e.tool === "stairs" && label === "Stairs";
+        btn.classList.toggle("editor-tool-btn--active", isMove || isPath || isDel || isStairs);
+      }
+    }
+    if (this._shoreSelect) {
+      this._shoreSelect.value = e.map.tilesets?.shore ?? "default";
+    }
+    if (this._plateauSelect) {
+      this._plateauSelect.value = e.map.tilesets?.plateau ?? "rocks";
+    }
+    for (const { buttons, getSelectedKey } of this._assetPickers.values()) {
+      const key = getSelectedKey();
+      for (const btn of buttons) {
+        btn.classList.toggle("editor-building-item--selected", btn.dataset.assetKey === key);
+      }
+    }
+    if (this.root && e.editorMode === "buildings") {
+      for (const btn of this._placeBuildingButtons) {
+        btn.classList.toggle("editor-building-item--selected", btn.dataset.buildingType === e.placeBuildingType);
       }
     }
 

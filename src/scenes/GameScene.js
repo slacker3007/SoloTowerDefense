@@ -20,6 +20,9 @@ import {
   isInsideGrid,
   worldToCell,
 } from "../game/maps/tileRules";
+import { addBuildingToContainer } from "../game/buildings/buildingCatalog";
+import { addCatalogPlacementSprite, addPropDecorationSprite } from "../game/maps/mapPlacementSprites";
+import { ensureMapPlacementGrids } from "../game/maps/mapUtils";
 import { DECORATION_IMAGE_KEYS, MAP_TILE_LAYER_COUNT } from "../game/maps/tileOverrideSchema";
 import { EnemySystem } from "../game/systems/EnemySystem";
 import { BuilderSystem } from "../game/systems/BuilderSystem";
@@ -247,12 +250,14 @@ export class GameScene extends Phaser.Scene {
     this.keybindStore = new KeybindStore();
     this.hud = new Hud(this, {
       maxLives: STARTING_LIVES,
+      keybindStore: this.keybindStore,
       onMapEditorFromMenu: () => this.toggleMapEditorFromMenu(),
       onOpenSettings: () => this.openSettingsFromGame(),
       onMainMenu: () => this.backToMainMenu(),
       onCycleGameSpeed: () => this.cycleGameSpeed(),
       onTogglePause: () => this.togglePause(),
     });
+    this.hud.setTopVisible(false);
     this.debugOverlay = new DebugOverlay(this);
     this.debugOverlay.redraw();
     this.worldRoot.add(this.debugOverlay.graphics);
@@ -1224,7 +1229,7 @@ export class GameScene extends Phaser.Scene {
 
   syncHudForEditorMode({ clampCamera = true } = {}) {
     const editorEnabled = Boolean(this.editor?.enabled);
-    this.hud?.setTopVisible(true);
+    this.hud?.setTopVisible(editorEnabled);
     this.hud?.setBottomVisible(!editorEnabled);
     if (clampCamera) {
       this._clampCameraScroll();
@@ -1882,6 +1887,7 @@ export class GameScene extends Phaser.Scene {
     ensureMapTilesets(this.map);
     ensureMapOverrideGrids(this.map);
     ensureMapLayerTiles(this.map);
+    ensureMapPlacementGrids(this.map);
     ensurePathMaskGrid(this.map);
 
     for (let y = 0; y < this.map.height; y += 1) {
@@ -1918,23 +1924,38 @@ export class GameScene extends Phaser.Scene {
 
     for (let y = 0; y < this.map.height; y += 1) {
       for (let x = 0; x < this.map.width; x += 1) {
+        const dec = this.map.decorations?.[y]?.[x];
+        if (dec != null && typeof dec.sheet === "string") {
+          addPropDecorationSprite(this, this.terrainContainer, dec, x, y, 14);
+        }
+      }
+    }
+
+    for (let y = 0; y < this.map.height; y += 1) {
+      for (let x = 0; x < this.map.width; x += 1) {
         const key = this.map.buildings[y][x];
         if (key == null) {
           continue;
         }
         const pos = cellToWorld(x, y);
-        if (key === "barracks_blue") {
-          if (hasSheet && this.textures.exists("blueBarracks")) {
-            this.terrainContainer.add(this.add.image(pos.x, pos.y, "blueBarracks").setDepth(20));
-          } else {
-            this.terrainContainer.add(this.add.rectangle(pos.x, pos.y, TILE_SIZE - 8, TILE_SIZE - 8, 0x355bb7).setDepth(20));
-          }
-        } else if (key === "barracks_red") {
-          if (hasSheet && this.textures.exists("redBarracks")) {
-            this.terrainContainer.add(this.add.image(pos.x, pos.y, "redBarracks").setDepth(20));
-          } else {
-            this.terrainContainer.add(this.add.rectangle(pos.x, pos.y, TILE_SIZE - 8, TILE_SIZE - 8, 0xb43b3b).setDepth(20));
-          }
+        addBuildingToContainer(this, this.terrainContainer, key, pos.x, pos.y, 20);
+      }
+    }
+
+    for (let y = 0; y < this.map.height; y += 1) {
+      for (let x = 0; x < this.map.width; x += 1) {
+        const unit = this.map.unitPlacements?.[y]?.[x];
+        if (unit != null) {
+          addCatalogPlacementSprite(this, this.terrainContainer, unit, x, y, 22, "unit");
+        }
+      }
+    }
+
+    for (let y = 0; y < this.map.height; y += 1) {
+      for (let x = 0; x < this.map.width; x += 1) {
+        const ui = this.map.uiPlacements?.[y]?.[x];
+        if (ui != null) {
+          addCatalogPlacementSprite(this, this.terrainContainer, ui, x, y, 24, "ui");
         }
       }
     }
@@ -1969,17 +1990,24 @@ export class GameScene extends Phaser.Scene {
       this.terrainContainer.add(selGfx);
     }
 
-    const movePick = this.editor?.enabled ? this.editor.getMovePickCell?.() : null;
-    if (movePick && isInsideGrid(movePick.x, movePick.y, this.map.width, this.map.height)) {
+    const drawPickHighlight = (pick, color) => {
+      if (!pick || !isInsideGrid(pick.x, pick.y, this.map.width, this.map.height)) {
+        return;
+      }
       const pickedGfx = this.add.graphics();
-      const px = movePick.x * TILE_SIZE;
-      const py = movePick.y * TILE_SIZE;
-      pickedGfx.fillStyle(0x5cb3ff, 0.2);
+      const px = pick.x * TILE_SIZE;
+      const py = pick.y * TILE_SIZE;
+      pickedGfx.fillStyle(color, 0.2);
       pickedGfx.fillRect(px + 2, py + 2, TILE_SIZE - 4, TILE_SIZE - 4);
-      pickedGfx.lineStyle(3, 0x5cb3ff, 1);
+      pickedGfx.lineStyle(3, color, 1);
       pickedGfx.strokeRect(px + 2, py + 2, TILE_SIZE - 4, TILE_SIZE - 4);
       pickedGfx.setDepth(52);
       this.terrainContainer.add(pickedGfx);
+    };
+    if (this.editor?.enabled) {
+      drawPickHighlight(this.editor.getMovePickCell?.(), 0x5cb3ff);
+      drawPickHighlight(this.editor.getUnitPickCell?.(), 0x7fd97f);
+      drawPickHighlight(this.editor.getUiPickCell?.(), 0xd9a85c);
     }
 
     this.debugOverlay?.redraw();

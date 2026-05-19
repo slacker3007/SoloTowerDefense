@@ -1,12 +1,15 @@
 import { TILE_SIZE } from "./constants";
+import { BUILDING_ASSETS } from "./generated/buildingCatalog.js";
+import { PROP_ASSETS } from "./generated/propCatalog.js";
 import { TERRAIN_TILESET_ASSETS } from "./generated/terrainTilesetCatalog.js";
+import { UI_ASSETS } from "./generated/uiCatalog.js";
+import { UNIT_ASSETS } from "./generated/unitCatalog.js";
 
 const tinySwordsRoot = "TinySwords";
 
 const terrainRoot = `${tinySwordsRoot}/Terrain/Tileset`;
 const barsRoot = `${tinySwordsRoot}/UI Elements/UI Elements/Bars`;
 const elementIconsRoot = `${tinySwordsRoot}/UI Elements/UI Elements/Element_Icons`;
-const elementalBuildingsRoot = `${tinySwordsRoot}/Buildings/Elemental Buildings notog`;
 const particleFxRoot = `${tinySwordsRoot}/Particle FX`;
 const terrainResourcesRoot = `${tinySwordsRoot}/Terrain/Resources/Meat/Sheep`;
 
@@ -100,22 +103,18 @@ export const spriteSheets = [
   },
 ];
 
+const barracksMapKeys = new Set(["barracks_blue", "barracks_red"]);
+const buildingImages = BUILDING_ASSETS.filter((asset) => !barracksMapKeys.has(asset.key)).map((asset) => ({
+  key: asset.key,
+  path: asset.path,
+}));
+
 export const standaloneImages = [
   { key: "gameLogo", path: `${tinySwordsRoot}/logo.png` },
   { key: "waterBackground", path: `${terrainRoot}/Water Background color.png` },
   { key: "blueBarracks", path: `${tinySwordsRoot}/Buildings/Blue Buildings/Barracks.png` },
-  { key: "blueHouse2", path: `${tinySwordsRoot}/Buildings/Blue Buildings/House2.png` },
   { key: "redBarracks", path: `${tinySwordsRoot}/Buildings/Red Buildings/Barracks.png` },
-  { key: "redHouse2", path: `${tinySwordsRoot}/Buildings/Red Buildings/House2.png` },
-  { key: "blueTower", path: `${tinySwordsRoot}/Buildings/Blue Buildings/Tower.png` },
-  { key: "tower_archer_building", path: `${elementalBuildingsRoot}/archer_tower.png` },
-  { key: "tower_lightning_building", path: `${elementalBuildingsRoot}/lightning_tower.png` },
-  { key: "tower_earth_building", path: `${elementalBuildingsRoot}/earth_tower.png` },
-  { key: "tower_fire_building", path: `${elementalBuildingsRoot}/fire_tower.png` },
-  { key: "tower_holy_building", path: `${elementalBuildingsRoot}/holy_tower.png` },
-  { key: "tower_ice_building", path: `${elementalBuildingsRoot}/ice_tower.png` },
-  { key: "tower_dark_building", path: `${elementalBuildingsRoot}/dark_tower.png` },
-  { key: "tower_nature_building", path: `${elementalBuildingsRoot}/nature_tower.png` },
+  ...buildingImages,
   { key: "buildIcon01", path: `${tinySwordsRoot}/UI Elements/UI Elements/Icons/Icon_01.png` },
   { key: "buildIcon05", path: `${tinySwordsRoot}/UI Elements/UI Elements/Icons/Icon_05.png` },
   { key: "buildIcon06", path: `${tinySwordsRoot}/UI Elements/UI Elements/Icons/Icon_06.png` },
@@ -142,7 +141,28 @@ export const terrainFrameDefaults = {
   grassInteriorFrame: 0,
 };
 
+function preloadCatalogAssets(scene, assets, loadedSheets, loadedImages) {
+  for (const asset of assets) {
+    if (loadedSheets.has(asset.key) || loadedImages.has(asset.key)) {
+      continue;
+    }
+    if (asset.frameCount > 1) {
+      scene.load.spritesheet(asset.key, asset.path, {
+        frameWidth: asset.frameW,
+        frameHeight: asset.frameH,
+      });
+      loadedSheets.add(asset.key);
+    } else {
+      scene.load.image(asset.key, asset.path);
+      loadedImages.add(asset.key);
+    }
+  }
+}
+
 export function preloadTinySwords(scene) {
+  const loadedSheets = new Set(spriteSheets.map((sheet) => sheet.key));
+  const loadedImages = new Set(standaloneImages.map((image) => image.key));
+
   for (const sheet of spriteSheets) {
     scene.load.spritesheet(sheet.key, sheet.path, sheet.frameConfig);
   }
@@ -150,6 +170,10 @@ export function preloadTinySwords(scene) {
   for (const image of standaloneImages) {
     scene.load.image(image.key, image.path);
   }
+
+  preloadCatalogAssets(scene, PROP_ASSETS, loadedSheets, loadedImages);
+  preloadCatalogAssets(scene, UNIT_ASSETS, loadedSheets, loadedImages);
+  preloadCatalogAssets(scene, UI_ASSETS, loadedSheets, loadedImages);
 }
 
 export function createTinySwordsAnimations(scene) {

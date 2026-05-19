@@ -1,20 +1,18 @@
 import Phaser from "phaser";
 
-/** @typedef {"selectBlueBarracks"|"backOrClose"|"grid_r1c1"|"grid_r1c2"|"grid_r1c3"|"grid_r1c4"|"grid_r2c1"|"grid_r2c2"|"grid_r2c3"|"grid_r2c4"|"grid_r3c1"|"grid_r3c2"|"grid_r3c3"|"grid_r3c4"} KeybindActionId */
+/** @typedef {"selectBlueBarracks"|"backOrClose"|"grid_r1c1"|"grid_r1c2"|"grid_r1c3"|"grid_r1c4"|"grid_r1c5"|"grid_r1c6"|"grid_r1c7"|"grid_r1c8"|"grid_r1c9"|"grid_r1c10"} KeybindActionId */
 
 export const GRID_KEYBIND_ACTION_IDS = /** @type {const} */ ([
   "grid_r1c1",
   "grid_r1c2",
   "grid_r1c3",
   "grid_r1c4",
-  "grid_r2c1",
-  "grid_r2c2",
-  "grid_r2c3",
-  "grid_r2c4",
-  "grid_r3c1",
-  "grid_r3c2",
-  "grid_r3c3",
-  "grid_r3c4",
+  "grid_r1c5",
+  "grid_r1c6",
+  "grid_r1c7",
+  "grid_r1c8",
+  "grid_r1c9",
+  "grid_r1c10",
 ]);
 
 export const KEYBIND_ACTION_IDS = /** @type {const} */ ([
@@ -26,38 +24,47 @@ export const KEYBIND_ACTION_IDS = /** @type {const} */ ([
 /** @type {Record<KeybindActionId, string>} */
 export const KEYBIND_DESCRIPTIONS = {
   selectBlueBarracks: "Select blue barracks",
-  grid_r1c1: "Action slot 1 (Q, top-left)",
-  grid_r1c2: "Action slot 2 (W)",
-  grid_r1c3: "Action slot 3 (E)",
-  grid_r1c4: "Action slot 4 (R, top-right)",
-  grid_r2c1: "Action slot 5 (A)",
-  grid_r2c2: "Action slot 6 (S)",
-  grid_r2c3: "Action slot 7 (D)",
-  grid_r2c4: "Action slot 8 (F)",
-  grid_r3c1: "Action slot 9 (Z, bottom-left)",
-  grid_r3c2: "Action slot 10 (X)",
-  grid_r3c3: "Action slot 11 (C)",
-  grid_r3c4: "Action slot 12 (V, bottom-right)",
+  grid_r1c1: "Action slot 1 (1)",
+  grid_r1c2: "Action slot 2 (2)",
+  grid_r1c3: "Action slot 3 (3)",
+  grid_r1c4: "Action slot 4 (4)",
+  grid_r1c5: "Action slot 5 (5)",
+  grid_r1c6: "Action slot 6 (6)",
+  grid_r1c7: "Action slot 7 (7)",
+  grid_r1c8: "Action slot 8 (8)",
+  grid_r1c9: "Action slot 9 (9)",
+  grid_r1c10: "Action slot 0 (0)",
   backOrClose: "Back / close",
 };
 
-const STORAGE_KEY = "soloTd.keybinds.v1";
+const STORAGE_KEY = "soloTd.keybinds.v2";
+
+const NUMBER_KEY_CODES = [
+  Phaser.Input.Keyboard.KeyCodes.ONE,
+  Phaser.Input.Keyboard.KeyCodes.TWO,
+  Phaser.Input.Keyboard.KeyCodes.THREE,
+  Phaser.Input.Keyboard.KeyCodes.FOUR,
+  Phaser.Input.Keyboard.KeyCodes.FIVE,
+  Phaser.Input.Keyboard.KeyCodes.SIX,
+  Phaser.Input.Keyboard.KeyCodes.SEVEN,
+  Phaser.Input.Keyboard.KeyCodes.EIGHT,
+  Phaser.Input.Keyboard.KeyCodes.NINE,
+  Phaser.Input.Keyboard.KeyCodes.ZERO,
+];
 
 /** @type {Record<KeybindActionId, number>} */
 const DEFAULT_CODES = {
-  selectBlueBarracks: Phaser.Input.Keyboard.KeyCodes.ONE,
-  grid_r1c1: Phaser.Input.Keyboard.KeyCodes.Q,
-  grid_r1c2: Phaser.Input.Keyboard.KeyCodes.W,
-  grid_r1c3: Phaser.Input.Keyboard.KeyCodes.E,
-  grid_r1c4: Phaser.Input.Keyboard.KeyCodes.R,
-  grid_r2c1: Phaser.Input.Keyboard.KeyCodes.A,
-  grid_r2c2: Phaser.Input.Keyboard.KeyCodes.S,
-  grid_r2c3: Phaser.Input.Keyboard.KeyCodes.D,
-  grid_r2c4: Phaser.Input.Keyboard.KeyCodes.F,
-  grid_r3c1: Phaser.Input.Keyboard.KeyCodes.Z,
-  grid_r3c2: Phaser.Input.Keyboard.KeyCodes.X,
-  grid_r3c3: Phaser.Input.Keyboard.KeyCodes.C,
-  grid_r3c4: Phaser.Input.Keyboard.KeyCodes.V,
+  selectBlueBarracks: Phaser.Input.Keyboard.KeyCodes.B,
+  grid_r1c1: NUMBER_KEY_CODES[0],
+  grid_r1c2: NUMBER_KEY_CODES[1],
+  grid_r1c3: NUMBER_KEY_CODES[2],
+  grid_r1c4: NUMBER_KEY_CODES[3],
+  grid_r1c5: NUMBER_KEY_CODES[4],
+  grid_r1c6: NUMBER_KEY_CODES[5],
+  grid_r1c7: NUMBER_KEY_CODES[6],
+  grid_r1c8: NUMBER_KEY_CODES[7],
+  grid_r1c9: NUMBER_KEY_CODES[8],
+  grid_r1c10: NUMBER_KEY_CODES[9],
   backOrClose: Phaser.Input.Keyboard.KeyCodes.ESC,
 };
 
@@ -214,14 +221,13 @@ export class KeybindStore {
 
   /**
    * @param {number} code
-   * @param {KeybindActionId | null} exceptActionId
    * @returns {KeybindActionId | null}
    */
-  findActionForCode(code, exceptActionId = null) {
+  findActionForCode(code) {
+    if (!Number.isFinite(code)) {
+      return null;
+    }
     for (const id of KEYBIND_ACTION_IDS) {
-      if (id === exceptActionId) {
-        continue;
-      }
       if (this._codes[id] === code) {
         return id;
       }
