@@ -1368,8 +1368,8 @@ export class GameScene extends Phaser.Scene {
     if (viewportProfile.isPortrait && this.cameras.main.zoom > 0.82) {
       this.cameras.main.setZoom(0.82);
     }
-    if (viewportProfile.isLandscape && this.cameras.main.zoom < 0.7) {
-      this.cameras.main.setZoom(0.7);
+    if (viewportProfile.isLandscape && this.cameras.main.zoom < DEFAULT_CAMERA_ZOOM) {
+      this.cameras.main.setZoom(DEFAULT_CAMERA_ZOOM);
     }
     this.hud?.setViewportMode?.(viewportProfile.isPortrait ? "portrait" : "landscape");
     this.hud?.layout?.(width, height);
@@ -1749,7 +1749,19 @@ export class GameScene extends Phaser.Scene {
     const cx = width / (2 * overlayScale);
     const cy = height / (2 * overlayScale);
     const panelW = Math.min(400, Math.round(width * 0.72 / overlayScale));
-    const panelH = Math.min(340, Math.round(height * 0.42 / overlayScale));
+    const menuInset = 14;
+    const rowCount = 4;
+    const minRowGap = 6;
+    const defaultRowH = 36;
+    const headerToButtons = 92;
+    const minPanelH =
+      headerToButtons + defaultRowH * rowCount + minRowGap * (rowCount - 1) + menuInset;
+    const maxPanelH = Math.round(height * 0.9 / overlayScale);
+    let panelH = Math.min(
+      380,
+      Math.max(minPanelH, Math.round(height * 0.42 / overlayScale)),
+    );
+    panelH = Math.min(panelH, maxPanelH);
     const panelLeft = cx - panelW / 2;
     const panelTop = cy - panelH / 2;
 
@@ -1765,17 +1777,23 @@ export class GameScene extends Phaser.Scene {
     const hintY = panelTop + 68;
     this._pauseHint?.setPosition(cx, hintY);
 
-    const menuInset = 14;
-    const menuRowH = 36;
     const menuRowW = panelW - menuInset * 2;
-    const rowCount = 4;
-    const contentTop = hintY + 24;
+    const contentTop = panelTop + headerToButtons;
     const contentBottom = panelTop + panelH - menuInset;
-    const availH = Math.max(menuRowH, contentBottom - contentTop);
-    const itemGap = Math.max(
-      6,
-      Math.round((availH - menuRowH * rowCount) / Math.max(1, rowCount - 1)),
-    );
+    const availH = Math.max(defaultRowH, contentBottom - contentTop);
+    let menuRowH = defaultRowH;
+    let itemGap = minRowGap;
+    const neededH = menuRowH * rowCount + itemGap * (rowCount - 1);
+    if (neededH > availH) {
+      itemGap = Math.max(4, Math.floor((availH - menuRowH * rowCount) / (rowCount - 1)));
+      if (menuRowH * rowCount + itemGap * (rowCount - 1) > availH) {
+        menuRowH = Math.max(28, Math.floor((availH - itemGap * (rowCount - 1)) / rowCount));
+      }
+    } else {
+      itemGap = Math.max(minRowGap, Math.round((availH - menuRowH * rowCount) / (rowCount - 1)));
+    }
+    const blockH = menuRowH * rowCount + itemGap * (rowCount - 1);
+    const blockTop = contentTop + Math.max(0, Math.floor((availH - blockH) / 2));
     const rows = [
       this._pauseResumeBtn,
       this._pauseSettingsBtn,
@@ -1788,7 +1806,7 @@ export class GameScene extends Phaser.Scene {
         continue;
       }
       row.setSize(menuRowW, menuRowH);
-      row.setPosition(panelLeft + menuInset, contentTop + (menuRowH + itemGap) * i);
+      row.setPosition(panelLeft + menuInset, blockTop + (menuRowH + itemGap) * i);
     }
   }
 
