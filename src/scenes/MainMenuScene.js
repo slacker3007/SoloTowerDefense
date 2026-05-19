@@ -28,18 +28,26 @@ export class MainMenuScene extends Phaser.Scene {
     this._menuBackdropSeed = undefined;
     /** @type {Phaser.GameObjects.TileSprite | null} */
     this._menuWater = null;
+    /** @type {((size: Phaser.Structs.Size) => void) | null} */
+    this._boundResize = null;
   }
 
   create() {
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.shutdown, this);
     if (this._menuBackdropSeed == null) {
       this._menuBackdropSeed = `${Date.now()}-${Phaser.Math.RND.integer()}`;
     }
     this._boundResize = (size) => this._handleResize(size);
     this.scale.on(Phaser.Scale.Events.RESIZE, this._boundResize);
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-      this.scale.off(Phaser.Scale.Events.RESIZE, this._boundResize);
-    });
     this.rebuildLayout();
+  }
+
+  shutdown() {
+    if (this._boundResize) {
+      this.scale.off(Phaser.Scale.Events.RESIZE, this._boundResize);
+      this._boundResize = null;
+    }
+    this._menuWater = null;
   }
 
   /**
@@ -161,7 +169,13 @@ export class MainMenuScene extends Phaser.Scene {
     const buttonWidth = Math.min(320, contentWidth - 96);
     const firstY = panel.y - 28;
     const gap = 58;
-    const startBtn = createCozyButton(this, "Start Run", () => this.scene.start("game"), { width: buttonWidth, fontSize: 26 });
+    const startGame = () => {
+      if (this.scene.isActive("game")) {
+        this.scene.stop("game");
+      }
+      this.scene.start("game");
+    };
+    const startBtn = createCozyButton(this, "Start Run", startGame, { width: buttonWidth, fontSize: 26 });
     const settingsBtn = createCozyButton(this, "Settings", () => {
       this.registry.set("settingsReturnScene", "main-menu");
       this.scene.start("settings");
@@ -177,7 +191,7 @@ export class MainMenuScene extends Phaser.Scene {
     settingsBtn.setDepth(DEPTH_UI + 1);
     quitBtn.setDepth(DEPTH_UI + 1);
 
-    const hint = this.add.text(panel.x, panel.y + panel.height * 0.36, "Tip: Press 1 to select your Home Barracks in-game.", {
+    const hint = this.add.text(panel.x, panel.y + panel.height * 0.36, "Tip: Home Barracks is selected when you start. Press 1 to build your first tower.", {
       fontFamily: cozyTheme.typography.bodyFamily,
       fontSize: "15px",
       color: cozyTheme.colors.textMuted,
@@ -189,7 +203,13 @@ export class MainMenuScene extends Phaser.Scene {
     hint.setDepth(DEPTH_UI + 1);
   }
 
+  /**
+   * @param {Phaser.Structs.Size} size
+   */
   _handleResize(size) {
+    if (!this.sys.isActive()) {
+      return;
+    }
     const w = size.width || GAME_WIDTH;
     const h = size.height || GAME_HEIGHT;
     this.cameras.main.setViewport(0, 0, w, h);

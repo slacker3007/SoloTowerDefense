@@ -55,6 +55,11 @@ import { EditorPanel } from "../game/editor/EditorPanel";
 import { GRID_KEYBIND_ACTION_IDS, KeybindStore } from "../game/input/KeybindStore.js";
 import { ensureMapLayerTiles, ensureMapOverrideGrids, ensureMapTilesets, ensurePathMaskGrid } from "../game/maps/mapUtils";
 import { cozyTheme, createCozyButton, createCozyPanel } from "../game/ui/CozyTheme";
+import {
+  createFantasyMenuRow,
+  createFantasyPanel,
+  darkFantasyPalette,
+} from "../game/ui/FantasyHudChrome";
 import { getViewportProfile } from "../game/config";
 
 const BARRACKS_CLICK_WIDTH = 192;
@@ -72,7 +77,7 @@ const BLUE_BARRACKS_FIRE_POINTS = [
 const TOWER_DOUBLE_CLICK_MS = 300;
 const DEFAULT_CAMERA_ZOOM = 0.59;
 const DEFAULT_CAMERA_SCROLL_X = -12;
-const DEFAULT_CAMERA_SCROLL_Y = 228;
+const DEFAULT_CAMERA_SCROLL_Y = 335;
 /** World scrollY at game start before panning to `DEFAULT_CAMERA_SCROLL_Y` (enemy base in view). */
 const INTRO_CAMERA_SCROLL_Y = 514;
 const INTRO_CAMERA_PAN_MS = 3000;
@@ -173,6 +178,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   create() {
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.shutdown, this);
     // Phaser reuses this scene instance on `restart()`; constructor does not run again.
     this._runEnded = false;
     this._pauseOverlayOpen = false;
@@ -187,115 +193,136 @@ export class GameScene extends Phaser.Scene {
     this._lastSelectionPulseKey = null;
     this._cameraPanning = false;
     this._performance = { clearedWaves: 0, leaksInWave: 0, livesAtWaveStart: STARTING_LIVES, waveTimer: 0 };
-    // On scene.restart(), old overlay references can briefly survive until recreated.
-    // Clear them before the first resize/layout pass to avoid stale-child access.
 
-    this.map = createFreshMap001();
-    this.gameState = {
-      gold: STARTING_GOLD,
-      lives: STARTING_LIVES,
-      wave: 0,
-      paused: false,
-      gameSpeed: 1,
-    };
+    // Explicitly nullify stale UI references that might survive on the scene instance
+    this._pauseOverlayRoot = null;
+    this._pauseBackdrop = null;
+    this._pauseGlow = null;
+    this._pausePanel = null;
+    this._pauseTitle = null;
+    this._pauseHint = null;
+    this._pauseResumeBtn = null;
+    this._pauseSettingsBtn = null;
+    this._pauseRestartBtn = null;
+    this._pauseMenuBtn = null;
+    this._runEndOverlayRoot = null;
+    this._runEndBackdrop = null;
+    this._runEndPanel = null;
+    this._runEndTitle = null;
+    this._runEndStats = null;
+    this._runEndRetryBtn = null;
+    this._runEndMenuBtn = null;
 
-    createTinySwordsAnimations(this);
+    try {
+      this.map = createFreshMap001();
+      this.gameState = {
+        gold: STARTING_GOLD,
+        lives: STARTING_LIVES,
+        wave: 0,
+        paused: false,
+        gameSpeed: 1,
+      };
 
-    ensureMapTilesets(this.map);
-    ensureMapOverrideGrids(this.map);
-    ensurePathMaskGrid(this.map);
-    this.editor = new MapEditor(this, this.map, { hydrateFromStorage: false });
-    this.editorPanel = new EditorPanel(this.editor);
+      createTinySwordsAnimations(this);
 
-    this.worldRoot = this.add.container(0, 0);
-    this.terrainContainer = this.add.container(0, 0);
-    this.blueBarracksHpRoot = this.add.container(0, 0);
-    this.worldRoot.add(this.terrainContainer);
-    this.worldRoot.add(this.blueBarracksHpRoot);
-    this.unitsWorldLayer = this.add.container(0, 0);
-    this.towersWorldLayer = this.add.container(0, 0);
-    this.effectsWorldLayer = this.add.container(0, 0);
-    this.worldRoot.add(this.unitsWorldLayer);
-    this.worldRoot.add(this.towersWorldLayer);
-    this.worldRoot.add(this.effectsWorldLayer);
-    this._selectionOutlineGfx = this.add.graphics();
-    this._selectionOutlineGfx.setDepth(60);
-    this.effectsWorldLayer.add(this._selectionOutlineGfx);
-    /** @type {{ container: Phaser.GameObjects.Container, setRatio: (r: number) => void, setValues: (current: number, max: number) => void, destroy: () => void } | null} */
-    this._homeHpBar = null;
-    this.redrawTerrain();
+      ensureMapTilesets(this.map);
+      ensureMapOverrideGrids(this.map);
+      ensurePathMaskGrid(this.map);
+      this.editor = new MapEditor(this, this.map, { hydrateFromStorage: false });
+      this.editorPanel = new EditorPanel(this.editor);
 
-    this.enemySystem = new EnemySystem(this, {
-      map: this.map,
-      spawnCell: this.map.points.enemyBarracks,
-      targetCell: this.map.points.homeBarracks,
-    });
-    this.towerSystem = new TowerSystem(this, this.map);
-    this.builderSystem = new BuilderSystem(this, {
-      map: this.map,
-      towerSystem: this.towerSystem,
-      onAfterJobComplete: () => {
-        this.debugOverlay?.redraw?.();
-        this.hud?.render?.(
-          this.gameState,
-          this.towerSystem.towers.length,
-          STARTING_LIVES,
-          this.selectedBuilding,
-          this.getWaveInfo(),
-        );
-      },
-    });
-    this.combatSystem = new CombatSystem(this, this.towerSystem, this.enemySystem);
-    this.waveSystem = new WaveSystem(this.enemySystem);
-    this.keybindStore = new KeybindStore();
-    this.hud = new Hud(this, {
-      maxLives: STARTING_LIVES,
-      keybindStore: this.keybindStore,
-      onMapEditorFromMenu: () => this.toggleMapEditorFromMenu(),
-      onOpenSettings: () => this.openSettingsFromGame(),
-      onMainMenu: () => this.backToMainMenu(),
-      onCycleGameSpeed: () => this.cycleGameSpeed(),
-      onTogglePause: () => this.togglePause(),
-    });
-    this.hud.setTopVisible(false);
-    this.debugOverlay = new DebugOverlay(this);
-    this.debugOverlay.redraw();
-    this.worldRoot.add(this.debugOverlay.graphics);
+      this.worldRoot = this.add.container(0, 0);
+      this.terrainContainer = this.add.container(0, 0);
+      this.blueBarracksHpRoot = this.add.container(0, 0);
+      this.worldRoot.add(this.terrainContainer);
+      this.worldRoot.add(this.blueBarracksHpRoot);
+      this.unitsWorldLayer = this.add.container(0, 0);
+      this.towersWorldLayer = this.add.container(0, 0);
+      this.effectsWorldLayer = this.add.container(0, 0);
+      this.worldRoot.add(this.unitsWorldLayer);
+      this.worldRoot.add(this.towersWorldLayer);
+      this.worldRoot.add(this.effectsWorldLayer);
+      this._selectionOutlineGfx = this.add.graphics();
+      this._selectionOutlineGfx.setDepth(60);
+      this.effectsWorldLayer.add(this._selectionOutlineGfx);
+      /** @type {{ container: Phaser.GameObjects.Container, setRatio: (r: number) => void, setValues: (current: number, max: number) => void, destroy: () => void } | null} */
+      this._homeHpBar = null;
+      this.redrawTerrain();
 
-    this.waveSystem.startAutoSpawner();
-    this.gameState.wave = this.waveSystem.waveIndex;
-    this._performance.livesAtWaveStart = this.gameState.lives;
+      this.enemySystem = new EnemySystem(this, {
+        map: this.map,
+        spawnCell: this.map.points.enemyBarracks,
+        targetCell: this.map.points.homeBarracks,
+      });
+      this.towerSystem = new TowerSystem(this, this.map);
+      this.builderSystem = new BuilderSystem(this, {
+        map: this.map,
+        towerSystem: this.towerSystem,
+        onAfterJobComplete: () => {
+          this.debugOverlay?.redraw?.();
+          this.hud?.render?.(
+            this.gameState,
+            this.towerSystem.towers.length,
+            STARTING_LIVES,
+            this.selectedBuilding,
+            this.getWaveInfo(),
+          );
+        },
+      });
+      this.combatSystem = new CombatSystem(this, this.towerSystem, this.enemySystem);
+      this.waveSystem = new WaveSystem(this.enemySystem);
+      this.keybindStore = new KeybindStore();
+      this.hud = new Hud(this, {
+        maxLives: STARTING_LIVES,
+        keybindStore: this.keybindStore,
+        onMapEditorFromMenu: () => this.toggleMapEditorFromMenu(),
+        onOpenSettings: () => this.openSettingsFromGame(),
+        onMainMenu: () => this.backToMainMenu(),
+        onCycleGameSpeed: () => this.cycleGameSpeed(),
+        onTogglePause: () => this.togglePause(),
+      });
+      this.hud.setTopVisible(false);
+      this.debugOverlay = new DebugOverlay(this);
+      this.debugOverlay.redraw();
+      this.worldRoot.add(this.debugOverlay.graphics);
 
-    this._mapPixelW = this.map.width * TILE_SIZE;
-    this._mapPixelH = this.map.height * TILE_SIZE;
-    this.cameras.main.removeBounds();
+      this.waveSystem.startAutoSpawner();
+      this.gameState.wave = this.waveSystem.waveIndex;
+      this._performance.livesAtWaveStart = this.gameState.lives;
 
-    this.cameras.main.ignore(this.hud.getUiObjects());
-    this.uiCamera = this.cameras.add(0, 0, this.scale.width, this.scale.height, false, "ui");
-    this.uiCamera.setScroll(0, 0);
-    this.uiCamera.setZoom(1);
-    this.uiCamera.ignore(this.worldRoot);
-    this._boundResize = (size) => this.handleResize(size);
-    this.scale.on(Phaser.Scale.Events.RESIZE, this._boundResize);
-    this.handleResize({ width: this.scale.width, height: this.scale.height });
-    this._startIntroCameraPan();
+      this._mapPixelW = this.map.width * TILE_SIZE;
+      this._mapPixelH = this.map.height * TILE_SIZE;
+      this.cameras.main.removeBounds();
 
-    this.unbindInput();
-    this.bindInput();
-    this.createPauseOverlay();
-    this.createRunEndOverlay();
-    ensureUnitHpOverlay(this);
-    this.syncHudForEditorMode({ clampCamera: false });
-    this.applyDefaultBlueBarracksSelection();
-    this.applyHudDisplayPreferences();
-    this.updateHudActions();
-    this.hud.render(
-      this.gameState,
-      this.towerSystem.towers.length,
-      STARTING_LIVES,
-      this.selectedBuilding,
-      this.getWaveInfo(),
-    );
+      this.cameras.main.ignore(this.hud.getUiObjects());
+      this.uiCamera = this.cameras.add(0, 0, this.scale.width, this.scale.height, false, "ui");
+      this.uiCamera.setScroll(0, 0);
+      this.uiCamera.setZoom(1);
+      this.uiCamera.ignore(this.worldRoot);
+      this._boundResize = (size) => this.handleResize(size);
+      this.scale.on(Phaser.Scale.Events.RESIZE, this._boundResize);
+      this.handleResize({ width: this.scale.width, height: this.scale.height });
+      this._startIntroCameraPan();
+
+      this.unbindInput();
+      this.bindInput();
+      this.createPauseOverlay();
+      this.createRunEndOverlay();
+      ensureUnitHpOverlay(this);
+      this.syncHudForEditorMode({ clampCamera: false });
+      this.applyDefaultBlueBarracksSelection();
+      this.applyHudDisplayPreferences();
+      this.updateHudActions();
+      this.hud.render(
+        this.gameState,
+        this.towerSystem.towers.length,
+        STARTING_LIVES,
+        this.selectedBuilding,
+        this.getWaveInfo(),
+      );
+    } catch (err) {
+      throw err;
+    }
   }
 
   shutdown() {
@@ -313,20 +340,42 @@ export class GameScene extends Phaser.Scene {
     }
     this.clearTowerPlacement();
     this.builderSystem?.destroy?.();
+    this.builderSystem = null;
     this._homeHpBar?.destroy();
     this._homeHpBar = null;
     this._destroyBlueBarracksFireEffect();
     this._selectionOutlineGfx?.destroy?.();
     this._selectionOutlineGfx = null;
     this.blueBarracksHpRoot?.destroy(true);
+    this.blueBarracksHpRoot = null;
     this.editorPanel?.destroy();
-    this.editor.destroy();
+    this.editorPanel = null;
+    this.editor?.destroy();
+    this.editor = null;
     this.hud?.dispose();
     this.hud = null;
+
     this._pauseOverlayRoot?.destroy(true);
     this._pauseOverlayRoot = null;
+    this._pauseBackdrop = null;
+    this._pauseGlow = null;
+    this._pausePanel = null;
+    this._pauseTitle = null;
+    this._pauseHint = null;
+    this._pauseResumeBtn = null;
+    this._pauseSettingsBtn = null;
+    this._pauseRestartBtn = null;
+    this._pauseMenuBtn = null;
+
     this._runEndOverlayRoot?.destroy(true);
     this._runEndOverlayRoot = null;
+    this._runEndBackdrop = null;
+    this._runEndPanel = null;
+    this._runEndTitle = null;
+    this._runEndStats = null;
+    this._runEndRetryBtn = null;
+    this._runEndMenuBtn = null;
+
     destroyUnitHpOverlay(this);
   }
 
@@ -1635,25 +1684,51 @@ export class GameScene extends Phaser.Scene {
   createPauseOverlay() {
     this._pauseOverlayRoot?.destroy(true);
     this._pauseOverlayRoot = null;
-    this._pauseBackdrop = this.add.rectangle(0, 0, 100, 100, cozyTheme.colors.overlay, 0.65).setOrigin(0, 0);
-    this._pausePanel = createCozyPanel(this, 0, 0, 460, 360);
+    this._pauseBackdrop = this.add
+      .rectangle(0, 0, 100, 100, darkFantasyPalette.trayShadow, 1)
+      .setOrigin(0, 0);
+    this._pauseBackdrop.setInteractive();
+    this._pauseBackdrop.on("pointerdown", () => this.togglePause());
+    this._pauseGlow = this.add
+      .rectangle(0, 0, 100, 100, darkFantasyPalette.trayBase, 0.22)
+      .setOrigin(0.5, 0.5);
+    this._pausePanel = createFantasyPanel(this);
     this._pauseTitle = this.add.text(0, 0, "Paused", {
       fontFamily: cozyTheme.typography.titleFamily,
       fontSize: "48px",
-      color: cozyTheme.colors.textPrimary,
+      color: darkFantasyPalette.textPrimary,
     }).setOrigin(0.5, 0.5);
-    this._pauseResumeBtn = createCozyButton(this, "Resume", () => this.togglePause(), { width: 220, fontSize: 24 });
-    this._pauseSettingsBtn = createCozyButton(this, "Settings", () => this.openSettingsFromGame(), { width: 220, fontSize: 22 });
-    this._pauseRestartBtn = createCozyButton(this, "Restart", () => this.scene.restart(), { width: 220, fontSize: 22 });
-    this._pauseMenuBtn = createCozyButton(this, "Main Menu", () => this.backToMainMenu(), { width: 220, fontSize: 22 });
+    this._pauseHint = this.add.text(0, 0, "Press P or Esc to resume", {
+      fontFamily: cozyTheme.typography.bodyFamily,
+      fontSize: "16px",
+      color: darkFantasyPalette.textMuted,
+    }).setOrigin(0.5, 0.5);
+    this._pauseResumeBtn = createFantasyMenuRow(this, {
+      label: "Resume",
+      onClick: () => this.togglePause(),
+    });
+    this._pauseSettingsBtn = createFantasyMenuRow(this, {
+      label: "Settings",
+      onClick: () => this.openSettingsFromGame(),
+    });
+    this._pauseRestartBtn = createFantasyMenuRow(this, {
+      label: "Restart",
+      onClick: () => this.scene.restart(),
+    });
+    this._pauseMenuBtn = createFantasyMenuRow(this, {
+      label: "Main menu",
+      onClick: () => this.backToMainMenu(),
+    });
     this._pauseOverlayRoot = this.add.container(0, 0, [
       this._pauseBackdrop,
-      this._pausePanel,
+      this._pauseGlow,
+      this._pausePanel.container,
       this._pauseTitle,
-      this._pauseResumeBtn,
-      this._pauseSettingsBtn,
-      this._pauseRestartBtn,
-      this._pauseMenuBtn,
+      this._pauseHint,
+      this._pauseResumeBtn.container,
+      this._pauseSettingsBtn.container,
+      this._pauseRestartBtn.container,
+      this._pauseMenuBtn.container,
     ]);
     this._pauseOverlayRoot.setDepth(180);
     this._pauseOverlayRoot.setVisible(false);
@@ -1673,15 +1748,48 @@ export class GameScene extends Phaser.Scene {
     this._pauseBackdrop.setSize(width / overlayScale, height / overlayScale);
     const cx = width / (2 * overlayScale);
     const cy = height / (2 * overlayScale);
-    const panelW = Math.min(460, Math.round(width * 0.72 / overlayScale));
-    const panelH = Math.min(360, Math.round(height * 0.42 / overlayScale));
-    this._pausePanel.setPosition(cx, cy);
-    this._pausePanel.setSize(panelW, panelH);
-    this._pauseTitle.setPosition(cx, cy - panelH * 0.5 + 48);
-    this._pauseResumeBtn.setPosition(cx, cy - 35);
-    this._pauseSettingsBtn.setPosition(cx, cy + 20);
-    this._pauseRestartBtn.setPosition(cx, cy + 75);
-    this._pauseMenuBtn.setPosition(cx, cy + 130);
+    const panelW = Math.min(400, Math.round(width * 0.72 / overlayScale));
+    const panelH = Math.min(340, Math.round(height * 0.42 / overlayScale));
+    const panelLeft = cx - panelW / 2;
+    const panelTop = cy - panelH / 2;
+
+    this._pauseGlow?.setPosition(cx, cy).setSize(panelW, panelH);
+    this._pausePanel?.setSize(panelW, panelH);
+    this._pausePanel?.setPosition(panelLeft, panelTop);
+
+    const titleSize = Math.max(32, Math.min(48, Math.round(panelW * 0.1)));
+    const titleY = panelTop + 40;
+    this._pauseTitle?.setPosition(cx, titleY);
+    this._pauseTitle?.setStyle({ fontSize: `${titleSize}px` });
+
+    const hintY = panelTop + 68;
+    this._pauseHint?.setPosition(cx, hintY);
+
+    const menuInset = 14;
+    const menuRowH = 36;
+    const menuRowW = panelW - menuInset * 2;
+    const rowCount = 4;
+    const contentTop = hintY + 24;
+    const contentBottom = panelTop + panelH - menuInset;
+    const availH = Math.max(menuRowH, contentBottom - contentTop);
+    const itemGap = Math.max(
+      6,
+      Math.round((availH - menuRowH * rowCount) / Math.max(1, rowCount - 1)),
+    );
+    const rows = [
+      this._pauseResumeBtn,
+      this._pauseSettingsBtn,
+      this._pauseRestartBtn,
+      this._pauseMenuBtn,
+    ];
+    for (let i = 0; i < rows.length; i += 1) {
+      const row = rows[i];
+      if (!row) {
+        continue;
+      }
+      row.setSize(menuRowW, menuRowH);
+      row.setPosition(panelLeft + menuInset, contentTop + (menuRowH + itemGap) * i);
+    }
   }
 
   createRunEndOverlay() {
@@ -1783,6 +1891,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   backToMainMenu() {
+    if (this.scene.isActive("settings")) {
+      this.scene.stop("settings");
+    }
     this.scene.start("main-menu");
   }
 

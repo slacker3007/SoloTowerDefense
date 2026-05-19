@@ -58,6 +58,183 @@ export function drawStonePanel(g, w, h, opts = {}) {
 
 /**
  * @param {Phaser.GameObjects.Graphics} g
+ * @param {number} cx
+ * @param {number} cy
+ * @param {number} [size]
+ */
+export function drawHamburgerIcon(g, cx, cy, size = 14) {
+  const lineW = size;
+  const lineH = 2;
+  const gap = 4;
+  g.fillStyle(0xf0ece8, 1);
+  for (let i = -1; i <= 1; i += 1) {
+    const y = cy + i * gap - lineH / 2;
+    g.fillRect(cx - lineW / 2, y, lineW, lineH);
+  }
+}
+
+/**
+ * @param {Phaser.GameObjects.Graphics} g
+ * @param {number} size
+ */
+export function drawFantasyChip(g, size) {
+  const inset = 2;
+  const inner = size - inset * 2;
+  g.clear();
+  g.fillStyle(darkFantasyPalette.slotInset, 1);
+  g.fillRect(0, 0, size, size);
+  g.fillStyle(darkFantasyPalette.slotBase, 1);
+  g.fillRect(inset, inset, inner, inner);
+  g.lineStyle(1, darkFantasyPalette.trayShadow, 0.9);
+  g.strokeRect(inset + 0.5, inset + 0.5, inner - 1, inner - 1);
+  g.lineStyle(1, darkFantasyPalette.slotBorder, 1);
+  g.strokeRect(inset, inset, inner, inner);
+}
+
+/**
+ * @param {Phaser.GameObjects.Graphics} g
+ * @param {number} w
+ * @param {number} h
+ */
+export function drawFantasyBarTrack(g, w, h) {
+  g.clear();
+  g.fillStyle(darkFantasyPalette.barTrack, 1);
+  g.fillRect(0, 0, w, h);
+  g.lineStyle(1, darkFantasyPalette.barTrackStroke, 1);
+  g.strokeRect(0.5, 0.5, w - 1, h - 1);
+  g.lineStyle(1, darkFantasyPalette.trayShadow, 0.7);
+  g.beginPath();
+  g.moveTo(1, h - 1);
+  g.lineTo(w - 1, h - 1);
+  g.lineTo(w - 1, 1);
+  g.strokePath();
+}
+
+/**
+ * @param {Phaser.Scene} scene
+ */
+export function createFantasyPanel(scene) {
+  const container = scene.add.container(0, 0);
+  const graphics = scene.add.graphics();
+  container.add(graphics);
+  let width = 0;
+  let height = 0;
+
+  const panel = {
+    container,
+    graphics,
+    get x() {
+      return container.x;
+    },
+    get y() {
+      return container.y;
+    },
+    get width() {
+      return width;
+    },
+    get height() {
+      return height;
+    },
+    setPosition(x, y) {
+      container.setPosition(x, y);
+    },
+    setSize(w, h) {
+      width = Math.max(0, Math.round(w));
+      height = Math.max(0, Math.round(h));
+      drawStonePanel(graphics, width, height);
+    },
+    setVisible(visible) {
+      container.setVisible(visible);
+    },
+  };
+
+  return panel;
+}
+
+/**
+ * @param {Phaser.Scene} scene
+ */
+export function createFantasyChipHost(scene) {
+  const container = scene.add.container(0, 0);
+  const graphics = scene.add.graphics();
+  container.add(graphics);
+  let size = 38;
+
+  const chip = {
+    container,
+    graphics,
+    get x() {
+      return container.x;
+    },
+    get y() {
+      return container.y;
+    },
+    get width() {
+      return size;
+    },
+    get height() {
+      return size;
+    },
+    setPosition(x, y) {
+      container.setPosition(x, y);
+    },
+    setSize(w, h) {
+      size = Math.max(8, Math.round(Math.max(w, h)));
+      drawFantasyChip(graphics, size);
+    },
+    setVisible(visible) {
+      container.setVisible(visible);
+    },
+  };
+
+  chip.setSize(38, 38);
+  return chip;
+}
+
+/**
+ * @param {Phaser.Scene} scene
+ */
+export function createFantasyBarTrackHost(scene) {
+  const container = scene.add.container(0, 0);
+  const graphics = scene.add.graphics();
+  container.add(graphics);
+  let width = 120;
+  let height = 12;
+
+  const track = {
+    container,
+    graphics,
+    get x() {
+      return container.x;
+    },
+    get y() {
+      return container.y;
+    },
+    get width() {
+      return width;
+    },
+    get height() {
+      return height;
+    },
+    setPosition(x, y) {
+      container.setPosition(x, y);
+    },
+    setSize(w, h) {
+      width = Math.max(4, Math.round(w));
+      height = Math.max(4, Math.round(h));
+      drawFantasyBarTrack(graphics, width, height);
+    },
+    setVisible(visible) {
+      container.setVisible(visible);
+    },
+  };
+
+  track.setSize(120, 12);
+  return track;
+}
+
+/**
+ * @param {Phaser.GameObjects.Graphics} g
  * @param {number} w
  * @param {number} h
  * @param {FantasyButtonState} state
@@ -98,13 +275,14 @@ function drawBeveledButton(g, w, h, state) {
 
 /**
  * @param {Phaser.Scene} scene
- * @param {{ width?: number, height?: number, label?: string, interactive?: boolean, onClick?: () => void, keybindLabel?: string, keybindCorner?: "top" | "bottom" }} [opts]
+ * @param {{ width?: number, height?: number, label?: string, icon?: "hamburger", interactive?: boolean, onClick?: () => void, keybindLabel?: string, keybindCorner?: "top" | "bottom" }} [opts]
  */
 export function createFantasyButton(scene, opts = {}) {
   const w = opts.width ?? df.sideButtonW;
   const h = opts.height ?? df.sideButtonH;
   const interactive = opts.interactive !== false;
-  const label = opts.label ?? "";
+  const isHamburger = opts.icon === "hamburger";
+  const label = isHamburger ? "" : (opts.label ?? "");
   const keybindCorner = opts.keybindCorner === "bottom" ? "bottom" : "top";
 
   const container = scene.add.container(0, 0);
@@ -115,6 +293,7 @@ export function createFantasyButton(scene, opts = {}) {
     color: darkFantasyPalette.textPrimary,
   });
   labelText.setOrigin(0.5, 0.5);
+  labelText.setVisible(!isHamburger);
 
   const keybindText = scene.add.text(0, 0, opts.keybindLabel ?? "", {
     fontFamily: cozyTheme.typography.bodyFamily,
@@ -141,6 +320,9 @@ export function createFantasyButton(scene, opts = {}) {
 
   const redraw = () => {
     drawBeveledButton(graphics, w, h, state);
+    if (isHamburger) {
+      drawHamburgerIcon(graphics, w / 2, h / 2, Math.min(w, h) * 0.42);
+    }
     labelText.setAlpha(state === "disabled" ? 0.45 : 1);
   };
 
@@ -187,6 +369,84 @@ export function createFantasyButton(scene, opts = {}) {
     setKeybindLabel,
     width: w,
     height: h,
+  };
+}
+
+/**
+ * Full-width menu row for dropdown panels.
+ * @param {Phaser.Scene} scene
+ * @param {{ label: string, width?: number, height?: number, onClick?: () => void }} opts
+ */
+export function createFantasyMenuRow(scene, opts) {
+  const w = opts.width ?? 280;
+  const h = opts.height ?? 36;
+  const label = opts.label ?? "";
+
+  const container = scene.add.container(0, 0);
+  const graphics = scene.add.graphics();
+  const labelText = scene.add.text(14, h / 2, label, {
+    fontFamily: cozyTheme.typography.bodyFamily,
+    fontSize: `${df.sideButtonFontSize}px`,
+    color: darkFantasyPalette.textPrimary,
+  });
+  labelText.setOrigin(0, 0.5);
+
+  const zone = scene.add.zone(w / 2, h / 2, w, h);
+  zone.setOrigin(0.5, 0.5);
+  container.add([graphics, labelText, zone]);
+
+  let state = "regular";
+  let rowW = w;
+  let rowH = h;
+
+  const redraw = () => {
+    drawBeveledButton(graphics, rowW, rowH, state);
+    labelText.setAlpha(state === "disabled" ? 0.45 : 1);
+  };
+
+  const setSize = (nextW, nextH) => {
+    rowW = Math.max(40, Math.round(nextW));
+    rowH = Math.max(28, Math.round(nextH));
+    labelText.setPosition(14, rowH / 2);
+    zone.setSize(rowW, rowH);
+    zone.setPosition(rowW / 2, rowH / 2);
+    redraw();
+  };
+
+  const setState = (next) => {
+    state = next;
+    redraw();
+  };
+
+  redraw();
+
+  if (typeof opts.onClick === "function") {
+    zone.setInteractive({ useHandCursor: true });
+    zone.on("pointerover", () => setState("hover"));
+    zone.on("pointerout", () => setState("regular"));
+    zone.on("pointerdown", () => {
+      setState("pressed");
+      opts.onClick();
+    });
+    zone.on("pointerup", () => setState("hover"));
+  }
+
+  return {
+    container,
+    setSize,
+    setState,
+    setPosition(x, y) {
+      container.setPosition(x, y);
+    },
+    setVisible(visible) {
+      container.setVisible(visible);
+    },
+    get width() {
+      return rowW;
+    },
+    get height() {
+      return rowH;
+    },
   };
 }
 

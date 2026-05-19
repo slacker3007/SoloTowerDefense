@@ -6,9 +6,17 @@ import {
   setHudScalePreference,
   toggleFullscreenPreferred,
 } from "../game/settings/displaySettings.js";
-import { cozyTheme, createCozyButton, createCozyPanel } from "../game/ui/CozyTheme";
+import { cozyTheme } from "../game/ui/CozyTheme";
+import {
+  createFantasyMenuRow,
+  createFantasyPanel,
+  darkFantasyPalette,
+} from "../game/ui/FantasyHudChrome";
 
 const TAB_ORDER = /** @type {const} */ (["controls", "audio", "display"]);
+
+const TAB_IDLE_BG = "#2e2a3d";
+const TAB_ACTIVE_BG = "#3d3550";
 
 export class SettingsScene extends Phaser.Scene {
   constructor() {
@@ -21,22 +29,27 @@ export class SettingsScene extends Phaser.Scene {
     this._settingsBackdrop = null;
     /** @type {Phaser.GameObjects.Rectangle | null} */
     this._settingsGlow = null;
-    /** @type {Phaser.GameObjects.Rectangle | null} */
+    /** @type {ReturnType<typeof createFantasyPanel> | null} */
     this._panel = null;
     /** @type {"controls"|"audio"|"display"} */
     this._activeTab = "controls";
   }
 
   create() {
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.shutdown, this);
     this.keybindStore = new KeybindStore();
-    this._settingsBackdrop = this.add.rectangle(0, 0, 100, 100, cozyTheme.colors.bgDark, 1).setOrigin(0, 0);
-    this._settingsGlow = this.add.rectangle(0, 0, 100, 100, cozyTheme.colors.overlaySoft, 0.28).setOrigin(0.5, 0.5);
-    this._panel = createCozyPanel(this, 400, 300, 400, 300);
+    this._settingsBackdrop = this.add
+      .rectangle(0, 0, 100, 100, darkFantasyPalette.trayShadow, 1)
+      .setOrigin(0, 0);
+    this._settingsGlow = this.add
+      .rectangle(0, 0, 100, 100, darkFantasyPalette.trayBase, 0.22)
+      .setOrigin(0.5, 0.5);
+    this._panel = createFantasyPanel(this);
 
     this.titleText = this.add.text(0, 0, "Settings", {
       fontFamily: cozyTheme.typography.titleFamily,
       fontSize: "42px",
-      color: cozyTheme.colors.textPrimary,
+      color: darkFantasyPalette.textPrimary,
     }).setOrigin(0.5, 0.5);
 
     const mkTab = (label, tabKey) => {
@@ -44,8 +57,8 @@ export class SettingsScene extends Phaser.Scene {
         .text(0, 0, label, {
           fontFamily: cozyTheme.typography.titleFamily,
           fontSize: "24px",
-          color: cozyTheme.colors.textMuted,
-          backgroundColor: "#2a2630",
+          color: darkFantasyPalette.textMuted,
+          backgroundColor: TAB_IDLE_BG,
           padding: { x: cozyTheme.spacing.sm, y: cozyTheme.spacing.sm },
         })
         .setOrigin(0, 0.5)
@@ -60,7 +73,7 @@ export class SettingsScene extends Phaser.Scene {
     this.feedbackText = this.add.text(0, 0, "", {
       fontFamily: cozyTheme.typography.bodyFamily,
       fontSize: "20px",
-      color: cozyTheme.colors.textMuted,
+      color: darkFantasyPalette.textMuted,
       align: "center",
       wordWrap: { width: 680, useAdvancedWrap: true },
     }).setOrigin(0.5, 0.5);
@@ -69,7 +82,7 @@ export class SettingsScene extends Phaser.Scene {
       .text(0, 0, "Audio settings will arrive in a future update.", {
         fontFamily: cozyTheme.typography.bodyFamily,
         fontSize: "22px",
-        color: cozyTheme.colors.textSecondary,
+        color: darkFantasyPalette.textMuted,
         align: "center",
         wordWrap: { width: 640, useAdvancedWrap: true },
       })
@@ -80,18 +93,23 @@ export class SettingsScene extends Phaser.Scene {
       .text(0, 0, "Window", {
         fontFamily: cozyTheme.typography.titleFamily,
         fontSize: "20px",
-        color: cozyTheme.colors.textSecondary,
+        color: darkFantasyPalette.textMuted,
       })
       .setOrigin(0, 0.5)
       .setVisible(false);
 
-    this.fullscreenBtn = createCozyButton(this, "Toggle fullscreen", async () => {
-      const r = await toggleFullscreenPreferred();
-      if (r.ok) {
-        this.setFeedback("Fullscreen toggled.", false);
-      } else {
-        this.setFeedback(r.reason ?? "Could not toggle fullscreen.", true);
-      }
+    this.fullscreenBtn = createFantasyMenuRow(this, {
+      label: "Toggle fullscreen",
+      width: 220,
+      height: 36,
+      onClick: async () => {
+        const r = await toggleFullscreenPreferred();
+        if (r.ok) {
+          this.setFeedback("Fullscreen toggled.", false);
+        } else {
+          this.setFeedback(r.reason ?? "Could not toggle fullscreen.", true);
+        }
+      },
     });
     this.fullscreenBtn.setVisible(false);
 
@@ -99,7 +117,7 @@ export class SettingsScene extends Phaser.Scene {
       .text(0, 0, "HUD scale", {
         fontFamily: cozyTheme.typography.titleFamily,
         fontSize: "20px",
-        color: cozyTheme.colors.textSecondary,
+        color: darkFantasyPalette.textMuted,
       })
       .setOrigin(0, 0.5)
       .setVisible(false);
@@ -107,18 +125,18 @@ export class SettingsScene extends Phaser.Scene {
     this._hudScalePickers = [];
     for (const scale of getHudScaleChoices()) {
       const pct = `${Math.round(scale * 100)}%`;
-      const btn = createCozyButton(
-        this,
-        pct,
-        () => {
+      const row = createFantasyMenuRow(this, {
+        label: pct,
+        width: 80,
+        height: 32,
+        onClick: () => {
           setHudScalePreference(scale);
           this._refreshHudScaleTabs();
           this.setFeedback(`HUD scale set to ${pct}.`, false);
         },
-        { fontSize: 18, width: 80, variant: "muted" },
-      );
-      btn.setVisible(false);
-      this._hudScalePickers.push({ scale, button: btn });
+      });
+      row.setVisible(false);
+      this._hudScalePickers.push({ scale, row });
     }
 
     this.rowButtons = [];
@@ -127,28 +145,34 @@ export class SettingsScene extends Phaser.Scene {
       const rowText = this.add.text(0, 0, "", {
         fontFamily: cozyTheme.typography.bodyFamily,
         fontSize: "20px",
-        color: cozyTheme.colors.textSecondary,
+        color: darkFantasyPalette.textMuted,
         wordWrap: { width: 360, useAdvancedWrap: true },
       }).setOrigin(0, 0.5);
-      const rowBtn = createCozyButton(this, "Rebind", () => this.beginRebind(actionId), {
-        fontSize: 18,
+      const rowBtn = createFantasyMenuRow(this, {
+        label: "Rebind",
         width: 120,
-        variant: "muted",
+        height: 32,
+        onClick: () => this.beginRebind(actionId),
       });
       this.rowButtons.push({ actionId, label, rowText, rowBtn });
     }
 
-    this.backBtn = createCozyButton(this, "Back", () => this.goBack(), { fontSize: 24, width: 200 });
-    this.resetBtn = createCozyButton(
-      this,
-      "Reset Defaults",
-      () => {
+    this.backBtn = createFantasyMenuRow(this, {
+      label: "Back",
+      width: 200,
+      height: 40,
+      onClick: () => this.goBack(),
+    });
+    this.resetBtn = createFantasyMenuRow(this, {
+      label: "Reset Defaults",
+      width: 260,
+      height: 40,
+      onClick: () => {
         this.keybindStore.resetToDefaults();
         this.setFeedback("Controls reset to defaults.", false);
         this.refreshRows();
       },
-      { fontSize: 22, width: 260 },
-    );
+    });
 
     this._globalKeydown = (ev) => {
       if (ev.key === "Escape" && !this._rebindingActionId) {
@@ -187,20 +211,22 @@ export class SettingsScene extends Phaser.Scene {
 
     this._settingsBackdrop?.setPosition(0, 0).setSize(width, height);
     this._settingsGlow?.setPosition(centerX, centerY).setSize(Math.min(contentWidth, width - pad * 2), panelH);
-    this._panel?.setPosition(centerX, centerY).setSize(panelW, panelH);
+    this._panel?.setSize(panelW, panelH);
+    this._panel?.setPosition(centerX - panelW / 2, centerY - panelH / 2);
 
     const panel = this._panel;
     if (!panel) {
       return;
     }
-    const left = panel.x - panel.width * 0.5;
-    const right = panel.x + panel.width * 0.5;
-    const top = panel.y - panel.height * 0.5;
-    const bottom = panel.y + panel.height * 0.5;
+    const left = panel.x;
+    const right = left + panel.width;
+    const top = panel.y;
+    const bottom = top + panel.height;
+    const panelCx = left + panel.width / 2;
     const innerPad = 14;
 
     const titleSize = Math.max(26, Math.min(48, Math.round(contentWidth * 0.058)));
-    this.titleText.setPosition(panel.x, top + 32);
+    this.titleText.setPosition(panelCx, top + 32);
     this.titleText.setStyle({ fontSize: `${titleSize}px` });
 
     const tabY = top + 62;
@@ -229,62 +255,60 @@ export class SettingsScene extends Phaser.Scene {
     const rowFont = rowStep < 34 ? "16px" : "18px";
     const innerW = panel.width - 2 * innerPad;
     const rebindW = Math.min(140, Math.max(88, Math.floor(innerW * 0.22)));
+    const rebindH = rowStep < 34 ? 30 : 34;
     const labelMaxW = Math.max(100, innerW - rebindW - 20);
 
     let y = contentTop + rowStep * 0.5;
     for (const row of this.rowButtons) {
       row.rowText.setPosition(left + innerPad, y);
       row.rowText.setStyle({ fontSize: rowFont, wordWrap: { width: labelMaxW, useAdvancedWrap: true } });
-      row.rowBtn.setStyle({ fontSize: rowStep < 34 ? "15px" : "17px", padding: { x: 8, y: 5 } });
-      row.rowBtn.setFixedSize(rebindW, 0);
-      row.rowBtn.setPosition(right - innerPad - rebindW * 0.5, y);
+      row.rowBtn.setSize(rebindW, rebindH);
+      row.rowBtn.setPosition(right - innerPad - rebindW, y - rebindH / 2);
       y += rowStep;
     }
 
     const audioDisplayCenterY = (contentTop + contentBottom) * 0.5;
-    this.audioSoonText.setPosition(panel.x, audioDisplayCenterY);
+    this.audioSoonText.setPosition(panelCx, audioDisplayCenterY);
     this.audioSoonText.setStyle({ wordWrap: { width: panel.width - 40, useAdvancedWrap: true } });
 
     const dispX = left + innerPad;
     let dispY = contentTop + 16;
     this.displaySectionLabel.setPosition(dispX, dispY);
     dispY += 32;
-    this.fullscreenBtn.setPosition(dispX + this.fullscreenBtn.width * 0.5, dispY);
+    this.fullscreenBtn.setPosition(dispX, dispY);
     dispY += this.fullscreenBtn.height + 18;
     this.hudScaleLabel.setPosition(dispX, dispY + 8);
     dispY += 36;
     const gapBtn = 8;
-    let hx = dispX + 36;
-    for (const { button } of this._hudScalePickers) {
-      if (hx + button.width > right - innerPad) {
+    let hx = dispX;
+    for (const { row } of this._hudScalePickers) {
+      if (hx + row.width > right - innerPad) {
         hx = dispX;
-        dispY += button.height + 10;
+        dispY += row.height + 10;
       }
-      button.setPosition(hx + button.width * 0.5, dispY);
-      hx += button.width + gapBtn;
+      row.setPosition(hx, dispY);
+      hx += row.width + gapBtn;
     }
 
-    this.feedbackText.setPosition(panel.x, bottom - footerH * 0.55);
+    this.feedbackText.setPosition(panelCx, bottom - footerH * 0.55);
     this.feedbackText.setStyle({ wordWrap: { width: panel.width - 32, useAdvancedWrap: true } });
 
     const footY = bottom - innerPad - 28;
     if (panel.width < 420) {
-      this.resetBtn.setPosition(panel.x, footY - 52);
-      this.backBtn.setPosition(panel.x, footY);
+      this.resetBtn.setPosition(panelCx - this.resetBtn.width / 2, footY - 52 - this.resetBtn.height / 2);
+      this.backBtn.setPosition(panelCx - this.backBtn.width / 2, footY - this.backBtn.height / 2);
     } else {
-      this.backBtn.setPosition(panel.x - 150, footY);
-      this.resetBtn.setPosition(panel.x + 150, footY);
+      this.backBtn.setPosition(panelCx - 150 - this.backBtn.width / 2, footY - this.backBtn.height / 2);
+      this.resetBtn.setPosition(panelCx + 150 - this.resetBtn.width / 2, footY - this.resetBtn.height / 2);
     }
     this._applyTabVisibility();
   }
 
   _refreshHudScaleTabs() {
     const current = getDisplaySettings().hudScale;
-    const activeBg = "#5a4a40";
-    const idleBg = "#453a42";
-    for (const { scale, button } of this._hudScalePickers) {
+    for (const { scale, row } of this._hudScalePickers) {
       const on = Math.abs(scale - current) < 0.001;
-      button.setStyle({ backgroundColor: on ? activeBg : idleBg });
+      row.setState(on ? "pressed" : "regular");
     }
   }
 
@@ -294,21 +318,19 @@ export class SettingsScene extends Phaser.Scene {
   setActiveTab(tab) {
     const key = TAB_ORDER.includes(tab) ? tab : "controls";
     this._activeTab = key;
-    const active = cozyTheme.colors.textOnDark;
-    const idle = cozyTheme.colors.textMuted;
-    const idleBg = "#2a2630";
-    const activeBg = "#6a5648";
+    const activeColor = darkFantasyPalette.textPrimary;
+    const idleColor = darkFantasyPalette.textMuted;
     this.tabControls.setStyle({
-      color: key === "controls" ? active : idle,
-      backgroundColor: key === "controls" ? activeBg : idleBg,
+      color: key === "controls" ? activeColor : idleColor,
+      backgroundColor: key === "controls" ? TAB_ACTIVE_BG : TAB_IDLE_BG,
     });
     this.tabAudio.setStyle({
-      color: key === "audio" ? active : idle,
-      backgroundColor: key === "audio" ? activeBg : idleBg,
+      color: key === "audio" ? activeColor : idleColor,
+      backgroundColor: key === "audio" ? TAB_ACTIVE_BG : TAB_IDLE_BG,
     });
     this.tabDisplay.setStyle({
-      color: key === "display" ? active : idle,
-      backgroundColor: key === "display" ? activeBg : idleBg,
+      color: key === "display" ? activeColor : idleColor,
+      backgroundColor: key === "display" ? TAB_ACTIVE_BG : TAB_IDLE_BG,
     });
     this._applyTabVisibility();
   }
@@ -326,8 +348,8 @@ export class SettingsScene extends Phaser.Scene {
     this.displaySectionLabel.setVisible(display);
     this.fullscreenBtn.setVisible(display);
     this.hudScaleLabel.setVisible(display);
-    for (const { button } of this._hudScalePickers) {
-      button.setVisible(display);
+    for (const { row } of this._hudScalePickers) {
+      row.setVisible(display);
     }
     this.resetBtn.setVisible(controls);
     if (display) {
@@ -384,7 +406,7 @@ export class SettingsScene extends Phaser.Scene {
 
   setFeedback(text, isError) {
     this.feedbackText.setText(text);
-    this.feedbackText.setColor(isError ? cozyTheme.colors.textDanger : cozyTheme.colors.textSuccess);
+    this.feedbackText.setColor(isError ? darkFantasyPalette.textDanger : cozyTheme.colors.textSuccess);
   }
 
   goBack() {

@@ -5,7 +5,11 @@ import { formatKeyLabel, GRID_KEYBIND_ACTION_IDS } from "../input/KeybindStore.j
 import {
   createBottomBarChrome,
   createFantasyActionSlot,
+  createFantasyBarTrackHost,
   createFantasyButton,
+  createFantasyChipHost,
+  createFantasyMenuRow,
+  createFantasyPanel,
   darkFantasyPalette,
   drawStonePanel,
   drawVerticalDivider,
@@ -17,7 +21,6 @@ const ACTION_SLOT_COUNT = 10;
 const ACTION_GRID_COLS = 10;
 const ACTION_GRID_ROWS = 1;
 
-const DETAILS_CLOSE_ICON_KEY = "detailsCloseIcon09";
 /** Padding for floating editor menu (no top bar). */
 const FLOATING_MENU_PAD = 8;
 
@@ -118,9 +121,7 @@ export class Hud {
     this._bottomChrome = createBottomBarChrome(scene);
     this._leftUtilityButtons = [
       createFantasyButton(scene, {
-        label: "☰",
-        keybindLabel: menuKeybindLabel,
-        keybindCorner: "top",
+        icon: "hamburger",
         onClick: () => this.toggleMenuDropdown(),
       }),
       createFantasyButton(scene, { label: "⚙", onClick: () => this.onOpenSettings() }),
@@ -160,34 +161,39 @@ export class Hud {
     });
     this.menuBackdrop.setVisible(false);
 
-    this.menuDropdownBg = scene.add.rectangle(0, 0, 320, 220, this._hudColors.panelElevated, 0.98);
-    this.menuDropdownBg.setOrigin(0, 0);
-    this.menuDropdownBg.setStrokeStyle(2, this._hudColors.panelStroke, 1);
+    this.menuDropdownPanel = createFantasyPanel(scene);
+    this.menuDropdownPanel.setSize(320, 220);
 
-    this.menuBtnMapEditor = this.createButton("Map editor", true, () => {
-      this.closeMenuDropdown();
-      this.onMapEditorFromMenu();
+    this.menuBtnMapEditor = createFantasyMenuRow(scene, {
+      label: "Map editor",
+      onClick: () => {
+        this.closeMenuDropdown();
+        this.onMapEditorFromMenu();
+      },
     });
     this.menuBtnMapEditor.setVisible(false);
-    this.menuBtnSettings = this.createButton("Settings", true, () => {
-      this.closeMenuDropdown();
-      this.onOpenSettings();
+    this.menuBtnSettings = createFantasyMenuRow(scene, {
+      label: "Settings",
+      onClick: () => {
+        this.closeMenuDropdown();
+        this.onOpenSettings();
+      },
     });
-    this.menuBtnMainMenu = this.createButton("Main menu", true, () => {
-      this.closeMenuDropdown();
-      this.onMainMenu();
+    this.menuBtnMainMenu = createFantasyMenuRow(scene, {
+      label: "Main menu",
+      onClick: () => {
+        this.closeMenuDropdown();
+        this.onMainMenu();
+      },
     });
 
     this.menuDropdownRoot = scene.add.container(0, 0, [
-      this.menuDropdownBg,
-      this.menuBtnMapEditor,
-      this.menuBtnSettings,
-      this.menuBtnMainMenu,
+      this.menuDropdownPanel.container,
+      this.menuBtnMapEditor.container,
+      this.menuBtnSettings.container,
+      this.menuBtnMainMenu.container,
     ]);
     this.menuDropdownRoot.setVisible(false);
-    this.menuBtnMapEditor.setPosition(14, 30);
-    this.menuBtnSettings.setPosition(14, 94);
-    this.menuBtnMainMenu.setPosition(14, 158);
 
     this.hpText = scene.add.text(0, 0, "", {
       fontFamily: cozyTheme.typography.bodyFamily,
@@ -222,42 +228,39 @@ export class Hud {
     this.debugPanelText.setOrigin(0, 0);
     this.debugPanelRoot = scene.add.container(0, 0, [this.debugPanelBg, this.debugPanelText]);
     this.debugPanelRoot.setVisible(false);
-    this.contextPanelFrame = scene.add.rectangle(0, 0, 320, 130, this._hudColors.panel, 0.95);
-    this.contextPanelFrame.setOrigin(0, 0);
-    this.contextPanelFrame.setStrokeStyle(2, this._hudColors.panelStrokeSoft, 0.9);
+    this.contextPanelFrame = createFantasyPanel(scene);
+    this.contextPanelFrame.setSize(320, 130);
     this.contextTitleText = scene.add.text(0, 0, "Battle Context", {
-      fontFamily: "monospace",
+      fontFamily: cozyTheme.typography.bodyFamily,
       fontSize: "16px",
-      color: "#ffffff",
+      color: darkFantasyPalette.textPrimary,
     });
     this.contextTitleText.setOrigin(0, 0);
     this.contextSubtitleText = scene.add.text(0, 0, "", {
-      fontFamily: "monospace",
+      fontFamily: cozyTheme.typography.bodyFamily,
       fontSize: "13px",
-      color: "#c8d0ff",
+      color: darkFantasyPalette.textMuted,
     });
     this.contextSubtitleText.setOrigin(0, 0);
     this.waveCountText = scene.add.text(0, 0, "Wave: 1", {
-      fontFamily: "monospace",
+      fontFamily: cozyTheme.typography.bodyFamily,
       fontSize: "14px",
-      color: "#c8d0ff",
+      color: darkFantasyPalette.textMuted,
     });
     this.waveCountText.setOrigin(0, 0);
     this.waveEnemiesText = scene.add.text(0, 0, "Enemies: 0", {
-      fontFamily: "monospace",
+      fontFamily: cozyTheme.typography.bodyFamily,
       fontSize: "14px",
-      color: "#c8d0ff",
+      color: darkFantasyPalette.textMuted,
     });
     this.waveEnemiesText.setOrigin(0, 0);
     this.upcomingEnemiesTitleText = scene.add.text(0, 0, "Upcoming", {
-      fontFamily: "monospace",
+      fontFamily: cozyTheme.typography.bodyFamily,
       fontSize: "12px",
-      color: "#9ac6f7",
+      color: darkFantasyPalette.textMuted,
     });
     this.upcomingEnemiesTitleText.setOrigin(0, 0);
-    this.upcomingCurrentIconBg = scene.add.rectangle(0, 0, 38, 38, this._hudColors.chipBg, 1);
-    this.upcomingCurrentIconBg.setOrigin(0, 0);
-    this.upcomingCurrentIconBg.setStrokeStyle(1, this._hudColors.chipStroke, 0.8);
+    this.upcomingCurrentIconBg = createFantasyChipHost(scene);
     this.upcomingCurrentIcon = scene.add.image(0, 0, "__WHITE");
     this.upcomingCurrentIcon.setVisible(false);
     this.upcomingCurrentNowText = scene.add.text(0, 0, "Now", {
@@ -269,14 +272,12 @@ export class Hud {
     });
     this.upcomingCurrentNowText.setOrigin(0, 1);
     this.upcomingCurrentRoleText = scene.add.text(0, 0, "", {
-      fontFamily: "monospace",
+      fontFamily: cozyTheme.typography.bodyFamily,
       fontSize: "11px",
-      color: "#d2e4ff",
+      color: darkFantasyPalette.textMuted,
     });
     this.upcomingCurrentRoleText.setOrigin(0, 0);
-    this.upcomingNextIconBg = scene.add.rectangle(0, 0, 38, 38, this._hudColors.chipBg, 1);
-    this.upcomingNextIconBg.setOrigin(0, 0);
-    this.upcomingNextIconBg.setStrokeStyle(1, this._hudColors.chipStroke, 0.8);
+    this.upcomingNextIconBg = createFantasyChipHost(scene);
     this.upcomingNextIcon = scene.add.image(0, 0, "__WHITE");
     this.upcomingNextIcon.setVisible(false);
     this.upcomingNextNowText = scene.add.text(0, 0, "Next", {
@@ -288,49 +289,46 @@ export class Hud {
     });
     this.upcomingNextNowText.setOrigin(0, 1);
     this.upcomingNextRoleText = scene.add.text(0, 0, "", {
-      fontFamily: "monospace",
+      fontFamily: cozyTheme.typography.bodyFamily,
       fontSize: "11px",
-      color: "#d2e4ff",
+      color: darkFantasyPalette.textMuted,
     });
     this.upcomingNextRoleText.setOrigin(0, 0);
-    this.towerCardIconBg = scene.add.rectangle(0, 0, 72, 72, this._hudColors.chipBg, 1);
-    this.towerCardIconBg.setOrigin(0, 0);
-    this.towerCardIconBg.setStrokeStyle(1, this._hudColors.chipStroke, 0.8);
+    this.towerCardIconBg = createFantasyChipHost(scene);
+    this.towerCardIconBg.setSize(72, 72);
     this.towerCardIcon = scene.add.image(0, 0, "__WHITE");
     this.towerCardIcon.setVisible(false);
     this.towerNameTierText = scene.add.text(0, 0, "", {
-      fontFamily: "monospace",
+      fontFamily: cozyTheme.typography.bodyFamily,
       fontSize: "16px",
-      color: "#ffffff",
+      color: darkFantasyPalette.textPrimary,
     });
     this.towerNameTierText.setOrigin(0, 0);
     this.towerRolePrimaryText = scene.add.text(0, 0, "", {
-      fontFamily: "monospace",
+      fontFamily: cozyTheme.typography.bodyFamily,
       fontSize: "14px",
-      color: "#e8f4ff",
+      color: darkFantasyPalette.textPrimary,
     });
     this.towerRolePrimaryText.setOrigin(0, 0);
     this.towerDpsText = scene.add.text(0, 0, "", {
-      fontFamily: "monospace",
+      fontFamily: cozyTheme.typography.bodyFamily,
       fontSize: "14px",
-      color: "#d6e7ff",
+      color: darkFantasyPalette.textMuted,
     });
     this.towerDpsText.setOrigin(0, 0);
     this.towerRangeText = scene.add.text(0, 0, "", {
-      fontFamily: "monospace",
+      fontFamily: cozyTheme.typography.bodyFamily,
       fontSize: "14px",
-      color: "#d6e7ff",
+      color: darkFantasyPalette.textMuted,
     });
     this.towerRangeText.setOrigin(0, 0);
-    this.towerRangeTrack = scene.add.rectangle(0, 0, 100, 10, this._hudColors.chipBg, 1);
-    this.towerRangeTrack.setOrigin(0, 0);
-    this.towerRangeTrack.setStrokeStyle(1, this._hudColors.chipStroke, 0.8);
-    this.towerRangeFill = scene.add.rectangle(0, 0, 2, 8, 0x8db8ff, 1);
+    this.towerRangeTrack = createFantasyBarTrackHost(scene);
+    this.towerRangeFill = scene.add.rectangle(0, 0, 2, 8, darkFantasyPalette.slotGlow, 1);
     this.towerRangeFill.setOrigin(0, 0);
     this.towerEffectText = scene.add.text(0, 0, "", {
-      fontFamily: "monospace",
+      fontFamily: cozyTheme.typography.bodyFamily,
       fontSize: "12px",
-      color: "#9ac6f7",
+      color: darkFantasyPalette.textMuted,
       wordWrap: { width: 400, useAdvancedWrap: true },
     });
     this.towerEffectText.setOrigin(0, 0);
@@ -377,14 +375,12 @@ export class Hud {
     this.towerRangeText.setOrigin(0, 0);
     this.towerEffectText.setOrigin(0, 0);
 
-    this.waveProgressTrack = scene.add.rectangle(0, 0, 120, 12, this._hudColors.chipBg, 1);
-    this.waveProgressTrack.setOrigin(0, 0);
-    this.waveProgressTrack.setStrokeStyle(1, this._hudColors.chipStroke, 0.9);
+    this.waveProgressTrack = createFantasyBarTrackHost(scene);
     this.waveProgressSegments = scene.add.graphics();
     this.waveProgressText = scene.add.text(0, 0, "0%", {
-      fontFamily: "monospace",
+      fontFamily: cozyTheme.typography.bodyFamily,
       fontSize: "13px",
-      color: "#f5e6a3",
+      color: cozyTheme.colors.textWarning,
     });
     this.waveProgressText.setOrigin(0, 0);
     this.goldDeltaText = scene.add.text(0, 0, "", {
@@ -450,20 +446,19 @@ export class Hud {
 
     this._bottomChrome.actionHost.add(this._actionGridBackground);
 
-    this.tooltipBackground = scene.add.rectangle(0, 0, 300, 120, this._hudColors.tooltipBg, 0.96);
-    this.tooltipBackground.setOrigin(0, 0);
-    this.tooltipBackground.setStrokeStyle(1, this._hudColors.tooltipStroke, 0.95);
+    this.tooltipPanel = createFantasyPanel(scene);
+    this.tooltipPanel.setSize(300, 120);
     this.tooltipTitleText = scene.add.text(0, 0, "", {
-      fontFamily: "monospace",
+      fontFamily: cozyTheme.typography.bodyFamily,
       fontSize: "17px",
-      color: "#ffffff",
+      color: darkFantasyPalette.textPrimary,
       fontStyle: "bold",
     });
     this.tooltipTitleText.setOrigin(0, 0);
     this.tooltipDescriptionText = scene.add.text(0, 0, "", {
-      fontFamily: "monospace",
+      fontFamily: cozyTheme.typography.bodyFamily,
       fontSize: "24px",
-      color: "#d7e2ff",
+      color: darkFantasyPalette.textMuted,
       wordWrap: { width: 510, useAdvancedWrap: true },
     });
     this.tooltipDescriptionText.setOrigin(0, 0);
@@ -474,13 +469,13 @@ export class Hud {
     });
     this.tooltipCostText.setOrigin(0, 0);
     this.tooltipWarningText = scene.add.text(0, 0, "", {
-      fontFamily: "monospace",
+      fontFamily: cozyTheme.typography.bodyFamily,
       fontSize: "14px",
-      color: "#ff9a9a",
+      color: darkFantasyPalette.textDanger,
     });
     this.tooltipWarningText.setOrigin(0, 0);
     this.tooltipRoot = scene.add.container(0, 0, [
-      this.tooltipBackground,
+      this.tooltipPanel.container,
       this.tooltipTitleText,
       this.tooltipDescriptionText,
       this.tooltipCostText,
@@ -492,20 +487,19 @@ export class Hud {
     this.detailsBackdrop.setOrigin(0, 0);
     this.detailsBackdrop.setInteractive();
     this.detailsBackdrop.on("pointerdown", () => this.hideActionDetails());
-    this.detailsBackground = scene.add.rectangle(0, 0, 520, 260, this._hudColors.tooltipBg, 0.97);
-    this.detailsBackground.setOrigin(0, 0);
-    this.detailsBackground.setStrokeStyle(2, this._hudColors.tooltipStroke, 0.95);
+    this.detailsPanel = createFantasyPanel(scene);
+    this.detailsPanel.setSize(520, 260);
     this.detailsTitleText = scene.add.text(0, 0, "", {
-      fontFamily: "monospace",
+      fontFamily: cozyTheme.typography.bodyFamily,
       fontSize: "20px",
-      color: "#ffffff",
+      color: darkFantasyPalette.textPrimary,
       fontStyle: "bold",
     });
     this.detailsTitleText.setOrigin(0, 0);
     this.detailsDescriptionText = scene.add.text(0, 0, "", {
-      fontFamily: "monospace",
+      fontFamily: cozyTheme.typography.bodyFamily,
       fontSize: "16px",
-      color: "#d7e2ff",
+      color: darkFantasyPalette.textMuted,
       wordWrap: { width: 488, useAdvancedWrap: true },
     });
     this.detailsDescriptionText.setOrigin(0, 0);
@@ -516,27 +510,21 @@ export class Hud {
     });
     this.detailsCostText.setOrigin(0, 0);
     this.detailsWarningText = scene.add.text(0, 0, "", {
-      fontFamily: "monospace",
+      fontFamily: cozyTheme.typography.bodyFamily,
       fontSize: "14px",
-      color: "#ff9a9a",
+      color: darkFantasyPalette.textDanger,
     });
     this.detailsWarningText.setOrigin(0, 0);
-    if (scene.textures.exists(DETAILS_CLOSE_ICON_KEY)) {
-      const img = scene.add.image(0, 0, DETAILS_CLOSE_ICON_KEY);
-      img.setOrigin(1, 0);
-      img.setDisplaySize(30, 30);
-      img.setInteractive({ useHandCursor: true });
-      img.on("pointerdown", () => this.hideActionDetails());
-      img.on("pointerover", () => img.setTint(0xcccccc));
-      img.on("pointerout", () => img.clearTint());
-      this.detailsCloseButton = img;
-    } else {
-      this.detailsCloseButton = this.createButton("×", true, () => this.hideActionDetails());
-      this.detailsCloseButton.setOrigin(1, 0);
-    }
+    this._detailsCloseFantasy = createFantasyButton(scene, {
+      label: "×",
+      width: 28,
+      height: 28,
+      onClick: () => this.hideActionDetails(),
+    });
+    this.detailsCloseButton = this._detailsCloseFantasy.container;
     this.detailsRoot = scene.add.container(0, 0, [
       this.detailsBackdrop,
-      this.detailsBackground,
+      this.detailsPanel.container,
       this.detailsTitleText,
       this.detailsDescriptionText,
       this.detailsCostText,
@@ -557,30 +545,30 @@ export class Hud {
       this.towersText,
       this.cameraTelemetryText,
       this.debugPanelRoot,
-      this.contextPanelFrame,
+      this.contextPanelFrame.container,
       this.contextTitleText,
       this.contextSubtitleText,
       this.waveCountText,
       this.waveEnemiesText,
       this.upcomingEnemiesTitleText,
-      this.upcomingCurrentIconBg,
+      this.upcomingCurrentIconBg.container,
       this.upcomingCurrentIcon,
       this.upcomingCurrentNowText,
       this.upcomingCurrentRoleText,
-      this.upcomingNextIconBg,
+      this.upcomingNextIconBg.container,
       this.upcomingNextIcon,
       this.upcomingNextNowText,
       this.upcomingNextRoleText,
-      this.waveProgressTrack,
+      this.waveProgressTrack.container,
       this.waveProgressSegments,
       this.waveProgressText,
-      this.towerCardIconBg,
+      this.towerCardIconBg.container,
       this.towerCardIcon,
       this.towerNameTierText,
       this.towerRolePrimaryText,
       this.towerDpsText,
       this.towerRangeText,
-      this.towerRangeTrack,
+      this.towerRangeTrack.container,
       this.towerRangeFill,
       this.towerEffectText,
       this.menuBackdrop,
@@ -600,30 +588,30 @@ export class Hud {
     ];
     this.bottomUiObjects = [
       this._bottomChrome.root,
-      this.contextPanelFrame,
+      this.contextPanelFrame.container,
       this.contextTitleText,
       this.contextSubtitleText,
       this.waveCountText,
       this.waveEnemiesText,
       this.upcomingEnemiesTitleText,
-      this.upcomingCurrentIconBg,
+      this.upcomingCurrentIconBg.container,
       this.upcomingCurrentIcon,
       this.upcomingCurrentNowText,
       this.upcomingCurrentRoleText,
-      this.upcomingNextIconBg,
+      this.upcomingNextIconBg.container,
       this.upcomingNextIcon,
       this.upcomingNextNowText,
       this.upcomingNextRoleText,
-      this.waveProgressTrack,
+      this.waveProgressTrack.container,
       this.waveProgressSegments,
       this.waveProgressText,
-      this.towerCardIconBg,
+      this.towerCardIconBg.container,
       this.towerCardIcon,
       this.towerNameTierText,
       this.towerRolePrimaryText,
       this.towerDpsText,
       this.towerRangeText,
-      this.towerRangeTrack,
+      this.towerRangeTrack.container,
       this.towerRangeFill,
       this.towerEffectText,
     ];
@@ -644,7 +632,6 @@ export class Hud {
   _refreshMenuKeybindLabels() {
     const label = this._menuKeybindLabel();
     this._editorMenuButton?.setKeybindLabel?.(label);
-    this._leftUtilityButtons[0]?.setKeybindLabel?.(label);
   }
 
   /**
@@ -855,7 +842,7 @@ export class Hud {
       this.tooltipCostText.height +
       warningHeight +
       textPad;
-    this.tooltipBackground.setSize(tooltipW, tooltipH);
+    this.tooltipPanel.setSize(tooltipW, tooltipH);
     this.tooltipRoot.setVisible(true);
     this.moveActionTooltip(pointer);
   }
@@ -875,8 +862,8 @@ export class Hud {
     const localY = (this._tooltipAnchor.y - this.rootOffsetY) / rootScale;
     const offsetX = 16;
     const offsetY = 20;
-    const maxX = Math.max(4, rootWidth - this.tooltipBackground.width - 4);
-    const maxY = Math.max(4, rootHeight - this.tooltipBackground.height - 4);
+    const maxX = Math.max(4, rootWidth - this.tooltipPanel.width - 4);
+    const maxY = Math.max(4, rootHeight - this.tooltipPanel.height - 4);
     const x = this.clamp(localX + offsetX, 4, maxX);
     const y = this.clamp(localY + offsetY, 4, maxY);
     this.tooltipRoot.setPosition(x, y);
@@ -1132,23 +1119,23 @@ export class Hud {
         menuRowCount === 3 ? 130 : 96,
         menuRowCount === 3 ? 200 : 160,
       );
-      const menuItemFontSize = 20;
-      const menuItemPadX = this.clamp(Math.round(menuWidth * 0.05), 12, 20);
-      const menuItemPadY = 10;
-      this.menuDropdownBg.setSize(menuWidth, menuHeight);
-      this.menuBtnMapEditor.setStyle({ fontSize: `${menuItemFontSize}px`, padding: { x: menuItemPadX, y: menuItemPadY } });
-      this.menuBtnSettings.setStyle({ fontSize: `${menuItemFontSize}px`, padding: { x: menuItemPadX, y: menuItemPadY } });
-      this.menuBtnMainMenu.setStyle({ fontSize: `${menuItemFontSize}px`, padding: { x: menuItemPadX, y: menuItemPadY } });
-      const itemGap = Math.max(38, Math.round(menuHeight * 0.28));
-      const itemStartY = Math.max(24, Math.round(menuHeight * 0.18));
+      const menuInset = 14;
+      const menuRowH = 36;
+      const menuRowW = menuWidth - menuInset * 2;
+      this.menuDropdownPanel.setSize(menuWidth, menuHeight);
+      this.menuBtnMapEditor.setSize(menuRowW, menuRowH);
+      this.menuBtnSettings.setSize(menuRowW, menuRowH);
+      this.menuBtnMainMenu.setSize(menuRowW, menuRowH);
+      const itemGap = Math.max(6, Math.round((menuHeight - menuInset * 2 - menuRowH * menuRowCount) / Math.max(1, menuRowCount - 1)));
+      const itemStartY = menuInset;
       this.menuBtnMapEditor.setVisible(showMapEditor);
       if (showMapEditor) {
-        this.menuBtnMapEditor.setPosition(14, itemStartY);
-        this.menuBtnSettings.setPosition(14, itemStartY + itemGap);
-        this.menuBtnMainMenu.setPosition(14, itemStartY + itemGap * 2);
+        this.menuBtnMapEditor.setPosition(menuInset, itemStartY);
+        this.menuBtnSettings.setPosition(menuInset, itemStartY + menuRowH + itemGap);
+        this.menuBtnMainMenu.setPosition(menuInset, itemStartY + (menuRowH + itemGap) * 2);
       } else {
-        this.menuBtnSettings.setPosition(14, itemStartY);
-        this.menuBtnMainMenu.setPosition(14, itemStartY + itemGap);
+        this.menuBtnSettings.setPosition(menuInset, itemStartY);
+        this.menuBtnMainMenu.setPosition(menuInset, itemStartY + menuRowH + itemGap);
       }
 
       const positionMenuDropdown = () => {
@@ -1632,14 +1619,14 @@ export class Hud {
       const detailsH = this.clamp(Math.round(rootHeight * 0.35), 220, 320);
       const detailsX = this.clamp(Math.round(rootWidth * 0.5 - detailsW / 2), 8, rootWidth - detailsW - 8);
       const detailsY = this.clamp(Math.round(rootHeight * 0.5 - detailsH / 2), 8, rootHeight - detailsH - 8);
-      this.detailsBackground.setPosition(detailsX, detailsY);
-      this.detailsBackground.setSize(detailsW, detailsH);
+      this.detailsPanel.setPosition(detailsX, detailsY);
+      this.detailsPanel.setSize(detailsW, detailsH);
       this.detailsDescriptionText.setWordWrapWidth(detailsW - 32, true);
       this.detailsTitleText.setPosition(detailsX + 14, detailsY + 12);
       this.detailsDescriptionText.setPosition(detailsX + 14, this.detailsTitleText.y + this.detailsTitleText.height + 8);
       this.detailsCostText.setPosition(detailsX + 14, this.detailsDescriptionText.y + this.detailsDescriptionText.height + 8);
       this.detailsWarningText.setPosition(detailsX + 14, this.detailsCostText.y + this.detailsCostText.height + 6);
-      this.detailsCloseButton.setPosition(detailsX + detailsW - 10, detailsY + 8);
+      this.detailsCloseButton.setPosition(detailsX + detailsW - this._detailsCloseFantasy.width - 8, detailsY + 8);
     } catch (e) {
       console.error("[HUD] Layout error:", e);
     }
@@ -2040,7 +2027,7 @@ export class Hud {
       } else {
         g.fillStyle(0x2c2438, 1);
         g.fillRoundedRect(px, py, pillW, innerH, radius);
-        g.lineStyle(2, this._hudColors.panelStroke, 0.85);
+        g.lineStyle(2, darkFantasyPalette.slotBorder, 0.85);
         g.strokeRoundedRect(px + 0.5, py + 0.5, pillW - 1, innerH - 1, radius);
       }
     }
