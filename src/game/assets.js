@@ -93,6 +93,11 @@ export const spriteSheets = [
     frameConfig: { frameWidth: 64, frameHeight: 64 },
   },
   {
+    key: "fxDust02",
+    path: `${particleFxRoot}/Dust_02.png`,
+    frameConfig: { frameWidth: 64, frameHeight: 64 },
+  },
+  {
     key: SHEEP_IDLE_SHEET_KEY,
     path: `${terrainResourcesRoot}/Sheep_Idle.png`,
     frameConfig: { frameWidth: 128, frameHeight: 128 },
@@ -150,7 +155,6 @@ export const standaloneImages = [
   { key: "fxExplosion01", path: `${particleFxRoot}/Explosion_01.png` },
   { key: "fxExplosion02", path: `${particleFxRoot}/Explosion_02.png` },
   { key: "fxDust01", path: `${particleFxRoot}/Dust_01.png` },
-  { key: "fxDust02", path: `${particleFxRoot}/Dust_02.png` },
   { key: "fxSplash", path: `${particleFxRoot}/Water Splash.png` },
   { key: "waterFoam", path: `${terrainRoot}/Water Foam.png` },
 ];
@@ -232,6 +236,14 @@ export function createTinySwordsAnimations(scene) {
   createRunLoop("blueArcherIdleSheet", "blue-archer-idle");
   createRunLoop("blueLancerIdleSheet", "blue-lancer-idle");
   createRunLoop("fire01Sheet", "fire-01-loop", 7);
+  if (scene.textures.exists("fxDust02") && !scene.anims.exists("fx-dust-02")) {
+    scene.anims.create({
+      key: "fx-dust-02",
+      frames: scene.anims.generateFrameNumbers("fxDust02", { start: 0, end: 9 }),
+      frameRate: 24,
+      repeat: 0,
+    });
+  }
   createRunLoop(SHEEP_IDLE_SHEET_KEY, SHEEP_IDLE_ANIM_KEY, 5);
   createRunLoop(SHEEP_MOVE_SHEET_KEY, SHEEP_MOVE_ANIM_KEY, 5);
 }

@@ -6,10 +6,23 @@ import {
   getTowerTextureKey,
   getUpgradeOptionsForTower,
   isValidConversionTarget,
+  MAX_TOWER_LEVEL,
   toWorldRange,
   towerCatalog,
   upgrades,
 } from "../balance";
+import { MAX_TIER_RING_KEY } from "./ProjectileFxFactory.js";
+
+const MAX_TIER_RING_DEPTH_OFFSET = 0.0005;
+const MAX_TIER_BADGE_DEPTH_OFFSET = 0.0003;
+const MAX_TIER_BADGE_TEXT_STYLE = {
+  fontFamily: "system-ui, Segoe UI, sans-serif",
+  fontSize: "14px",
+  fontStyle: "bold",
+  color: "#f5d742",
+  stroke: "#000000",
+  strokeThickness: 4,
+};
 import { GAME_EVENT, gameEvents } from "../events.js";
 
 /** Base depth for tower sprites on `towersWorldLayer`. Placement ghost uses 19 — keep computed depths below that. */
@@ -61,11 +74,93 @@ export class TowerSystem {
   _applyTowerSpriteDepth(tower) {
     const depth = towerSpriteDrawDepthForTower(tower);
     tower?.sprite?.setDepth?.(depth);
+    if (tower?._maxTierRing?.setDepth) {
+      tower._maxTierRing.setDepth(depth - MAX_TIER_RING_DEPTH_OFFSET);
+    }
+    if (tower?._maxTierBadge?.setDepth) {
+      tower._maxTierBadge.setDepth(depth + MAX_TIER_BADGE_DEPTH_OFFSET);
+    }
     // Phaser Container renders by internal list order, not child depth — reorder after depth changes.
     const layer = this.scene.towersWorldLayer;
     if (layer && typeof layer.sort === "function") {
       layer.sort("depth");
     }
+  }
+
+  /** @param {*} tower */
+  _removeMaxTierIndicator(tower) {
+    if (!tower) {
+      return;
+    }
+    tower._maxGlowTween?.stop?.();
+    tower._maxGlowTween = null;
+    tower._maxTierRingTween?.stop?.();
+    tower._maxTierRingTween = null;
+    const sprite = tower.sprite;
+    if (tower._maxGlowFx && sprite?.postFX) {
+      try {
+        sprite.postFX.remove(tower._maxGlowFx);
+      } catch {
+        sprite.postFX.clear();
+      }
+      tower._maxGlowFx = null;
+    }
+    tower._maxTierRing?.destroy?.();
+    tower._maxTierRing = null;
+    tower._maxTierBadge?.destroy?.();
+    tower._maxTierBadge = null;
+  }
+
+  /**
+   * Gold "MAX" label + pulsing base ring for fully upgraded towers.
+   * @param {*} tower
+   */
+  _ensureMaxTierIndicator(tower) {
+    if (!tower || (tower.tier ?? 0) < MAX_TOWER_LEVEL) {
+      this._removeMaxTierIndicator(tower);
+      return;
+    }
+
+    const parent = this.scene.towersWorldLayer ?? this.scene.worldRoot;
+
+    if (this.scene.textures.exists(MAX_TIER_RING_KEY)) {
+      const ringX = tower.x;
+      const ringY = tower.y + 4;
+      if (!tower._maxTierRing) {
+        const ring = this.scene.add.sprite(ringX, ringY, MAX_TIER_RING_KEY);
+        ring.setOrigin(0.5, 0.5);
+        ring.setAlpha(0.75);
+        if (parent) {
+          parent.add(ring);
+        }
+        tower._maxTierRing = ring;
+        tower._maxTierRingTween = this.scene.tweens.add({
+          targets: ring,
+          alpha: { from: 0.55, to: 1 },
+          duration: 900,
+          yoyo: true,
+          repeat: -1,
+          ease: "Sine.easeInOut",
+        });
+      } else {
+        tower._maxTierRing.setPosition(ringX, ringY);
+      }
+    }
+
+    const badgeX = tower.x;
+    const badgeY = tower.y - TILE_SIZE * 1.0;
+    if (!tower._maxTierBadge) {
+      const badge = this.scene.add.text(badgeX, badgeY, "MAX", MAX_TIER_BADGE_TEXT_STYLE);
+      badge.setOrigin(0.5, 0.5);
+      if (parent) {
+        parent.add(badge);
+      }
+      tower._maxTierBadge = badge;
+    } else {
+      tower._maxTierBadge.setPosition(badgeX, badgeY);
+    }
+
+    this._applyTowerSpriteDepth(tower);
   }
 
   /**
@@ -236,6 +331,7 @@ export class TowerSystem {
       this.towers.splice(index, 1);
     }
     this.cellOccupancy.delete(`${cellX},${cellY}`);
+    this._removeMaxTierIndicator(tower);
     tower.sprite?.destroy?.();
     gameEvents.emit(GAME_EVENT.TOWER_SOLD, { tower, cellX, cellY });
     return Math.floor(this.towerCost * economy.sellRefundRate);
@@ -279,6 +375,7 @@ export class TowerSystem {
       tower.effects = getTowerBaseEffects(targetType);
       tower.hitCount = 0;
       tower.lifestealPool = 0;
+      this._removeMaxTierIndicator(tower);
       const convertedTextureKey = getTowerTextureKey(targetType);
       if (this.scene.textures.exists(convertedTextureKey) && typeof tower.sprite?.setTexture === "function") {
         tower.sprite.setTexture(convertedTextureKey);
@@ -307,6 +404,9 @@ export class TowerSystem {
     }
     if (Array.isArray(upgradeData.effects)) {
       tower.effects.push(...upgradeData.effects);
+    }
+    if (tower.tier >= MAX_TOWER_LEVEL) {
+      this._ensureMaxTierIndicator(tower);
     }
     gameEvents.emit(GAME_EVENT.TOWER_UPGRADED, { tower, cellX, cellY, optionId });
     return true;

@@ -28,6 +28,7 @@ import { EnemySystem } from "../game/systems/EnemySystem";
 import { BuilderSystem } from "../game/systems/BuilderSystem";
 import { TowerSystem } from "../game/systems/TowerSystem";
 import { CombatSystem } from "../game/systems/CombatSystem";
+import { ensureProjectileFx } from "../game/systems/ProjectileFxFactory.js";
 import { WaveSystem } from "../game/systems/WaveSystem";
 import { audioManager } from "../game/systems/AudioManager.js";
 import { feedbackManager } from "../game/systems/FeedbackManager.js";
@@ -242,6 +243,7 @@ export class GameScene extends Phaser.Scene {
       };
 
       createTinySwordsAnimations(this);
+      ensureProjectileFx(this);
 
       audioManager.attachToScene(this);
       feedbackManager.attachToScene(this);

@@ -386,6 +386,7 @@ class FeedbackManager {
     }
     const parent = scene.effectsWorldLayer ?? scene.worldRoot;
     const p = scene.add.particles(x, y, "fxDust02", {
+      frame: [0, 1, 2, 3],
       lifespan: { min: 220, max: 400 },
       speed: { min: 30, max: 120 },
       angle: { min: 0, max: 360 },
@@ -437,17 +438,16 @@ class FeedbackManager {
       return;
     }
     if (towerType === "holy") {
-      this._sparkles(x, y);
-      const ring = scene.add.circle(x, y, 8, 0xfff2a7, 0.5).setBlendMode(Phaser.BlendModes.ADD);
+      const ring = scene.add.circle(x, y, 6, 0xfff2a7, 0.35);
       if (parent) {
         parent.add(ring);
       }
       scene.tweens.add({
         targets: ring,
-        scaleX: 2.5,
-        scaleY: 2.5,
+        scaleX: 1.6,
+        scaleY: 1.6,
         alpha: 0,
-        duration: 280,
+        duration: 180,
         ease: "Quad.Out",
         onComplete: () => ring.destroy(),
       });

@@ -1,7 +1,14 @@
 import Phaser from "phaser";
+import { TILE_SIZE } from "../constants";
 import { balanceRules, clampUtilityBudget, getTowerProjectileColor, toWorldRange, towerCatalog } from "../balance";
 import { GAME_EVENT, gameEvents } from "../events";
 import { prefersReducedMotion } from "../settings/accessibilitySettings.js";
+import {
+  ADDITIVE_PROJECTILE_TYPES,
+  getMuzzleTextureKey,
+  getProjectileTextureKey,
+  ROTATING_PROJECTILE_TYPES,
+} from "./ProjectileFxFactory.js";
 
 export class CombatSystem {
   constructor(scene, towerSystem, enemySystem) {
@@ -127,7 +134,13 @@ export class CombatSystem {
         const dmg = this.resolveDamage(tower, enemy, raw);
         this.damageAndReward(tower, enemy, dmg, gameState, this._fireDamageOpts(tower, { aoe: true }));
       }
-      this.spawnPulseRingFx(tower.x, tower.y, tower.range * this.getTowerRangeMultiplier(tower), color);
+      this.spawnPulseRingFx(
+        tower.x,
+        tower.y,
+        tower.range * this.getTowerRangeMultiplier(tower),
+        color,
+        tower.type,
+      );
     }
   }
 
@@ -155,9 +168,20 @@ export class CombatSystem {
         tower.hitCount = (tower.hitCount ?? 0) + 1;
         tower.cooldownRemaining = tower.cooldown / this.getTowerSpeedMultiplier(tower);
         gameEvents.emit(GAME_EVENT.TOWER_FIRE, { tower, target });
-        const projectileColor = getTowerProjectileColor(tower.type);
-        const sprite = this.scene.add.circle(tower.x, tower.y, 4, projectileColor);
-        sprite.setStrokeStyle(1.5, 0xffffff, 0.5);
+        this._spawnMuzzleFlash(tower);
+        const towerType = tower.type ?? "basic";
+        const projKey = getProjectileTextureKey(towerType);
+        const fallbackKey = getProjectileTextureKey("basic");
+        const textureKey = this.scene.textures.exists(projKey) ? projKey : fallbackKey;
+        const sprite = this.scene.add.sprite(tower.x, tower.y, textureKey);
+        sprite.setOrigin(0.5, 0.5);
+        if (ADDITIVE_PROJECTILE_TYPES.has(towerType)) {
+          sprite.setBlendMode(Phaser.BlendModes.ADD);
+        }
+        const angle = Math.atan2(target.sprite.y - tower.y, target.sprite.x - tower.x);
+        if (ROTATING_PROJECTILE_TYPES.has(towerType)) {
+          sprite.setRotation(angle);
+        }
         const effectsParent = this.scene.effectsWorldLayer ?? this.scene.worldRoot;
         if (effectsParent) {
           effectsParent.add(sprite);
@@ -170,6 +194,7 @@ export class CombatSystem {
           damage: tower.damage,
           sprite,
           tower,
+          rotateAlongVelocity: ROTATING_PROJECTILE_TYPES.has(towerType),
         };
         this.projectiles.push(projectile);
       }
@@ -210,6 +235,9 @@ export class CombatSystem {
       projectile.y += ny * step;
       projectile.sprite.x = projectile.x;
       projectile.sprite.y = projectile.y;
+      if (projectile.rotateAlongVelocity && projectile.sprite?.setRotation) {
+        projectile.sprite.setRotation(Math.atan2(dy, dx));
+      }
       this._spawnProjectileTrail(projectile, deltaSeconds);
       next.push(projectile);
     }
@@ -218,11 +246,56 @@ export class CombatSystem {
   }
 
   /**
+   * Brief flash at the top of the firing tower.
+   * @param {{ x?: number, y?: number, type?: string }} tower
+   */
+  _spawnMuzzleFlash(tower) {
+    if (prefersReducedMotion() || !tower) {
+      return;
+    }
+    const towerType = tower.type ?? "basic";
+    if (towerType === "holy") {
+      return;
+    }
+    const muzzleKey = getMuzzleTextureKey(towerType);
+    const fallbackKey = getMuzzleTextureKey("basic");
+    const textureKey = this.scene.textures.exists(muzzleKey) ? muzzleKey : fallbackKey;
+    if (!this.scene.textures.exists(textureKey)) {
+      return;
+    }
+    const parent = this.scene.effectsWorldLayer ?? this.scene.worldRoot;
+    if (!parent) {
+      return;
+    }
+    const flashY = (tower.y ?? 0) - TILE_SIZE * 0.95;
+    const flash = this.scene.add.sprite(tower.x ?? 0, flashY, textureKey);
+    flash.setOrigin(0.5, 0.5);
+    flash.setScale(0.6);
+    flash.setAlpha(1);
+    if (ADDITIVE_PROJECTILE_TYPES.has(towerType)) {
+      flash.setBlendMode(Phaser.BlendModes.ADD);
+    }
+    parent.add(flash);
+    this.scene.tweens.add({
+      targets: flash,
+      scaleX: 1.2,
+      scaleY: 1.2,
+      alpha: 0,
+      duration: 110,
+      ease: "Quad.Out",
+      onComplete: () => flash.destroy(),
+    });
+  }
+
+  /**
    * @param {{ x: number, y: number, tower?: { type?: string } }} projectile
    * @param {number} deltaSeconds
    */
   _spawnProjectileTrail(projectile, deltaSeconds) {
     if (prefersReducedMotion()) {
+      return;
+    }
+    if (projectile.tower?.type === "holy") {
       return;
     }
     projectile._trailTick = (projectile._trailTick ?? 0) + deltaSeconds;
@@ -236,7 +309,7 @@ export class CombatSystem {
     }
     const color = getTowerProjectileColor(projectile.tower?.type ?? "basic");
     const dot = this.scene.add
-      .circle(projectile.x, projectile.y, 2.6, color, 0.7)
+      .circle(projectile.x, projectile.y, 3.4, color, 0.85)
       .setBlendMode(Phaser.BlendModes.ADD);
     parent.add(dot);
     this.scene.tweens.add({
@@ -255,7 +328,7 @@ export class CombatSystem {
    * @param {string} towerType
    */
   _spawnImpactBurst(x, y, towerType) {
-    if (prefersReducedMotion()) {
+    if (prefersReducedMotion() || towerType === "holy") {
       return;
     }
     const parent = this.scene.effectsWorldLayer ?? this.scene.worldRoot;
@@ -265,6 +338,7 @@ export class CombatSystem {
     const color = getTowerProjectileColor(towerType);
     const additive = towerType === "lightning" || towerType === "holy";
     const p = this.scene.add.particles(x, y, "fxDust02", {
+      frame: [0, 1, 2, 3],
       lifespan: { min: 220, max: 360 },
       speed: { min: 30, max: 110 },
       angle: { min: 0, max: 360 },
@@ -582,7 +656,7 @@ export class CombatSystem {
     this._spawnExplosionBurst(worldX, worldY, color);
   }
 
-  spawnPulseRingFx(worldX, worldY, radiusWorld, color) {
+  spawnPulseRingFx(worldX, worldY, radiusWorld, color, towerType) {
     const parent = this.scene.effectsWorldLayer ?? this.scene.worldRoot;
     if (!parent) {
       return;
@@ -603,7 +677,9 @@ export class CombatSystem {
       ease: "Sine.easeOut",
       onComplete: () => gfx.destroy(),
     });
-    this._spawnExplosionBurst(worldX, worldY, color);
+    if (towerType !== "holy") {
+      this._spawnExplosionBurst(worldX, worldY, color);
+    }
   }
 
   spawnChainFx(fromX, fromY, primaryEnemy, chainedEnemies, color) {
