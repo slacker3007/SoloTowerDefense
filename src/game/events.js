@@ -68,4 +68,5 @@ export const GAME_EVENT = {
   RUN_END: "run-end",
   PAUSE_CHANGED: "pause-changed",
   TUTORIAL_STEP: "tutorial-step",
+  KILL_STREAK: "kill-streak",
 };

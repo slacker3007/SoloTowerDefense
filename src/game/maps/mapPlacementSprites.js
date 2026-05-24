@@ -1,9 +1,30 @@
 import { TILE_SIZE } from "../constants";
 import { SHEEP_IDLE_ANIM_KEY, SHEEP_IDLE_SHEET_KEY } from "../assets";
+import { prefersReducedMotion } from "../settings/accessibilitySettings.js";
 import { getPropAsset } from "../props/propCatalog";
 import { getUiAsset } from "../ui/uiCatalog";
 import { getUnitAsset } from "../units/unitCatalog";
 import { DECORATION_IMAGE_KEYS } from "./tileOverrideSchema";
+
+/**
+ * @param {Phaser.Scene} scene
+ * @param {Phaser.GameObjects.Sprite} spr
+ */
+function addPropBobble(scene, spr) {
+  if (prefersReducedMotion() || !spr?.active) {
+    return;
+  }
+  const baseScaleX = spr.scaleX;
+  scene.tweens.add({
+    targets: spr,
+    scaleX: baseScaleX * 1.02,
+    duration: 1800 + Math.random() * 800,
+    yoyo: true,
+    repeat: -1,
+    ease: "Sine.InOut",
+    delay: Math.random() * 1200,
+  });
+}
 
 /**
  * @param {Phaser.Scene} scene
@@ -31,6 +52,7 @@ export function addPropDecorationSprite(scene, container, placement, cellX, cell
       spr.play(SHEEP_IDLE_ANIM_KEY, false, Phaser.Math.Clamp(frame, 0, 5));
     }
     container.add(spr);
+    addPropBobble(scene, spr);
     return;
   }
 
@@ -40,6 +62,7 @@ export function addPropDecorationSprite(scene, container, placement, cellX, cell
     spr.setDisplaySize(TILE_SIZE * 2, TILE_SIZE * 3);
     spr.setDepth(depth);
     container.add(spr);
+    addPropBobble(scene, spr);
     return;
   }
 
@@ -51,6 +74,7 @@ export function addPropDecorationSprite(scene, container, placement, cellX, cell
     spr.setDisplaySize((asset?.width ?? TILE_SIZE) * scale, (asset?.height ?? TILE_SIZE) * scale);
     spr.setDepth(depth);
     container.add(spr);
+    addPropBobble(scene, spr);
     return;
   }
 
@@ -58,6 +82,7 @@ export function addPropDecorationSprite(scene, container, placement, cellX, cell
   spr.setDisplaySize(TILE_SIZE, TILE_SIZE);
   spr.setDepth(depth);
   container.add(spr);
+  addPropBobble(scene, spr);
 }
 
 /**

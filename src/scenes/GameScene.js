@@ -31,6 +31,7 @@ import { CombatSystem } from "../game/systems/CombatSystem";
 import { WaveSystem } from "../game/systems/WaveSystem";
 import { audioManager } from "../game/systems/AudioManager.js";
 import { feedbackManager } from "../game/systems/FeedbackManager.js";
+import { AmbientSheep } from "../game/systems/AmbientSheep.js";
 import { GAME_EVENT, gameEvents } from "../game/events.js";
 import { devWarn, isDevMode } from "../game/devMode.js";
 import { Hud } from "../game/ui/Hud";
@@ -182,6 +183,15 @@ export class GameScene extends Phaser.Scene {
     this._placementReturnMode = null;
     /** @type {Phaser.Tweens.Tween | null} */
     this._introCameraTween = null;
+    /** @type {{ sprite: Phaser.GameObjects.Image, vx: number }[]} */
+    this._ambientClouds = [];
+    this._placementDashAngle = 0;
+    /** @type {Phaser.GameObjects.Rectangle | null} */
+    this._placementTilePulse = null;
+    /** @type {Phaser.GameObjects.TileSprite | null} */
+    this._waterFoam = null;
+    /** @type {AmbientSheep | null} */
+    this._ambientSheep = null;
     this._introCameraPanActive = false;
   }
 
@@ -260,6 +270,11 @@ export class GameScene extends Phaser.Scene {
       /** @type {{ container: Phaser.GameObjects.Container, setRatio: (r: number) => void, setValues: (current: number, max: number) => void, destroy: () => void } | null} */
       this._homeHpBar = null;
       this.redrawTerrain();
+      this._initWaterFoam();
+      const viewportProfile = getViewportProfile(this.scale.width, this.scale.height);
+      if (!viewportProfile.isPortrait) {
+        this._ambientSheep = new AmbientSheep(this, this.map, this.terrainContainer);
+      }
 
       this.enemySystem = new EnemySystem(this, {
         map: this.map,
@@ -308,6 +323,7 @@ export class GameScene extends Phaser.Scene {
 
       this._mapPixelW = this.map.width * TILE_SIZE;
       this._mapPixelH = this.map.height * TILE_SIZE;
+      this._initAmbientClouds();
       this.cameras.main.removeBounds();
 
       this.cameras.main.ignore(this.hud.getUiObjects());
@@ -357,6 +373,11 @@ export class GameScene extends Phaser.Scene {
       this._boundResize = null;
     }
     this.clearTowerPlacement();
+    this._ambientSheep?.destroy?.();
+    this._ambientSheep = null;
+    this._waterFoam?.destroy?.();
+    this._waterFoam = null;
+    this._ambientClouds = [];
     this.builderSystem?.destroy?.();
     this.builderSystem = null;
     this._homeHpBar?.destroy();
@@ -644,19 +665,90 @@ export class GameScene extends Phaser.Scene {
    * @param {number} color
    * @param {number} alpha
    */
-  _drawDashedRangeCircle(gfx, cx, cy, radius, color, alpha) {
+  _drawDashedRangeCircle(gfx, cx, cy, radius, color, alpha, rotation = 0) {
     if (!gfx || !(radius > 0)) {
       return;
     }
-    const segmentCount = 36;
+    const segmentCount = 24;
     const arcSpan = (Math.PI * 2) / segmentCount;
-    const dashSpan = arcSpan * 0.6;
+    const gap = Math.PI / 36;
+    const dashSpan = arcSpan - gap;
     gfx.lineStyle(2, color, alpha);
     for (let i = 0; i < segmentCount; i += 1) {
-      const startAngle = i * arcSpan;
+      const startAngle = rotation + i * arcSpan;
       gfx.beginPath();
       gfx.arc(cx, cy, radius, startAngle, startAngle + dashSpan, false);
       gfx.strokePath();
+    }
+  }
+
+  _initWaterFoam() {
+    this._waterFoam?.destroy?.();
+    this._waterFoam = null;
+    if (!this.textures.exists("waterFoam") || prefersReducedMotion()) {
+      return;
+    }
+    const w = this._mapPixelW + 64;
+    const h = this._mapPixelH + 64;
+    this._waterFoam = this.add
+      .tileSprite(this._mapPixelW * 0.5, this._mapPixelH * 0.5, w, h, "waterFoam")
+      .setAlpha(0.25)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setDepth(-2);
+    this.worldRoot?.addAt(this._waterFoam, 0);
+  }
+
+  _initAmbientClouds() {
+    this._ambientClouds = [];
+    if (prefersReducedMotion()) {
+      return;
+    }
+    const keys = [
+      "propTinySwordsTerrainDecorationsCloudsClouds01",
+      "propTinySwordsTerrainDecorationsCloudsClouds02",
+      "propTinySwordsTerrainDecorationsCloudsClouds03",
+      "propTinySwordsTerrainDecorationsCloudsClouds04",
+    ];
+    const parent = this.worldRoot;
+    if (!parent) {
+      return;
+    }
+    for (let i = 0; i < 3; i += 1) {
+      const key = keys[i];
+      if (!this.textures.exists(key)) {
+        continue;
+      }
+      const sprite = this.add
+        .image(
+          Phaser.Math.Between(-200, this._mapPixelW),
+          Phaser.Math.Between(0, this._mapPixelH),
+          key,
+        )
+        .setAlpha(0.22)
+        .setScale(1.4)
+        .setDepth(60)
+        .setBlendMode(Phaser.BlendModes.MULTIPLY);
+      parent.add(sprite);
+      this._ambientClouds.push({ sprite, vx: Phaser.Math.FloatBetween(6, 14) });
+    }
+  }
+
+  /**
+   * @param {number} deltaSeconds
+   */
+  _updateAmbientClouds(deltaSeconds) {
+    if (prefersReducedMotion() || this._ambientClouds.length === 0) {
+      return;
+    }
+    const limit = this._mapPixelW + 300;
+    for (const c of this._ambientClouds) {
+      if (!c.sprite?.active) {
+        continue;
+      }
+      c.sprite.x += c.vx * deltaSeconds;
+      if (c.sprite.x > limit) {
+        c.sprite.x = -300;
+      }
     }
   }
 
@@ -1120,6 +1212,15 @@ export class GameScene extends Phaser.Scene {
     if (effectsParent) {
       effectsParent.add(this._placementRangeGfx);
     }
+    this._placementTilePulse = this.add
+      .rectangle(0, 0, TILE_SIZE, TILE_SIZE, 0x7ad858, 1)
+      .setOrigin(0.5, 0.5)
+      .setAlpha(0.2)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setDepth(16);
+    if (effectsParent) {
+      effectsParent.add(this._placementTilePulse);
+    }
     if (this.textures.exists("blueTower")) {
       this._towerGhost = this.add.image(pointer.worldX, pointer.worldY, "blueTower");
       this._towerGhost.setOrigin(0.5, 1);
@@ -1158,6 +1259,8 @@ export class GameScene extends Phaser.Scene {
     this._placementValidityGfx = null;
     this._placementRangeGfx?.destroy?.();
     this._placementRangeGfx = null;
+    this._placementTilePulse?.destroy?.();
+    this._placementTilePulse = null;
     this._placementConfirmBtn?.destroy?.();
     this._placementConfirmBtn = null;
     this._placementCancelBtn?.destroy?.();
@@ -1262,6 +1365,7 @@ export class GameScene extends Phaser.Scene {
       this._towerGhost.setVisible(false);
       validityGfx?.clear();
       rangeGfx?.clear();
+      this._placementTilePulse?.setVisible(false);
       return;
     }
     this._towerGhost.setVisible(true);
@@ -1284,11 +1388,18 @@ export class GameScene extends Phaser.Scene {
       validityGfx.lineStyle(2, tileColor, 0.85);
       validityGfx.strokeRect(world.x - TILE_SIZE / 2, world.y - TILE_SIZE / 2, TILE_SIZE, TILE_SIZE);
     }
+    if (this._placementTilePulse) {
+      this._placementTilePulse.setVisible(true);
+      this._placementTilePulse.setPosition(world.x, world.y);
+      this._placementTilePulse.setFillStyle(valid ? 0x7ad858 : 0xff5a1f, 1);
+      const pulse = 0.15 + 0.2 * (0.5 + 0.5 * Math.sin((this.time?.now ?? 0) / 333));
+      this._placementTilePulse.setAlpha(pulse);
+    }
     if (rangeGfx) {
       rangeGfx.clear();
       const baseRange = toWorldRange(towerCatalog.basic.rangeTiles);
-      const rangeColor = valid ? (cozyTheme.colors.panelBorder ?? 0xbda67a) : 0xff5a1f;
-      this._drawDashedRangeCircle(rangeGfx, world.x, world.y, baseRange, rangeColor, 0.55);
+      const rangeColor = valid ? getTowerProjectileColor("basic") : 0xff5a1f;
+      this._drawDashedRangeCircle(rangeGfx, world.x, world.y, baseRange, rangeColor, 0.55, this._placementDashAngle);
     }
   }
 
@@ -2447,6 +2558,15 @@ export class GameScene extends Phaser.Scene {
     const raw = Number(this.gameState.gameSpeed);
     const speed = Number.isFinite(raw) ? Phaser.Math.Clamp(raw, 1, 3) : 1;
     const deltaSeconds = (delta / 1000) * speed;
+    this._updateAmbientClouds(deltaSeconds);
+    this._ambientSheep?.update?.(deltaSeconds);
+    if (this._waterFoam?.active) {
+      this._waterFoam.tilePositionX += deltaSeconds * 12;
+      this._waterFoam.tilePositionY += deltaSeconds * 8;
+    }
+    if (this._pendingPlacement) {
+      this._placementDashAngle += deltaSeconds * 0.5;
+    }
     this._performance.waveTimer += deltaSeconds;
     this._performance.totalRunSeconds += deltaSeconds;
     this.enemySystem.update(deltaSeconds);
@@ -2462,6 +2582,7 @@ export class GameScene extends Phaser.Scene {
       this._performance.leaksInWave += leakEvents;
       this.combatSystem.runStats.killStreak = 0;
       gameEvents.emit(GAME_EVENT.ENEMY_LEAK, { leakEvents, livesDamage, lives: this.gameState.lives });
+      this.hud?.pulseLivesLoss?.();
       gameEvents.emit(GAME_EVENT.LIVES_CHANGED, { lives: this.gameState.lives, delta: -livesDamage });
       if (this.gameState.lives <= 0) {
         this.endRun("defeat");

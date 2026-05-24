@@ -2083,6 +2083,42 @@ export class Hud {
         this.goldDeltaText.setAlpha(1);
       },
     });
+    const popScale = positive ? 1.18 : 0.9;
+    this.goldText.setScale(popScale);
+    this.scene.tweens.add({
+      targets: this.goldText,
+      scale: 1,
+      duration: 180,
+      ease: "Back.easeOut",
+    });
+    this.goldText.setColor(positive ? "#ffe08a" : "#ff9d9d");
+    this.scene.time.delayedCall(220, () => {
+      if (this.goldText?.active) {
+        this.goldText.setColor(cozyTheme.hud.chipText);
+      }
+    });
+  }
+
+  pulseLivesLoss() {
+    const tgt = this.hpText;
+    if (!tgt?.active) {
+      return;
+    }
+    const baseX = tgt.x;
+    this.scene.tweens.add({
+      targets: tgt,
+      x: { from: baseX - 4, to: baseX },
+      duration: 90,
+      yoyo: true,
+      repeat: 2,
+      ease: "Sine.InOut",
+    });
+    tgt.setColor("#ff7878");
+    this.scene.time.delayedCall(450, () => {
+      if (tgt?.active) {
+        tgt.setColor(cozyTheme.hud.chipText);
+      }
+    });
   }
 
   _formatCameraTelemetry() {

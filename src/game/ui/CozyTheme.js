@@ -122,11 +122,54 @@ export function createCozyPanel(scene, x, y, width, height) {
  * @param {Phaser.Scene} scene
  * @param {string} label
  * @param {() => void} onClick
- * @param {{ fontSize?: number, width?: number, variant?: "primary" | "muted" }} [opts]
+ * @param {{ fontSize?: number, width?: number, variant?: "primary" | "muted", texture?: { base: string, pressed: string, hover?: string } }} [opts]
  */
 export function createCozyButton(scene, label, onClick, opts = {}) {
   const fontSize = Number.isFinite(opts.fontSize) ? opts.fontSize : 24;
   const width = Number.isFinite(opts.width) ? opts.width : 0;
+  const tex = opts.texture;
+  if (tex?.base && tex?.pressed && scene.textures.exists(tex.base) && scene.textures.exists(tex.pressed)) {
+    const buttonH = 64;
+    const buttonW = Math.max(buttonH * 2, width || 320);
+    const capW = buttonH;
+    const midW = Math.max(buttonH, buttonW - capW * 2);
+    const hitZone = scene.add
+      .rectangle(0, 0, buttonW, buttonH, 0x000000, 0.001)
+      .setOrigin(0.5, 0.5);
+    const left = scene.add.sprite(-buttonW * 0.5 + capW * 0.5, 0, tex.base, 0);
+    const middle = scene.add.tileSprite(0, 0, midW, buttonH, tex.base, 2);
+    const right = scene.add.sprite(buttonW * 0.5 - capW * 0.5, 0, tex.base, 4);
+    const txt = scene.add.text(0, 0, label, {
+      fontFamily: cozyTheme.typography.titleFamily,
+      fontSize: `${fontSize}px`,
+      color: cozyTheme.colors.textPrimary,
+      align: "center",
+    });
+    txt.setOrigin(0.5, 0.5);
+    txt.setY(-2);
+    const container = scene.add.container(0, 0, [hitZone, left, middle, right, txt]);
+    container.setSize(buttonW, buttonH);
+    hitZone.setInteractive({ useHandCursor: true });
+    const setTex = (key) => {
+      if (scene.textures.exists(key)) {
+        left.setTexture(key, 0);
+        middle.setTexture(key, 2);
+        right.setTexture(key, 4);
+      }
+    };
+    hitZone.on("pointerdown", () => {
+      audioManager.playSfx("ui-click");
+      setTex(tex.pressed);
+      onClick();
+    });
+    hitZone.on("pointerup", () => setTex(tex.hover ?? tex.base));
+    hitZone.on("pointerover", () => {
+      audioManager.playSfx("ui-hover");
+      setTex(tex.hover ?? tex.base);
+    });
+    hitZone.on("pointerout", () => setTex(tex.base));
+    return container;
+  }
   const variant = opts.variant === "muted" ? "muted" : "primary";
   const baseBg = variant === "muted" ? "#453a42" : "#4f3f38";
   const hoverBg = variant === "muted" ? "#5e4e5d" : "#6a5648";

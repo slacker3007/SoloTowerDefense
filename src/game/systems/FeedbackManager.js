@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { getTowerProjectileColor } from "../balance.js";
 import { GAME_EVENT, gameEvents } from "../events.js";
 import { prefersReducedMotion } from "../settings/accessibilitySettings.js";
 import { cozyTheme } from "../ui/CozyTheme.js";
@@ -163,6 +164,50 @@ class FeedbackManager {
     });
   }
 
+  /** @param {unknown} payload */
+  _onTowerFire(payload) {
+    const scene = this._scene;
+    if (!scene || prefersReducedMotion()) {
+      return;
+    }
+    const p = /** @type {{ tower?: { type?: string, sprite?: Phaser.GameObjects.GameObject & { scaleY?: number, active?: boolean } } }} */ (
+      payload
+    );
+    const tower = p?.tower;
+    const xy = this._worldFromTower(tower);
+    if (!xy) {
+      return;
+    }
+    const color = getTowerProjectileColor(tower?.type ?? "basic");
+    const parent = scene.effectsWorldLayer ?? scene.worldRoot;
+    const flash = scene.add
+      .circle(xy.x, xy.y - 6, 10, color, 0.85)
+      .setBlendMode(Phaser.BlendModes.ADD);
+    if (parent) {
+      parent.add(flash);
+    }
+    scene.tweens.add({
+      targets: flash,
+      scaleX: 1.8,
+      scaleY: 1.8,
+      alpha: 0,
+      duration: 110,
+      ease: "Quad.Out",
+      onComplete: () => flash.destroy(),
+    });
+    const sp = tower?.sprite;
+    if (sp?.active && typeof sp.scaleY === "number") {
+      const baseY = sp.scaleY;
+      scene.tweens.add({
+        targets: sp,
+        scaleY: baseY * 0.94,
+        duration: 35,
+        yoyo: true,
+        ease: "Quad.Out",
+      });
+    }
+  }
+
   /** @param {number} x @param {number} y */
   _sparkles(x, y) {
     const scene = this._scene;
@@ -224,11 +269,20 @@ class FeedbackManager {
             return;
           }
           sp.setFillStyle(this._lerpRgb(flash, prevFill ?? 0xcf3f3f, g.t));
+          if (typeof sp.scaleY === "number") {
+            if (sp._baseScaleY == null) {
+              sp._baseScaleY = sp.scaleY;
+            }
+            sp.scaleY = sp._baseScaleY * (1 - 0.06 * (1 - g.t));
+          }
         },
         onComplete: () => {
           try {
             if (sp.active && typeof sp.setFillStyle === "function") {
               sp.setFillStyle(prevFill ?? 0xcf3f3f);
+            }
+            if (sp._baseScaleY != null && typeof sp.scaleY === "number") {
+              sp.scaleY = sp._baseScaleY;
             }
           } catch {
             /* noop */
@@ -252,6 +306,12 @@ class FeedbackManager {
             return;
           }
           sp.setTint(this._lerpRgb(flash, endTint, g.t));
+          if (typeof sp.scaleY === "number") {
+            if (sp._baseScaleY == null) {
+              sp._baseScaleY = sp.scaleY;
+            }
+            sp.scaleY = sp._baseScaleY * (1 - 0.06 * (1 - g.t));
+          }
         },
         onComplete: () => {
           try {
@@ -263,6 +323,9 @@ class FeedbackManager {
             } else {
               sp.setTint(endTint);
             }
+            if (sp._baseScaleY != null && typeof sp.scaleY === "number") {
+              sp.scaleY = sp._baseScaleY;
+            }
           } catch {
             /* noop */
           }
@@ -272,9 +335,144 @@ class FeedbackManager {
   }
 
   /** @param {unknown} payload */
+  _streakBanner(payload) {
+    const scene = this._scene;
+    if (!scene || prefersReducedMotion()) {
+      return;
+    }
+    const p = /** @type {{ count?: number, x?: number, y?: number }} */ (payload);
+    const count = Number(p?.count);
+    const x = Number(p?.x);
+    const y = Number(p?.y);
+    if (!Number.isFinite(count) || count < 1 || !Number.isFinite(x) || !Number.isFinite(y)) {
+      return;
+    }
+    const txt = scene.add
+      .text(x, y - 48, `x${count} STREAK!`, {
+        fontFamily: "system-ui, Segoe UI, sans-serif",
+        fontSize: "16px",
+        fontStyle: "bold",
+        color: "#ffe08a",
+        stroke: "#120d12",
+        strokeThickness: 3,
+      })
+      .setOrigin(0.5, 1)
+      .setDepth(9560);
+    const parent = scene.effectsWorldLayer ?? scene.worldRoot;
+    if (parent) {
+      parent.add(txt);
+    }
+    scene.tweens.add({
+      targets: txt,
+      y: txt.y - 36,
+      alpha: 0,
+      duration: 720,
+      ease: "Quad.Out",
+      onComplete: () => txt.destroy(),
+    });
+  }
+
+  /**
+   * @param {number} x
+   * @param {number} y
+   * @param {number} count
+   * @param {number} tint
+   * @param {boolean} [additive]
+   */
+  _dustBurst(x, y, count, tint, additive = false) {
+    const scene = this._scene;
+    if (!scene || prefersReducedMotion() || !scene.textures.exists("fxDust02")) {
+      return;
+    }
+    const parent = scene.effectsWorldLayer ?? scene.worldRoot;
+    const p = scene.add.particles(x, y, "fxDust02", {
+      lifespan: { min: 220, max: 400 },
+      speed: { min: 30, max: 120 },
+      angle: { min: 0, max: 360 },
+      scale: { start: 0.55, end: 0 },
+      alpha: { start: 0.85, end: 0 },
+      tint,
+      blendMode: additive ? Phaser.BlendModes.ADD : Phaser.BlendModes.NORMAL,
+      emitting: false,
+    });
+    if (parent) {
+      parent.add(p);
+    }
+    p.explode(count);
+    scene.time.delayedCall(480, () => p.destroy());
+  }
+
+  /**
+   * @param {number} x
+   * @param {number} y
+   * @param {string} towerType
+   */
+  _elementDeathFx(x, y, towerType) {
+    const scene = this._scene;
+    if (!scene || prefersReducedMotion()) {
+      return;
+    }
+    const parent = scene.effectsWorldLayer ?? scene.worldRoot;
+    if (towerType === "fire" && scene.textures.exists("fire01Sheet")) {
+      const fire = scene.add.sprite(x, y, "fire01Sheet", 0);
+      if (parent) {
+        parent.add(fire);
+      }
+      if (scene.anims.exists("fire-01-loop")) {
+        fire.play({ key: "fire-01-loop", repeat: 0 });
+      }
+      scene.time.delayedCall(400, () => {
+        if (fire.active) {
+          fire.destroy();
+        }
+      });
+      return;
+    }
+    if (towerType === "ice") {
+      this._dustBurst(x, y, 8, 0xa8d8ff, true);
+      return;
+    }
+    if (towerType === "earth") {
+      this._dustBurst(x, y, 12, 0x8b6914, false);
+      return;
+    }
+    if (towerType === "holy") {
+      this._sparkles(x, y);
+      const ring = scene.add.circle(x, y, 8, 0xfff2a7, 0.5).setBlendMode(Phaser.BlendModes.ADD);
+      if (parent) {
+        parent.add(ring);
+      }
+      scene.tweens.add({
+        targets: ring,
+        scaleX: 2.5,
+        scaleY: 2.5,
+        alpha: 0,
+        duration: 280,
+        ease: "Quad.Out",
+        onComplete: () => ring.destroy(),
+      });
+      return;
+    }
+    const pop = scene.add.circle(x, y, 16, 0xffffff, 0.45);
+    if (parent) {
+      parent.add(pop);
+    }
+    scene.tweens.add({
+      targets: pop,
+      scaleX: 2.35,
+      scaleY: 2.35,
+      alpha: 0,
+      duration: 240,
+      ease: "Quad.Out",
+      onComplete: () => pop.destroy(),
+    });
+    this._dustBurst(x, y, 4, 0xffffff, false);
+  }
+
+  /** @param {unknown} payload */
   _deathAndGold(payload) {
     const scene = this._scene;
-    const p = /** @type {{ enemy?: object, gold?: number }} */ (payload);
+    const p = /** @type {{ enemy?: object, tower?: { type?: string }, gold?: number }} */ (payload);
     if (!scene) {
       return;
     }
@@ -283,17 +481,9 @@ class FeedbackManager {
     const gx = xy?.x ?? cam?.worldView?.centerX ?? 0;
     const gy = xy?.y ?? cam?.worldView?.centerY ?? 0;
 
-    if (xy && !prefersReducedMotion()) {
-      const pop = scene.add.circle(xy.x, xy.y, 16, 0xffffff, 0.45).setDepth(9530);
-      scene.tweens.add({
-        targets: pop,
-        scaleX: 2.35,
-        scaleY: 2.35,
-        alpha: 0,
-        duration: 240,
-        ease: "Quad.Out",
-        onComplete: () => pop.destroy(),
-      });
+    if (xy) {
+      const towerType = p?.tower?.type ?? "basic";
+      this._elementDeathFx(xy.x, xy.y, towerType);
     }
 
     const g = Number(p?.gold);
@@ -332,6 +522,8 @@ class FeedbackManager {
   }
 
   _bindEvents() {
+    gameEvents.on(GAME_EVENT.TOWER_FIRE, (p) => this._onTowerFire(p));
+    gameEvents.on(GAME_EVENT.KILL_STREAK, (p) => this._streakBanner(p));
     gameEvents.on(GAME_EVENT.ENEMY_HIT, (p) => this._hitFlash(p));
     gameEvents.on(GAME_EVENT.ENEMY_KILLED, (p) => this._deathAndGold(p));
     gameEvents.on(GAME_EVENT.ENEMY_LEAK, () => {

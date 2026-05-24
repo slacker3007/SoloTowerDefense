@@ -16,6 +16,8 @@ const terrainResourcesRoot = `${tinySwordsRoot}/Terrain/Resources/Meat/Sheep`;
 /** Matches `tileOverrideSchema.SHEEP_IDLE_SHEET_KEY` */
 export const SHEEP_IDLE_SHEET_KEY = "sheepIdleSheet";
 export const SHEEP_IDLE_ANIM_KEY = "sheep-idle";
+export const SHEEP_MOVE_SHEET_KEY = "sheepMoveSheet";
+export const SHEEP_MOVE_ANIM_KEY = "sheep-move";
 
 export const terrainSpriteSheets = TERRAIN_TILESET_ASSETS.map((asset) => ({
   key: asset.key,
@@ -95,10 +97,25 @@ export const spriteSheets = [
     path: `${terrainResourcesRoot}/Sheep_Idle.png`,
     frameConfig: { frameWidth: 128, frameHeight: 128 },
   },
+  {
+    key: SHEEP_MOVE_SHEET_KEY,
+    path: `${terrainResourcesRoot}/Sheep_Move.png`,
+    frameConfig: { frameWidth: 128, frameHeight: 128 },
+  },
   /** BigBar_Base 320×64 = (5×64)×64: frames 0=left, 2=tile middle (repeat), 4=right; 1 and 3 are blank. */
   {
     key: "bigBarBase",
     path: `${barsRoot}/BigBar_Base.png`,
+    frameConfig: { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE },
+  },
+  {
+    key: "buttonBigBlueBase",
+    path: `${tinySwordsRoot}/UI Elements/UI Elements/Buttons/BigBlueButton_Regular.png`,
+    frameConfig: { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE },
+  },
+  {
+    key: "buttonBigBluePressed",
+    path: `${tinySwordsRoot}/UI Elements/UI Elements/Buttons/BigBlueButton_Pressed.png`,
     frameConfig: { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE },
   },
 ];
@@ -130,6 +147,12 @@ export const standaloneImages = [
   { key: "tower_dark_icon", path: `${elementIconsRoot}/tower_dark_icon.png` },
   { key: "tower_nature_icon", path: `${elementIconsRoot}/tower_nature_icon.png` },
   { key: "bigBarFill", path: `${barsRoot}/BigBar_Fill.png` },
+  { key: "fxExplosion01", path: `${particleFxRoot}/Explosion_01.png` },
+  { key: "fxExplosion02", path: `${particleFxRoot}/Explosion_02.png` },
+  { key: "fxDust01", path: `${particleFxRoot}/Dust_01.png` },
+  { key: "fxDust02", path: `${particleFxRoot}/Dust_02.png` },
+  { key: "fxSplash", path: `${particleFxRoot}/Water Splash.png` },
+  { key: "waterFoam", path: `${terrainRoot}/Water Foam.png` },
 ];
 
 export const animationDefaults = {
@@ -210,6 +233,7 @@ export function createTinySwordsAnimations(scene) {
   createRunLoop("blueLancerIdleSheet", "blue-lancer-idle");
   createRunLoop("fire01Sheet", "fire-01-loop", 7);
   createRunLoop(SHEEP_IDLE_SHEET_KEY, SHEEP_IDLE_ANIM_KEY, 5);
+  createRunLoop(SHEEP_MOVE_SHEET_KEY, SHEEP_MOVE_ANIM_KEY, 5);
 }
 
 export function hasTinySwordsFolderHint(scene) {

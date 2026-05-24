@@ -9,6 +9,7 @@ import {
 import { cozyTheme, createCozyButton, createCozyPanel } from "../game/ui/CozyTheme";
 import { audioManager } from "../game/systems/AudioManager.js";
 import { getBestHighScore } from "../game/settings/highScoreSettings.js";
+import { prefersReducedMotion } from "../game/settings/accessibilitySettings.js";
 
 /** Scale for menu water texture tiling and island tilemap (terrain, foam, buildings, units). */
 /** Was 3×; 25% smaller → 3 × 0.75 */
@@ -36,6 +37,8 @@ export class MainMenuScene extends Phaser.Scene {
     this._menuBackdropSeed = undefined;
     /** @type {Phaser.GameObjects.TileSprite | null} */
     this._menuWater = null;
+    /** @type {Phaser.GameObjects.TileSprite | null} */
+    this._menuWaterFoam = null;
     /** @type {((size: Phaser.Structs.Size) => void) | null} */
     this._boundResize = null;
   }
@@ -58,6 +61,7 @@ export class MainMenuScene extends Phaser.Scene {
       this._boundResize = null;
     }
     this._menuWater = null;
+    this._menuWaterFoam = null;
   }
 
   /**
@@ -69,12 +73,17 @@ export class MainMenuScene extends Phaser.Scene {
       const s = MENU_BACKGROUND_ASSET_SCALE;
       this._menuWater.tilePositionX += delta * 0.011 * s;
       this._menuWater.tilePositionY += delta * 0.007 * s;
+      if (this._menuWaterFoam?.active) {
+        this._menuWaterFoam.tilePositionX += delta * 0.0066 * s;
+        this._menuWaterFoam.tilePositionY += delta * 0.0042 * s;
+      }
     }
   }
 
   rebuildLayout() {
     this.children.removeAll(true);
     this._menuWater = null;
+    this._menuWaterFoam = null;
     const { width, height } = this.scale;
     const contentWidth = Math.min(width - 24, 760);
     const centerX = width * 0.5;
@@ -98,6 +107,15 @@ export class MainMenuScene extends Phaser.Scene {
       water.setTileScale(MENU_BACKGROUND_ASSET_SCALE, MENU_BACKGROUND_ASSET_SCALE);
       water.setDepth(DEPTH_WATER);
       this._menuWater = water;
+      if (this.textures.exists("waterFoam") && !prefersReducedMotion()) {
+        const foam = this.add.tileSprite(centerX, midCy, width + 16, midHeight + 8, "waterFoam");
+        foam.setOrigin(0.5, 0.5);
+        foam.setTileScale(MENU_BACKGROUND_ASSET_SCALE, MENU_BACKGROUND_ASSET_SCALE);
+        foam.setAlpha(0.3);
+        foam.setBlendMode(Phaser.BlendModes.ADD);
+        foam.setDepth(DEPTH_WATER + 1);
+        this._menuWaterFoam = foam;
+      }
     } else {
       this.add
         .rectangle(centerX, midCy, width + 16, midHeight + 8, 0x2d4f7d, 1)
@@ -185,14 +203,19 @@ export class MainMenuScene extends Phaser.Scene {
       }
       this.scene.start("game");
     };
-    const startBtn = createCozyButton(this, "Start Run", startGame, { width: buttonWidth, fontSize: 26 });
+    const menuBtnTexture = { base: "buttonBigBlueBase", pressed: "buttonBigBluePressed" };
+    const startBtn = createCozyButton(this, "Start Run", startGame, {
+      width: buttonWidth,
+      fontSize: 26,
+      texture: menuBtnTexture,
+    });
     const settingsBtn = createCozyButton(this, "Settings", () => {
       this.registry.set("settingsReturnScene", "main-menu");
       this.scene.start("settings");
-    }, { width: buttonWidth, fontSize: 24 });
+    }, { width: buttonWidth, fontSize: 24, texture: menuBtnTexture });
     const quitBtn = createCozyButton(this, "Quit", () => {
       window.close();
-    }, { width: buttonWidth, fontSize: 24 });
+    }, { width: buttonWidth, fontSize: 24, texture: menuBtnTexture });
 
     startBtn.setPosition(panel.x, firstY);
     settingsBtn.setPosition(panel.x, firstY + gap);

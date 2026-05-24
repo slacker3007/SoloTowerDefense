@@ -1,5 +1,7 @@
+import Phaser from "phaser";
 import { balanceRules, clampUtilityBudget, getTowerProjectileColor, toWorldRange, towerCatalog } from "../balance";
 import { GAME_EVENT, gameEvents } from "../events";
+import { prefersReducedMotion } from "../settings/accessibilitySettings.js";
 
 export class CombatSystem {
   constructor(scene, towerSystem, enemySystem) {
@@ -54,6 +56,14 @@ export class CombatSystem {
     }
     gameEvents.emit(GAME_EVENT.ENEMY_KILLED, { enemy, tower, gold: killGold });
     gameEvents.emit(GAME_EVENT.GOLD_CHANGED, { gold: gameState.gold, delta: killGold });
+    const streak = this.runStats.killStreak;
+    if ([5, 10, 25, 50].includes(streak) && enemy?.sprite) {
+      gameEvents.emit(GAME_EVENT.KILL_STREAK, {
+        count: streak,
+        x: enemy.sprite.x,
+        y: enemy.sprite.y,
+      });
+    }
   }
 
   update(deltaSeconds, gameState) {
@@ -189,6 +199,7 @@ export class CombatSystem {
           this._fireDamageOpts(projectile.tower),
         );
         this.applyTowerEffects(projectile.tower, projectile.target, resolvedDamage, gameState);
+        this._spawnImpactBurst(projectile.x, projectile.y, projectile.tower?.type ?? "basic");
         projectile.sprite.destroy();
         continue;
       }
@@ -199,10 +210,73 @@ export class CombatSystem {
       projectile.y += ny * step;
       projectile.sprite.x = projectile.x;
       projectile.sprite.y = projectile.y;
+      this._spawnProjectileTrail(projectile, deltaSeconds);
       next.push(projectile);
     }
 
     this.projectiles = next;
+  }
+
+  /**
+   * @param {{ x: number, y: number, tower?: { type?: string } }} projectile
+   * @param {number} deltaSeconds
+   */
+  _spawnProjectileTrail(projectile, deltaSeconds) {
+    if (prefersReducedMotion()) {
+      return;
+    }
+    projectile._trailTick = (projectile._trailTick ?? 0) + deltaSeconds;
+    if (projectile._trailTick < 0.018) {
+      return;
+    }
+    projectile._trailTick = 0;
+    const parent = this.scene.effectsWorldLayer ?? this.scene.worldRoot;
+    if (!parent) {
+      return;
+    }
+    const color = getTowerProjectileColor(projectile.tower?.type ?? "basic");
+    const dot = this.scene.add
+      .circle(projectile.x, projectile.y, 2.6, color, 0.7)
+      .setBlendMode(Phaser.BlendModes.ADD);
+    parent.add(dot);
+    this.scene.tweens.add({
+      targets: dot,
+      alpha: 0,
+      scale: 0.3,
+      duration: 220,
+      ease: "Quad.Out",
+      onComplete: () => dot.destroy(),
+    });
+  }
+
+  /**
+   * @param {number} x
+   * @param {number} y
+   * @param {string} towerType
+   */
+  _spawnImpactBurst(x, y, towerType) {
+    if (prefersReducedMotion()) {
+      return;
+    }
+    const parent = this.scene.effectsWorldLayer ?? this.scene.worldRoot;
+    if (!parent || !this.scene.textures.exists("fxDust02")) {
+      return;
+    }
+    const color = getTowerProjectileColor(towerType);
+    const additive = towerType === "lightning" || towerType === "holy";
+    const p = this.scene.add.particles(x, y, "fxDust02", {
+      lifespan: { min: 220, max: 360 },
+      speed: { min: 30, max: 110 },
+      angle: { min: 0, max: 360 },
+      scale: { start: 0.55, end: 0 },
+      alpha: { start: 0.85, end: 0 },
+      tint: color,
+      blendMode: additive ? Phaser.BlendModes.ADD : Phaser.BlendModes.NORMAL,
+      emitting: false,
+    });
+    parent.add(p);
+    p.explode(6);
+    this.scene.time.delayedCall(420, () => p.destroy());
   }
 
   resolveDamage(tower, enemy, baseDamage) {
@@ -454,6 +528,35 @@ export class CombatSystem {
     return hit;
   }
 
+  /**
+   * @param {number} worldX
+   * @param {number} worldY
+   * @param {number} color
+   * @param {number} [count]
+   */
+  _spawnExplosionBurst(worldX, worldY, color, count = 14) {
+    if (prefersReducedMotion()) {
+      return;
+    }
+    const parent = this.scene.effectsWorldLayer ?? this.scene.worldRoot;
+    if (!parent || !this.scene.textures.exists("fxExplosion01")) {
+      return;
+    }
+    const p = this.scene.add.particles(worldX, worldY, "fxExplosion01", {
+      lifespan: { min: 200, max: 400 },
+      speed: { min: 50, max: 160 },
+      angle: { min: 0, max: 360 },
+      scale: { start: 0.6, end: 0 },
+      alpha: { start: 0.9, end: 0 },
+      tint: color,
+      blendMode: Phaser.BlendModes.ADD,
+      emitting: false,
+    });
+    parent.add(p);
+    p.explode(count);
+    this.scene.time.delayedCall(480, () => p.destroy());
+  }
+
   spawnSplashRingFx(worldX, worldY, radiusTiles, color) {
     const parent = this.scene.effectsWorldLayer ?? this.scene.worldRoot;
     if (!parent) {
@@ -476,6 +579,7 @@ export class CombatSystem {
       ease: "Sine.easeOut",
       onComplete: () => gfx.destroy(),
     });
+    this._spawnExplosionBurst(worldX, worldY, color);
   }
 
   spawnPulseRingFx(worldX, worldY, radiusWorld, color) {
@@ -499,6 +603,7 @@ export class CombatSystem {
       ease: "Sine.easeOut",
       onComplete: () => gfx.destroy(),
     });
+    this._spawnExplosionBurst(worldX, worldY, color);
   }
 
   spawnChainFx(fromX, fromY, primaryEnemy, chainedEnemies, color) {
