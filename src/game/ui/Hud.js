@@ -20,6 +20,7 @@ const SHOW_CONTEXT_PANEL = false;
 const ACTION_SLOT_COUNT = 10;
 const ACTION_GRID_COLS = 10;
 const ACTION_GRID_ROWS = 1;
+const APP_VERSION = "v0.1.0";
 
 /** Padding for floating editor menu (no top bar). */
 const FLOATING_MENU_PAD = 8;
@@ -216,6 +217,11 @@ export class Hud {
       color: "#d2e4ff",
     });
     this.cameraTelemetryText.setVisible(false);
+    this.versionText = scene.add.text(0, 0, APP_VERSION, {
+      fontFamily: "monospace",
+      fontSize: "11px",
+      color: darkFantasyPalette.textMuted,
+    }).setOrigin(1, 0);
     this.debugPanelBg = scene.add.rectangle(0, 0, 340, 76, 0x0d1522, 0.9);
     this.debugPanelBg.setOrigin(0, 0);
     this.debugPanelBg.setStrokeStyle(1, 0x5f7aa3, 0.95);
@@ -544,6 +550,7 @@ export class Hud {
       this.goldDeltaText,
       this.towersText,
       this.cameraTelemetryText,
+      this.versionText,
       this.debugPanelRoot,
       this.contextPanelFrame.container,
       this.contextTitleText,
@@ -994,6 +1001,7 @@ export class Hud {
       this.root.setPosition(this.rootOffsetX, this.rootOffsetY);
       const rootWidth = width / rootScale;
       const rootHeight = height / rootScale;
+      this.versionText.setPosition(rootWidth - 8, 8);
       const contentWidth = Math.min(rootWidth - 16, 980);
       const contentX = Math.round((rootWidth - contentWidth) * 0.5);
       const isPortrait = this._viewportMode !== "landscape";

@@ -549,10 +549,43 @@ export function getTowerTooltipSummary(towerType) {
   const { effectiveDps, isUtilityLimited } = getTowerEffectiveDps(towerType, damage, cooldown);
   const dpsLabel = effectiveDps >= 10 ? effectiveDps.toFixed(1) : effectiveDps.toFixed(2);
   const baseLine = `Damage ${damage} | Rate ${rate.toFixed(1)}/s | Range ${rangeTiles.toFixed(1)} tiles | Effective DPS ${dpsLabel}`;
+  const glossary = getStatusGlossaryForEffects(getTowerBaseEffects(towerType));
+  const lines = [baseLine];
   if (isUtilityLimited) {
-    return `${baseLine}\nUtility-limited (cap from balance budget)`;
+    lines.push("Utility-limited (cap from balance budget)");
   }
-  return baseLine;
+  if (glossary) {
+    lines.push(glossary);
+  }
+  return lines.join("\n");
+}
+
+export const STATUS_GLOSSARY = {
+  burn: "Burn: damage over time; weaker against fire-resistant enemies.",
+  poison: "Poison: damage over time that ignores tower attack timing.",
+  slow: "Slow: reduces movement speed unless the enemy resists slows.",
+  freeze: "Freeze: briefly stops movement and can unlock bonus damage.",
+  root: "Root: briefly pins an enemy in place.",
+  curse: "Curse: increases damage taken and can spread on death.",
+  vulnerability: "Vulnerability: temporarily increases damage taken.",
+  weakening: "Weakening: reduces movement pressure from affected enemies.",
+  shielded: "Shielded: absorbs damage before health is damaged.",
+};
+
+export function getStatusGlossaryForEffects(effects = []) {
+  const keys = new Set();
+  for (const effect of effects ?? []) {
+    if (effect.type === "burn" || effect.type === "burnStacking" || effect.type === "deathExplosionBurn") keys.add("burn");
+    if (effect.type === "poison" || effect.type === "poisonSpreadOnDeath") keys.add("poison");
+    if (effect.type === "slow" || effect.type === "auraSlow" || effect.type === "chainKnockbackSlow") keys.add("slow");
+    if (effect.type === "stunChance" && effect.asFreeze) keys.add("freeze");
+    if (effect.type === "rootChance") keys.add("root");
+    if (effect.type === "curse" || effect.type === "curseSpread") keys.add("curse");
+    if (effect.type === "auraVulnerability") keys.add("vulnerability");
+    if (effect.type === "weakening") keys.add("weakening");
+  }
+  const labels = [...keys].map((key) => STATUS_GLOSSARY[key]).filter(Boolean);
+  return labels.length > 0 ? labels.join("\n") : "";
 }
 
 export function getTowerTextureKey(towerType) {

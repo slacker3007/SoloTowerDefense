@@ -1,4 +1,5 @@
 import { balanceRules, clampUtilityBudget, getTowerProjectileColor, toWorldRange, towerCatalog } from "../balance";
+import { GAME_EVENT, gameEvents } from "../events";
 
 export class CombatSystem {
   constructor(scene, towerSystem, enemySystem) {
@@ -6,6 +7,53 @@ export class CombatSystem {
     this.towerSystem = towerSystem;
     this.enemySystem = enemySystem;
     this.projectiles = [];
+    /** @type {{ killStreak: number, bestKillStreak: number, killsThisRun: number, goldEarnedThisRun: number }} */
+    this.runStats = { killStreak: 0, bestKillStreak: 0, killsThisRun: 0, goldEarnedThisRun: 0 };
+  }
+
+  /**
+   * Apply damage and award kill rewards through a single path.
+   * @param {object | null} tower
+   * @param {object} enemy
+   * @param {number} amount
+   * @param {{ gold: number }} gameState
+   * @param {Record<string, unknown>} [damageOptions]
+   * @returns {boolean}
+   */
+  damageAndReward(tower, enemy, amount, gameState, damageOptions = {}) {
+    const killed = this.enemySystem.damageEnemy(enemy, amount, damageOptions);
+    if (killed) {
+      this.awardKill(enemy, tower, gameState);
+    } else if (amount > 0) {
+      gameEvents.emit(GAME_EVENT.ENEMY_HIT, { enemy, tower, amount, damageOptions });
+    }
+    return killed;
+  }
+
+  /**
+   * @param {object} enemy
+   * @param {object | null} tower
+   * @param {{ gold: number }} gameState
+   */
+  awardKill(enemy, tower, gameState) {
+    const killGold = this.enemySystem.getKillGold(enemy);
+    gameState.gold += killGold;
+    this.runStats.killsThisRun += 1;
+    this.runStats.killStreak += 1;
+    this.runStats.bestKillStreak = Math.max(this.runStats.bestKillStreak, this.runStats.killStreak);
+    this.runStats.goldEarnedThisRun += killGold;
+    if (tower) {
+      for (const effect of tower.effects ?? []) {
+        if (effect.type === "bonusGoldPerKill") {
+          const bonus = Number.isFinite(effect.amount) ? effect.amount : 0;
+          gameState.gold += bonus;
+          this.runStats.goldEarnedThisRun += bonus;
+        }
+      }
+      this.handleOnKillEffects(tower, enemy);
+    }
+    gameEvents.emit(GAME_EVENT.ENEMY_KILLED, { enemy, tower, gold: killGold });
+    gameEvents.emit(GAME_EVENT.GOLD_CHANGED, { gold: gameState.gold, delta: killGold });
   }
 
   update(deltaSeconds, gameState) {
@@ -67,16 +115,7 @@ export class CombatSystem {
         }
         const raw = tower.damage * ratio;
         const dmg = this.resolveDamage(tower, enemy, raw);
-        const killed = this.enemySystem.damageEnemy(enemy, dmg, this._fireDamageOpts(tower, { aoe: true }));
-        if (killed) {
-          gameState.gold += this.enemySystem.getKillGold(enemy);
-          for (const effect of tower.effects ?? []) {
-            if (effect.type === "bonusGoldPerKill") {
-              gameState.gold += Number.isFinite(effect.amount) ? effect.amount : 0;
-            }
-          }
-          this.handleOnKillEffects(tower, enemy);
-        }
+        this.damageAndReward(tower, enemy, dmg, gameState, this._fireDamageOpts(tower, { aoe: true }));
       }
       this.spawnPulseRingFx(tower.x, tower.y, tower.range * this.getTowerRangeMultiplier(tower), color);
     }
@@ -105,6 +144,7 @@ export class CombatSystem {
       if (target) {
         tower.hitCount = (tower.hitCount ?? 0) + 1;
         tower.cooldownRemaining = tower.cooldown / this.getTowerSpeedMultiplier(tower);
+        gameEvents.emit(GAME_EVENT.TOWER_FIRE, { tower, target });
         const projectileColor = getTowerProjectileColor(tower.type);
         const sprite = this.scene.add.circle(tower.x, tower.y, 4, projectileColor);
         sprite.setStrokeStyle(1.5, 0xffffff, 0.5);
@@ -141,21 +181,14 @@ export class CombatSystem {
 
       if (distance <= step + 8) {
         const resolvedDamage = this.resolveDamage(projectile.tower, projectile.target, projectile.damage);
-        const killed = this.enemySystem.damageEnemy(
+        this.damageAndReward(
+          projectile.tower,
           projectile.target,
           resolvedDamage,
+          gameState,
           this._fireDamageOpts(projectile.tower),
         );
         this.applyTowerEffects(projectile.tower, projectile.target, resolvedDamage, gameState);
-        if (killed) {
-          gameState.gold += this.enemySystem.getKillGold(projectile.target);
-          for (const effect of projectile.tower.effects ?? []) {
-            if (effect.type === "bonusGoldPerKill") {
-              gameState.gold += Number.isFinite(effect.amount) ? effect.amount : 0;
-            }
-          }
-          this.handleOnKillEffects(projectile.tower, projectile.target);
-        }
         projectile.sprite.destroy();
         continue;
       }
@@ -329,23 +362,23 @@ export class CombatSystem {
         this.applySplashStatus(enemy, "stun", 1.05, { duration: effect.duration ?? 0.8 });
       }
       if (effect.type === "burstAllInRange" && tower.hitCount % 5 === 0) {
-        this.applyRangeBurst(tower, resolvedDamage * 0.8);
+        this.applyRangeBurst(tower, resolvedDamage * 0.8, gameState);
       }
       if (effect.type === "volley" || effect.type === "volleyPierce") {
-        this.applyVolley(tower, enemy, resolvedDamage, effect.arrows ?? 3);
+        this.applyVolley(tower, enemy, resolvedDamage, effect.arrows ?? 3, gameState);
       }
       if (effect.type === "smiteBeamTargets") {
-        this.applySmiteBeam(tower, enemy, resolvedDamage, effect.targets ?? 3);
+        this.applySmiteBeam(tower, enemy, resolvedDamage, effect.targets ?? 3, gameState);
       }
       if (effect.type === "critExplosion" && Math.random() < (effect.chance ?? 0)) {
-        this.applySplashDamage(tower, enemy, resolvedDamage * (effect.multiplier ?? 2), 0.42, 1.15);
+        this.applySplashDamage(tower, enemy, resolvedDamage * (effect.multiplier ?? 2), 0.42, 1.15, gameState);
       }
     }
 
     if (splashes.length > 0) {
       const radiusTiles = Math.max(...splashes.map((s) => s.radiusTiles ?? 1.2));
       const ratio = Math.max(...splashes.map((s) => s.ratio ?? 0.5));
-      this.applySplashDamage(tower, enemy, resolvedDamage, ratio, radiusTiles);
+      this.applySplashDamage(tower, enemy, resolvedDamage, ratio, radiusTiles, gameState);
       this.spawnSplashRingFx(enemy.sprite.x, enemy.sprite.y, radiusTiles, getTowerProjectileColor(tower.type));
     }
     if (chains.length > 0) {
@@ -359,7 +392,7 @@ export class CombatSystem {
           maxTargets = Math.max(maxTargets, balanceRules.maxChainTargets);
         }
       }
-      const chained = this.applyChainDamage(tower, enemy, resolvedDamage, noDecay ? 999 : maxTargets, !noDecay);
+      const chained = this.applyChainDamage(tower, enemy, resolvedDamage, noDecay ? 999 : maxTargets, !noDecay, gameState);
       this.spawnChainFx(tower.x, tower.y, enemy, chained, getTowerProjectileColor(tower.type));
     }
   }
@@ -379,7 +412,7 @@ export class CombatSystem {
     }
   }
 
-  applySplashDamage(tower, target, baseDamage, ratio, radiusTiles) {
+  applySplashDamage(tower, target, baseDamage, ratio, radiusTiles, gameState) {
     const enemies = this.enemySystem.getActiveEnemies();
     const radius = toWorldRange(radiusTiles);
     for (const enemy of enemies) {
@@ -388,12 +421,13 @@ export class CombatSystem {
       }
       const distance = Math.hypot(enemy.sprite.x - target.sprite.x, enemy.sprite.y - target.sprite.y);
       if (distance <= radius) {
-        this.enemySystem.damageEnemy(enemy, baseDamage * ratio, this._fireDamageOpts(tower, { aoe: true }));
+        this.damageAndReward(tower, enemy, baseDamage * ratio, gameState, this._fireDamageOpts(tower, { aoe: true }));
       }
     }
   }
 
-  applyChainDamage(tower, target, baseDamage, chainTargets, decay = true) {
+  applyChainDamage(tower, target, baseDamage, chainTargets, decay = true, gameState = null) {
+    const gs = gameState ?? this.scene?.gameState;
     const safeTargets = Math.min(chainTargets, balanceRules.maxChainTargets);
     const enemies = this.enemySystem
       .getActiveEnemies()
@@ -403,11 +437,15 @@ export class CombatSystem {
     const hit = [];
     for (const enemy of enemies) {
       const vuln = enemy.tags.includes("linkedPack") ? (enemy.chainVulnerabilityMultiplier ?? 1) : 1;
-      this.enemySystem.damageEnemy(
-        enemy,
-        baseDamage * (decay ? ratio : 1) * vuln,
-        this._fireDamageOpts(tower, { aoe: true }),
-      );
+      if (gs) {
+        this.damageAndReward(tower, enemy, baseDamage * (decay ? ratio : 1) * vuln, gs, this._fireDamageOpts(tower, { aoe: true }));
+      } else {
+        this.enemySystem.damageEnemy(
+          enemy,
+          baseDamage * (decay ? ratio : 1) * vuln,
+          this._fireDamageOpts(tower, { aoe: true }),
+        );
+      }
       hit.push(enemy);
       if (decay) {
         ratio *= 0.85;
@@ -489,26 +527,26 @@ export class CombatSystem {
     });
   }
 
-  applyRangeBurst(tower, amount) {
+  applyRangeBurst(tower, amount, gameState) {
     for (const enemy of this.enemySystem.getActiveEnemies()) {
       const distance = Math.hypot(enemy.sprite.x - tower.x, enemy.sprite.y - tower.y);
       if (distance <= tower.range) {
-        this.enemySystem.damageEnemy(enemy, amount, this._fireDamageOpts(tower, { aoe: true }));
+        this.damageAndReward(tower, enemy, amount, gameState, this._fireDamageOpts(tower, { aoe: true }));
       }
     }
   }
 
-  applyVolley(tower, target, amount, arrows) {
+  applyVolley(tower, target, amount, arrows, gameState) {
     const safeArrows = Math.min(arrows, balanceRules.maxVolleyArrows);
     const enemies = this.enemySystem
       .getActiveEnemies()
       .filter((enemy) => Math.hypot(enemy.sprite.x - tower.x, enemy.sprite.y - tower.y) <= tower.range)
       .slice(0, safeArrows);
     for (const enemy of enemies) {
-      this.enemySystem.damageEnemy(enemy, amount * 0.35, this._fireDamageOpts(tower, { aoe: true }));
+      this.damageAndReward(tower, enemy, amount * 0.35, gameState, this._fireDamageOpts(tower, { aoe: true }));
     }
     if (!enemies.includes(target)) {
-      this.enemySystem.damageEnemy(target, amount * 0.35, this._fireDamageOpts(tower, { aoe: true }));
+      this.damageAndReward(tower, target, amount * 0.35, gameState, this._fireDamageOpts(tower, { aoe: true }));
     }
   }
 
@@ -550,16 +588,18 @@ export class CombatSystem {
     }
   }
 
-  applySmiteBeam(tower, target, amount, targets) {
+  applySmiteBeam(tower, target, amount, targets, gameState) {
     const safeTargets = Math.max(1, Math.min(targets, balanceRules.maxChainTargets));
     const enemies = this.enemySystem
       .getActiveEnemies()
       .filter((enemy) => Math.hypot(enemy.sprite.x - tower.x, enemy.sprite.y - tower.y) <= tower.range)
       .slice(0, safeTargets);
     for (const enemy of enemies) {
-      this.enemySystem.damageEnemy(
+      this.damageAndReward(
+        tower,
         enemy,
         enemy === target ? amount * 0.25 : amount * 0.5,
+        gameState,
         this._fireDamageOpts(tower, { aoe: true }),
       );
     }

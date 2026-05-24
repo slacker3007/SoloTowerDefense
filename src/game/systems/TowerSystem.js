@@ -10,6 +10,7 @@ import {
   towerCatalog,
   upgrades,
 } from "../balance";
+import { GAME_EVENT, gameEvents } from "../events.js";
 
 /** Base depth for tower sprites on `towersWorldLayer`. Placement ghost uses 19 — keep computed depths below that. */
 const TOWER_SPRITE_DEPTH_BASE = 18;
@@ -236,6 +237,7 @@ export class TowerSystem {
     }
     this.cellOccupancy.delete(`${cellX},${cellY}`);
     tower.sprite?.destroy?.();
+    gameEvents.emit(GAME_EVENT.TOWER_SOLD, { tower, cellX, cellY });
     return Math.floor(this.towerCost * economy.sellRefundRate);
   }
 
@@ -284,6 +286,7 @@ export class TowerSystem {
         tower.sprite.setDisplaySize(TILE_SIZE, TILE_SIZE * 2);
       }
       this._applyTowerSpriteDepth(tower);
+      gameEvents.emit(GAME_EVENT.TOWER_CONVERTED, { tower, cellX, cellY, targetType });
       return true;
     }
     const typeUpgrades = upgrades[tower.type];
@@ -305,6 +308,7 @@ export class TowerSystem {
     if (Array.isArray(upgradeData.effects)) {
       tower.effects.push(...upgradeData.effects);
     }
+    gameEvents.emit(GAME_EVENT.TOWER_UPGRADED, { tower, cellX, cellY, optionId });
     return true;
   }
 }

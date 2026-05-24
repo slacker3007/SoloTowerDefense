@@ -1,3 +1,5 @@
+import { audioManager } from "../systems/AudioManager.js";
+
 export const cozyTheme = {
   colors: {
     bgDark: 0x221a1f,
@@ -143,11 +145,15 @@ export function createCozyButton(scene, label, onClick, opts = {}) {
   }
   button.setInteractive({ useHandCursor: true });
   button.on("pointerdown", () => {
+    audioManager.playSfx("ui-click");
     button.setStyle({ backgroundColor: activeBg });
     onClick();
   });
   button.on("pointerup", () => button.setStyle({ backgroundColor: hoverBg }));
-  button.on("pointerover", () => button.setStyle({ backgroundColor: hoverBg }));
+  button.on("pointerover", () => {
+    audioManager.playSfx("ui-hover");
+    button.setStyle({ backgroundColor: hoverBg });
+  });
   button.on("pointerout", () => button.setStyle({ backgroundColor: baseBg }));
   return button;
 }
@@ -186,6 +192,7 @@ export function createHudButton(scene, label, onClick = null, opts = {}) {
     button.setInteractive({ useHandCursor: true });
     if (typeof onClick === "function") {
       button.on("pointerdown", () => {
+        audioManager.playSfx("ui-click");
         if (useHover) {
           button.setStyle({ backgroundColor: activeBg });
         }
@@ -193,7 +200,10 @@ export function createHudButton(scene, label, onClick = null, opts = {}) {
       });
       if (useHover) {
         button.on("pointerup", () => button.setStyle({ backgroundColor: hoverBg }));
-        button.on("pointerover", () => button.setStyle({ backgroundColor: hoverBg }));
+        button.on("pointerover", () => {
+          audioManager.playSfx("ui-hover");
+          button.setStyle({ backgroundColor: hoverBg });
+        });
         button.on("pointerout", () => button.setStyle({ backgroundColor: baseBg }));
       }
     }

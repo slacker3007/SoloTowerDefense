@@ -29,7 +29,12 @@ import { BuilderSystem } from "../game/systems/BuilderSystem";
 import { TowerSystem } from "../game/systems/TowerSystem";
 import { CombatSystem } from "../game/systems/CombatSystem";
 import { WaveSystem } from "../game/systems/WaveSystem";
+import { audioManager } from "../game/systems/AudioManager.js";
+import { feedbackManager } from "../game/systems/FeedbackManager.js";
+import { GAME_EVENT, gameEvents } from "../game/events.js";
+import { devWarn, isDevMode } from "../game/devMode.js";
 import { Hud } from "../game/ui/Hud";
+import { TutorialOverlay } from "../game/ui/TutorialOverlay.js";
 import { blueBarracksHpBarYOffset, createBlueBarracksHpBar } from "../game/ui/BlueBarracksHpBar";
 import { destroyUnitHpOverlay, ensureUnitHpOverlay, syncUnitHpBars } from "../game/ui/UnitHpBar";
 import { DebugOverlay } from "../game/debug/DebugOverlay";
@@ -50,6 +55,8 @@ import {
   towerCatalog,
 } from "../game/balance";
 import { getDisplaySettings } from "../game/settings/displaySettings.js";
+import { prefersReducedMotion } from "../game/settings/accessibilitySettings.js";
+import { computeRunScore, getBestHighScore, saveHighScore } from "../game/settings/highScoreSettings.js";
 import { MapEditor } from "../game/editor/MapEditor";
 import { EditorPanel } from "../game/editor/EditorPanel";
 import { GRID_KEYBIND_ACTION_IDS, KeybindStore } from "../game/input/KeybindStore.js";
@@ -152,12 +159,13 @@ export class GameScene extends Phaser.Scene {
     this._cameraPanning = false;
     this._lastPanX = 0;
     this._lastPanY = 0;
+    this._pinchDistance = 0;
     this.selectedBuilding = null;
     this._hudActionMode = "empty";
     this._pendingPlacement = null;
     this._towerGhost = null;
     this._towerConversionPage = 0;
-    this._performance = { clearedWaves: 0, leaksInWave: 0, livesAtWaveStart: STARTING_LIVES, waveTimer: 0 };
+    this._performance = { clearedWaves: 0, leaksInWave: 0, livesAtWaveStart: STARTING_LIVES, waveTimer: 0, totalRunSeconds: 0 };
     this._adaptiveEnabled = balanceRules.adaptive.enabled;
     this._blueBarracksFireFx = null;
     this._towerDoubleClick = { signature: null, at: 0 };
@@ -192,7 +200,7 @@ export class GameScene extends Phaser.Scene {
     this._selectionPulse = null;
     this._lastSelectionPulseKey = null;
     this._cameraPanning = false;
-    this._performance = { clearedWaves: 0, leaksInWave: 0, livesAtWaveStart: STARTING_LIVES, waveTimer: 0 };
+    this._performance = { clearedWaves: 0, leaksInWave: 0, livesAtWaveStart: STARTING_LIVES, waveTimer: 0, totalRunSeconds: 0 };
 
     // Explicitly nullify stale UI references that might survive on the scene instance
     this._pauseOverlayRoot = null;
@@ -224,6 +232,10 @@ export class GameScene extends Phaser.Scene {
       };
 
       createTinySwordsAnimations(this);
+
+      audioManager.attachToScene(this);
+      feedbackManager.attachToScene(this);
+      audioManager.playMusic("gameplay");
 
       ensureMapTilesets(this.map);
       ensureMapOverrideGrids(this.map);
@@ -270,6 +282,9 @@ export class GameScene extends Phaser.Scene {
         },
       });
       this.combatSystem = new CombatSystem(this, this.towerSystem, this.enemySystem);
+      this.enemySystem.onUnattributedKill = (enemy) => {
+        this.combatSystem.awardKill(enemy, null, this.gameState);
+      };
       this.waveSystem = new WaveSystem(this.enemySystem);
       this.keybindStore = new KeybindStore();
       this.hud = new Hud(this, {
@@ -288,6 +303,7 @@ export class GameScene extends Phaser.Scene {
 
       this.waveSystem.startAutoSpawner();
       this.gameState.wave = this.waveSystem.waveIndex;
+      gameEvents.emit(GAME_EVENT.WAVE_STARTED, { wave: this.gameState.wave });
       this._performance.livesAtWaveStart = this.gameState.lives;
 
       this._mapPixelW = this.map.width * TILE_SIZE;
@@ -320,6 +336,8 @@ export class GameScene extends Phaser.Scene {
         this.selectedBuilding,
         this.getWaveInfo(),
       );
+      this.tutorialOverlay = new TutorialOverlay(this);
+      this.tutorialOverlay.create();
     } catch (err) {
       throw err;
     }
@@ -352,6 +370,8 @@ export class GameScene extends Phaser.Scene {
     this.editorPanel = null;
     this.editor?.destroy();
     this.editor = null;
+    this.tutorialOverlay?.destroy?.();
+    this.tutorialOverlay = null;
     this.hud?.dispose();
     this.hud = null;
 
@@ -805,19 +825,19 @@ export class GameScene extends Phaser.Scene {
       const rowValid = Number.isInteger(row) && row >= 1 && row <= rows;
       const colValid = Number.isInteger(col) && col >= 1 && col <= cols;
       if (!rowValid || !colValid) {
-        console.warn("[HUD] Ignoring action with invalid coordinates:", def);
+        devWarn("[HUD] Ignoring action with invalid coordinates:", def);
         continue;
       }
       const key = `${row},${col}`;
       if (usedCoords.has(key)) {
-        console.warn("[HUD] Ignoring duplicate action coordinate:", key, def);
+        devWarn("[HUD] Ignoring duplicate action coordinate:", key, def);
         continue;
       }
       usedCoords.add(key);
 
       const slotIndex = (row - 1) * cols + (col - 1);
       if (typeof def.actionId !== "string" || def.actionId.length === 0) {
-        console.warn("[HUD] Ignoring action without actionId:", def);
+        devWarn("[HUD] Ignoring action without actionId:", def);
         continue;
       }
       slots[slotIndex] = {
@@ -1052,6 +1072,7 @@ export class GameScene extends Phaser.Scene {
         return;
       }
       this.startTowerPlacement({ preserveSelection: true, returnMode: "barracksMain" });
+      this.tutorialOverlay?.setStep?.(1);
       return;
     }
     if (action.startsWith("upgrade:") && this.selectedBuilding?.kind === "tower") {
@@ -1114,6 +1135,18 @@ export class GameScene extends Phaser.Scene {
     if (towerParent) {
       towerParent.add(this._towerGhost);
     }
+    this._placementPreviewCell = null;
+    this._placementConfirmBtn = createCozyButton(this, "Confirm", () => {
+      this.placePendingTowerAtCell(this._placementPreviewCell);
+    }, { width: 126, fontSize: 18 });
+    this._placementCancelBtn = createCozyButton(this, "Cancel", () => {
+      const mode = this._placementReturnMode;
+      this.clearTowerPlacement();
+      this.setHudActionMode(mode ?? "empty");
+    }, { width: 116, fontSize: 18, variant: "muted" });
+    this._placementConfirmBtn.setDepth(170).setScrollFactor(0).setPosition(this.scale.width * 0.5 - 70, this.scale.height - 112);
+    this._placementCancelBtn.setDepth(170).setScrollFactor(0).setPosition(this.scale.width * 0.5 + 70, this.scale.height - 112);
+    this.cameras.main.ignore([this._placementConfirmBtn, this._placementCancelBtn]);
     this.updateHudActions();
   }
 
@@ -1125,6 +1158,11 @@ export class GameScene extends Phaser.Scene {
     this._placementValidityGfx = null;
     this._placementRangeGfx?.destroy?.();
     this._placementRangeGfx = null;
+    this._placementConfirmBtn?.destroy?.();
+    this._placementConfirmBtn = null;
+    this._placementCancelBtn?.destroy?.();
+    this._placementCancelBtn = null;
+    this._placementPreviewCell = null;
     this._placementReturnMode = null;
   }
 
@@ -1254,6 +1292,38 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  placePendingTowerAtCell(cell) {
+    if (!cell || this._pendingPlacement?.type !== "tower") {
+      return false;
+    }
+    const placed = this.builderSystem.startTowerBuild(cell.x, cell.y, this._pendingPlacement.towerType, this.gameState);
+    if (!placed) {
+      return false;
+    }
+    const returnMode = this._placementReturnMode;
+    this.clearTowerPlacement();
+    this.setHudActionMode(returnMode ?? "empty");
+    this.tutorialOverlay?.setStep?.(2);
+    this.debugOverlay.redraw();
+    this.hud.render(
+      this.gameState,
+      this.towerSystem.towers.length,
+      STARTING_LIVES,
+      this.selectedBuilding,
+      this.getWaveInfo(),
+    );
+    return true;
+  }
+
+  setPlacementPreviewCell(cell) {
+    if (!cell || !isInsideGrid(cell.x, cell.y, this.map.width, this.map.height)) {
+      return;
+    }
+    this._placementPreviewCell = cell;
+    const world = cellToWorld(cell.x, cell.y);
+    this.updateTowerGhost({ worldX: world.x, worldY: world.y });
+  }
+
   getWaveInfo() {
     const role = this.waveSystem?.spawner?.waveRole;
     const progress = this.waveSystem?.getProgressInfo?.() ?? {};
@@ -1324,7 +1394,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   _startIntroCameraPan() {
-    if (this.editor?.enabled) {
+    if (this.editor?.enabled || prefersReducedMotion()) {
       this._applyInitialCameraPose();
       return;
     }
@@ -1373,6 +1443,9 @@ export class GameScene extends Phaser.Scene {
     }
     this.hud?.setViewportMode?.(viewportProfile.isPortrait ? "portrait" : "landscape");
     this.hud?.layout?.(width, height);
+    this.tutorialOverlay?.layout?.();
+    this._placementConfirmBtn?.setPosition(width * 0.5 - 70, height - 112);
+    this._placementCancelBtn?.setPosition(width * 0.5 + 70, height - 112);
     this._layoutPauseOverlay();
     this._layoutRunEndOverlay();
     if (!this._introCameraPanActive) {
@@ -1390,6 +1463,17 @@ export class GameScene extends Phaser.Scene {
     const ev = /** @type {MouseEvent | undefined} */ (pointer.event);
     const buttons = typeof ev?.buttons === "number" ? ev.buttons : 0;
     return pointer.middleButtonDown() || (buttons & 4) === 4;
+  }
+
+  _getTouchPointersDown() {
+    const pointers = this.input?.manager?.pointers;
+    if (!Array.isArray(pointers)) {
+      return [];
+    }
+    return pointers.filter((p) => {
+      const ev = /** @type {PointerEvent | undefined} */ (p.event);
+      return p.active && p.isDown && ev?.pointerType === "touch";
+    });
   }
 
   unbindInput() {
@@ -1441,6 +1525,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   bindInput() {
+    this.input.addPointer?.(2);
     this._boundPointerDown = (pointer) => {
       if (this._isPanPointer(pointer)) {
         const ev = /** @type {MouseEvent | undefined} */ (pointer.event);
@@ -1465,21 +1550,12 @@ export class GameScene extends Phaser.Scene {
         if (!cell) {
           return;
         }
-        const placed = this.builderSystem.startTowerBuild(cell.x, cell.y, this._pendingPlacement.towerType, this.gameState);
-        if (!placed) {
+        const ev = /** @type {PointerEvent | undefined} */ (pointer.event);
+        if (ev?.pointerType === "touch") {
+          this.setPlacementPreviewCell(cell);
           return;
         }
-        const returnMode = this._placementReturnMode;
-        this.clearTowerPlacement();
-        this.setHudActionMode(returnMode ?? "empty");
-        this.debugOverlay.redraw();
-        this.hud.render(
-          this.gameState,
-          this.towerSystem.towers.length,
-          STARTING_LIVES,
-          this.selectedBuilding,
-          this.getWaveInfo(),
-        );
+        this.placePendingTowerAtCell(cell);
         return;
       }
       const cell = this.pointerToCell(pointer);
@@ -1530,6 +1606,20 @@ export class GameScene extends Phaser.Scene {
     this.input.on("pointerdown", this._boundPointerDown);
 
     this._boundPointerMove = (pointer) => {
+      const touches = this._getTouchPointersDown();
+      if (touches.length >= 2) {
+        const distance = Phaser.Math.Distance.Between(touches[0].x, touches[0].y, touches[1].x, touches[1].y);
+        if (this._pinchDistance > 0 && distance > 32) {
+          this._cancelIntroCameraPan();
+          const ratio = Phaser.Math.Clamp(distance / this._pinchDistance, 0.96, 1.04);
+          const cam = this.cameras.main;
+          cam.setZoom(Phaser.Math.Clamp(cam.zoom * ratio, CAMERA_ZOOM_MIN, CAMERA_ZOOM_MAX));
+          this._clampCameraScroll();
+        }
+        this._pinchDistance = distance;
+        return;
+      }
+      this._pinchDistance = 0;
       if (this._cameraPanning && !this._isPanPointer(pointer)) {
         this._cameraPanning = false;
       }
@@ -1569,18 +1659,20 @@ export class GameScene extends Phaser.Scene {
     };
     this.input.on("wheel", this._boundWheel);
 
-    this._boundKeyDebug = () => {
-      this.debugOverlay.toggle();
-    };
-    this.input.keyboard.on("keydown-G", this._boundKeyDebug);
-    this._boundKeyHudDebug = () => {
-      this.hud?.toggleDebugPanelVisibility?.();
-      if (!this.hud?.isDebugPanelVisible() && this.editor.enabled) {
-        this.editor.setEnabled(false);
-        this._syncAfterMapEditorChange();
-      }
-    };
-    this.input.keyboard.on("keydown-F3", this._boundKeyHudDebug);
+    if (isDevMode()) {
+      this._boundKeyDebug = () => {
+        this.debugOverlay.toggle();
+      };
+      this.input.keyboard.on("keydown-G", this._boundKeyDebug);
+      this._boundKeyHudDebug = () => {
+        this.hud?.toggleDebugPanelVisibility?.();
+        if (!this.hud?.isDebugPanelVisible() && this.editor.enabled) {
+          this.editor.setEnabled(false);
+          this._syncAfterMapEditorChange();
+        }
+      };
+      this.input.keyboard.on("keydown-F3", this._boundKeyHudDebug);
+    }
 
     this._boundKeyPause = () => {
       if (this.editor.enabled) {
@@ -1590,25 +1682,64 @@ export class GameScene extends Phaser.Scene {
     };
     this.input.keyboard.on("keydown-P", this._boundKeyPause);
 
-    this._boundKeyRestart = () => {
-      this.scene.restart();
-    };
-    this.input.keyboard.on("keydown-R", this._boundKeyRestart);
+    if (isDevMode()) {
+      this._boundKeyRestart = () => {
+        this.scene.restart();
+      };
+      this.input.keyboard.on("keydown-R", this._boundKeyRestart);
 
-    this._boundKeyAdaptive = () => {
-      this._adaptiveEnabled = !this._adaptiveEnabled;
-    };
-    this.input.keyboard.on("keydown-O", this._boundKeyAdaptive);
+      this._boundKeyAdaptive = () => {
+        this._adaptiveEnabled = !this._adaptiveEnabled;
+      };
+      this.input.keyboard.on("keydown-O", this._boundKeyAdaptive);
 
-    this._boundKeyEditor = () => {
-      this.toggleMapEditorFromMenu();
-    };
-    this.input.keyboard.on("keydown-E", this._boundKeyEditor);
+      this._boundKeyEditor = () => {
+        this.toggleMapEditorFromMenu();
+      };
+      this.input.keyboard.on("keydown-E", this._boundKeyEditor);
+    }
 
     this._onGameplayKeyDown = (/** @type {KeyboardEvent} */ ev) => {
       const hud = this.hud;
       const store = this.keybindStore;
       if (!hud || !store) {
+        return;
+      }
+      if (this._pendingPlacement?.type === "tower") {
+        const cur = this._placementPreviewCell ?? worldToCell(this.input.activePointer.worldX, this.input.activePointer.worldY);
+        const deltas = {
+          ArrowUp: { x: 0, y: -1 },
+          ArrowDown: { x: 0, y: 1 },
+          ArrowLeft: { x: -1, y: 0 },
+          ArrowRight: { x: 1, y: 0 },
+        };
+        if (ev.key in deltas) {
+          const d = deltas[ev.key];
+          this.setPlacementPreviewCell({ x: cur.x + d.x, y: cur.y + d.y });
+          ev.preventDefault();
+          return;
+        }
+        if (ev.key === "Enter") {
+          this.placePendingTowerAtCell(this._placementPreviewCell ?? cur);
+          ev.preventDefault();
+          return;
+        }
+      }
+      if (ev.keyCode === store.getCode("pause")) {
+        this.togglePause();
+        ev.preventDefault();
+        return;
+      }
+      if (ev.keyCode === store.getCode("cycleSpeed") && !this.gameState.paused) {
+        this.cycleGameSpeed();
+        ev.preventDefault();
+        return;
+      }
+      if (ev.keyCode === store.getCode("cancelPlacement") && this._pendingPlacement?.type === "tower") {
+        const returnMode = this._placementReturnMode;
+        this.clearTowerPlacement();
+        this.setHudActionMode(returnMode ?? "empty");
+        ev.preventDefault();
         return;
       }
       if (hud.isMenuDropdownOpen()) {
@@ -1671,6 +1802,7 @@ export class GameScene extends Phaser.Scene {
     this.gameState.paused = !this.gameState.paused;
     this._pauseOverlayOpen = this.gameState.paused;
     this._pauseOverlayRoot?.setVisible(this._pauseOverlayOpen);
+    gameEvents.emit(GAME_EVENT.PAUSE_CHANGED, { paused: this.gameState.paused });
     this.hud.render(
       this.gameState,
       this.towerSystem.towers.length,
@@ -1822,10 +1954,11 @@ export class GameScene extends Phaser.Scene {
     }).setOrigin(0.5, 0.5);
     this._runEndStats = this.add.text(0, 0, "", {
       fontFamily: cozyTheme.typography.bodyFamily,
-      fontSize: "20px",
+      fontSize: "18px",
       color: cozyTheme.colors.textMuted,
       align: "center",
-    }).setOrigin(0.5, 0.5);
+      lineSpacing: 4,
+    }).setOrigin(0.5, 0);
     this._runEndRetryBtn = createCozyButton(this, "Retry", () => this.scene.restart(), { width: 220, fontSize: 24 });
     this._runEndMenuBtn = createCozyButton(this, "Back to Menu", () => this.backToMainMenu(), { width: 220, fontSize: 24 });
     this._runEndOverlayRoot = this.add.container(0, 0, [
@@ -1852,16 +1985,40 @@ export class GameScene extends Phaser.Scene {
     const overlayScale = Number.isFinite(hudScale) && hudScale > 0 ? hudScale : 1;
     this._runEndOverlayRoot.setScale(overlayScale);
     this._runEndBackdrop.setSize(width / overlayScale, height / overlayScale);
-    const cx = width / (2 * overlayScale);
-    const cy = height / (2 * overlayScale);
-    const panelW = Math.min(620, Math.round(width * 0.86 / overlayScale));
-    const panelH = Math.min(420, Math.round(height * 0.48 / overlayScale));
+    const localW = width / overlayScale;
+    const localH = height / overlayScale;
+    const cx = localW * 0.5;
+
+    const padTop = 36;
+    const titleToStatsGap = 22;
+    const statsToButtonsGap = 26;
+    const padBottom = 32;
+    const titleSize = Math.max(28, Math.min(40, Math.round(localW * 0.06)));
+    this._runEndTitle.setStyle({ fontSize: `${titleSize}px` });
+    this._runEndTitle.setOrigin(0.5, 0);
+
+    const titleH = this._runEndTitle.height;
+    const statsH = this._runEndStats.height;
+    const btnH = Math.max(this._runEndRetryBtn.height ?? 56, this._runEndMenuBtn.height ?? 56);
+
+    const desiredH = padTop + titleH + titleToStatsGap + statsH + statsToButtonsGap + btnH + padBottom;
+    const panelW = Math.min(640, Math.round(localW * 0.9));
+    const maxPanelH = Math.max(280, Math.round(localH - 32));
+    const panelH = Math.min(maxPanelH, Math.max(360, desiredH));
+    const cy = localH * 0.5;
+
     this._runEndPanel.setPosition(cx, cy);
     this._runEndPanel.setSize(panelW, panelH);
-    this._runEndTitle.setPosition(cx, cy - panelH * 0.5 + 56);
-    this._runEndStats.setPosition(cx, cy - 20);
-    const btnY = cy + panelH * 0.5 - 72;
-    const btnSpread = Math.min(120, panelW * 0.22);
+
+    const panelTop = cy - panelH * 0.5;
+    const titleY = panelTop + padTop;
+    this._runEndTitle.setPosition(cx, titleY);
+    const statsY = titleY + titleH + titleToStatsGap;
+    this._runEndStats.setPosition(cx, statsY);
+
+    const panelBottom = cy + panelH * 0.5;
+    const btnY = panelBottom - padBottom - btnH * 0.5;
+    const btnSpread = Math.min(140, panelW * 0.24);
     this._runEndRetryBtn.setPosition(cx - btnSpread, btnY);
     this._runEndMenuBtn.setPosition(cx + btnSpread, btnY);
   }
@@ -1925,13 +2082,47 @@ export class GameScene extends Phaser.Scene {
     this._pauseOverlayRoot?.setVisible(false);
     const title = reason === "victory" ? "Victory" : "Defeat";
     this._runEndTitle?.setText(title);
+    const runStats = this.combatSystem?.runStats ?? {};
+    const runSeconds = Math.max(0, Math.round(Number(this._performance.totalRunSeconds) || 0));
+    const score = computeRunScore({
+      waves: Math.max(0, Number(this.gameState.wave) || 0),
+      goldEarned: Math.max(0, Math.round(Number(runStats.goldEarnedThisRun) || 0)),
+      towersBuilt: this.towerSystem?.towers?.length ?? 0,
+      killStreak: Math.max(0, Math.round(Number(runStats.bestKillStreak) || 0)),
+      runSeconds,
+      victory: reason === "victory",
+    });
+    saveHighScore("campaign", {
+      score,
+      waves: Math.max(0, Number(this.gameState.wave) || 0),
+      goldEarned: Math.max(0, Math.round(Number(runStats.goldEarnedThisRun) || 0)),
+      towersBuilt: this.towerSystem?.towers?.length ?? 0,
+      killStreak: Math.max(0, Math.round(Number(runStats.bestKillStreak) || 0)),
+      runSeconds,
+    });
+    const best = getBestHighScore("campaign");
     const statsLines = [
       `Waves Survived: ${Math.max(0, Number(this.gameState.wave) || 0)}`,
       `Towers Built: ${this.towerSystem?.towers?.length ?? 0}`,
+      `Gold Earned: ${Math.max(0, Math.round(Number(runStats.goldEarnedThisRun) || 0))}`,
+      `Best Kill Streak: ${Math.max(0, Math.round(Number(runStats.bestKillStreak) || 0))}`,
+      `Run Time: ${Math.floor(runSeconds / 60)}:${String(runSeconds % 60).padStart(2, "0")}`,
+      `Score: ${score}`,
+      `Best Score: ${best?.score ?? score}`,
       `Gold Remaining: ${Math.max(0, Number(this.gameState.gold) || 0)}`,
     ];
     this._runEndStats?.setText(statsLines.join("\n"));
     this._runEndOverlayRoot?.setVisible(true);
+    this._layoutRunEndOverlay();
+    gameEvents.emit(GAME_EVENT.RUN_END, {
+      reason,
+      victory: reason === "victory",
+      waves: Math.max(0, Number(this.gameState.wave) || 0),
+      towersBuilt: this.towerSystem?.towers?.length ?? 0,
+      goldEarned: Math.max(0, Math.round(Number(runStats.goldEarnedThisRun) || 0)),
+      killStreak: Math.max(0, Math.round(Number(runStats.bestKillStreak) || 0)),
+      runSeconds,
+    });
   }
 
   cycleGameSpeed() {
@@ -1947,6 +2138,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   toggleMapEditorFromMenu() {
+    if (!isDevMode()) {
+      return;
+    }
     if (!this.editor.enabled && !this.hud?.isDebugPanelVisible()) {
       return;
     }
@@ -2254,6 +2448,7 @@ export class GameScene extends Phaser.Scene {
     const speed = Number.isFinite(raw) ? Phaser.Math.Clamp(raw, 1, 3) : 1;
     const deltaSeconds = (delta / 1000) * speed;
     this._performance.waveTimer += deltaSeconds;
+    this._performance.totalRunSeconds += deltaSeconds;
     this.enemySystem.update(deltaSeconds);
     this.builderSystem?.update?.(deltaSeconds);
     this.waveSystem.update(deltaSeconds);
@@ -2265,6 +2460,9 @@ export class GameScene extends Phaser.Scene {
     if (livesDamage > 0) {
       this.gameState.lives = Math.max(0, this.gameState.lives - livesDamage);
       this._performance.leaksInWave += leakEvents;
+      this.combatSystem.runStats.killStreak = 0;
+      gameEvents.emit(GAME_EVENT.ENEMY_LEAK, { leakEvents, livesDamage, lives: this.gameState.lives });
+      gameEvents.emit(GAME_EVENT.LIVES_CHANGED, { lives: this.gameState.lives, delta: -livesDamage });
       if (this.gameState.lives <= 0) {
         this.endRun("defeat");
         return;
@@ -2277,6 +2475,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     if (this.gameState.wave !== this.waveSystem.waveIndex) {
+      const clearedWave = this.gameState.wave;
       this._performance.clearedWaves += 1;
       const livesLostInWave = Math.max(0, this._performance.livesAtWaveStart - this.gameState.lives);
       if (this.gameState.wave === 1 && livesLostInWave === 0) {
@@ -2290,25 +2489,52 @@ export class GameScene extends Phaser.Scene {
       this._performance.waveTimer = 0;
       this._performance.leaksInWave = 0;
       this._performance.livesAtWaveStart = this.gameState.lives;
+      gameEvents.emit(GAME_EVENT.WAVE_CLEARED, { wave: clearedWave, perfect: livesLostInWave === 0 });
+      gameEvents.emit(GAME_EVENT.WAVE_STARTED, { wave: this.waveSystem.waveIndex });
     }
     this.gameState.wave = this.waveSystem.waveIndex;
     this._homeHpBar?.setRatio(this.gameState.lives / STARTING_LIVES);
     this._homeHpBar?.setValues(this.gameState.lives, STARTING_LIVES);
     this._updateBlueBarracksFireEffect();
     this.refreshTowerGroupSelection();
-    this.updateHudActions();
+    const actionSignature = JSON.stringify({
+      mode: this._hudActionMode,
+      gold: this.gameState.gold,
+      towers: this.towerSystem.towers.length,
+      selected: this.selectedBuilding?.kind ? `${this.selectedBuilding.kind}:${this.selectedBuilding.type ?? this.selectedBuilding.label}:${this.selectedBuilding.cellX},${this.selectedBuilding.cellY}:${this.selectedBuilding.tier ?? 0}:${this.selectedBuilding.selectedCount ?? 1}` : "",
+      pending: this._pendingPlacement?.type ?? "",
+      editor: Boolean(this.editor?.enabled),
+    });
+    if (actionSignature !== this._lastHudActionSignature) {
+      this._lastHudActionSignature = actionSignature;
+      this.updateHudActions();
+    }
     this._syncHudCameraTelemetry();
     if (this.selectedBuilding?.kind === "barracks" && this.selectedBuilding?.label === "Blue Barracks") {
       this.selectedBuilding.hpCurrent = this.gameState.lives;
       this.selectedBuilding.hpMax = STARTING_LIVES;
     }
-    this.hud.render(
-      this.gameState,
-      this.towerSystem.towers.length,
-      STARTING_LIVES,
-      this.selectedBuilding,
-      this.getWaveInfo(),
-    );
+    const hudSignature = JSON.stringify({
+      gold: this.gameState.gold,
+      lives: this.gameState.lives,
+      wave: this.gameState.wave,
+      paused: this.gameState.paused,
+      speed: this.gameState.gameSpeed,
+      towers: this.towerSystem.towers.length,
+      selected: this.selectedBuilding?.kind ? `${this.selectedBuilding.kind}:${this.selectedBuilding.type ?? this.selectedBuilding.label}:${this.selectedBuilding.cellX},${this.selectedBuilding.cellY}:${this.selectedBuilding.selectedCount ?? 1}` : "",
+      pending: this._pendingPlacement?.type ?? "",
+      waveInfo: this.getWaveInfo(),
+    });
+    if (hudSignature !== this._lastHudRenderSignature) {
+      this._lastHudRenderSignature = hudSignature;
+      this.hud.render(
+        this.gameState,
+        this.towerSystem.towers.length,
+        STARTING_LIVES,
+        this.selectedBuilding,
+        this.getWaveInfo(),
+      );
+    }
   }
 
   computeAdaptiveAdjustment(livesLostInWave = 0) {

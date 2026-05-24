@@ -11,6 +11,7 @@ import {
 } from "./mapUtils";
 import { normalizeAssetPlacement } from "./placementSchema";
 import { normalizeTerrainTileOverride } from "./tileOverrideSchema";
+import { devWarn } from "../devMode.js";
 
 /** Build a runtime map object from serialized editor/export JSON. */
 function mapFromSerialized(data) {
@@ -18,7 +19,7 @@ function mapFromSerialized(data) {
   const width = typeof d.width === "number" ? d.width : GRID_COLS;
   const height = typeof d.height === "number" ? d.height : GRID_ROWS;
   if (width !== GRID_COLS || height !== GRID_ROWS) {
-    console.warn(`map-001.default.json size ${width}x${height} does not match GRID_COLS/GRID_ROWS ${GRID_COLS}x${GRID_ROWS}`);
+    devWarn(`map-001.default.json size ${width}x${height} does not match GRID_COLS/GRID_ROWS ${GRID_COLS}x${GRID_ROWS}`);
   }
 
   const pts = d.points && typeof d.points === "object" ? /** @type {Record<string, { x?: number, y?: number }>} */ (d.points) : {};
@@ -98,7 +99,7 @@ function mapFromSerialized(data) {
     if (legacy) {
       map.pathMask = legacy;
     } else {
-      console.warn("map enemyPath in JSON was invalid; using default L path mask");
+      devWarn("map enemyPath in JSON was invalid; using default L path mask");
       map.pathMask = buildDefaultPathMask(map.points.enemyBarracks, map.points.homeBarracks, width, height);
     }
   } else {

@@ -593,7 +593,21 @@ function tinySwordsPublic() {
     },
     async closeBundle() {
       const outDir = path.join(__dirname, "dist", "TinySwords");
-      await cp(tinySwordsDir, outDir, { recursive: true });
+      await cp(tinySwordsDir, outDir, {
+        recursive: true,
+        filter: (src) => {
+          const ext = path.extname(src).toLowerCase();
+          if (!ext) {
+            return true;
+          }
+          if (!imageExts.has(ext)) {
+            return false;
+          }
+          const base = path.basename(src).toLowerCase();
+          const editorOnly = base.includes("template") || base.includes("source") || base.includes("preview");
+          return !editorOnly;
+        },
+      });
     },
   };
 }

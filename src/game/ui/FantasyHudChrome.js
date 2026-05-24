@@ -1,4 +1,5 @@
 import { cozyTheme } from "./CozyTheme.js";
+import { audioManager } from "../systems/AudioManager.js";
 
 /** @typedef {"regular" | "hover" | "pressed" | "disabled"} FantasyButtonState */
 
@@ -347,9 +348,13 @@ export function createFantasyButton(scene, opts = {}) {
 
   if (interactive && typeof opts.onClick === "function") {
     zone.setInteractive({ useHandCursor: true });
-    zone.on("pointerover", () => setState("hover"));
+    zone.on("pointerover", () => {
+      audioManager.playSfx("ui-hover");
+      setState("hover");
+    });
     zone.on("pointerout", () => setState("regular"));
     zone.on("pointerdown", () => {
+      audioManager.playSfx("ui-click");
       setState("pressed");
       opts.onClick();
     });
@@ -418,13 +423,21 @@ export function createFantasyMenuRow(scene, opts) {
     redraw();
   };
 
+  const setLabel = (text) => {
+    labelText.setText(text);
+  };
+
   redraw();
 
   if (typeof opts.onClick === "function") {
     zone.setInteractive({ useHandCursor: true });
-    zone.on("pointerover", () => setState("hover"));
+    zone.on("pointerover", () => {
+      audioManager.playSfx("ui-hover");
+      setState("hover");
+    });
     zone.on("pointerout", () => setState("regular"));
     zone.on("pointerdown", () => {
+      audioManager.playSfx("ui-click");
       setState("pressed");
       opts.onClick();
     });
@@ -435,6 +448,7 @@ export function createFantasyMenuRow(scene, opts) {
     container,
     setSize,
     setState,
+    setLabel,
     setPosition(x, y) {
       container.setPosition(x, y);
     },

@@ -1,0 +1,368 @@
+import Phaser from "phaser";
+import { GAME_EVENT, gameEvents } from "../events.js";
+import { prefersReducedMotion } from "../settings/accessibilitySettings.js";
+import { cozyTheme } from "../ui/CozyTheme.js";
+import { darkFantasyPalette } from "../ui/FantasyHudChrome.js";
+
+const BANNER_TEXT_STYLE = {
+  fontFamily: "system-ui, Segoe UI, sans-serif",
+  fontSize: "26px",
+  fontStyle: "bold",
+  stroke: "#120d12",
+  strokeThickness: 4,
+  shadow: { offsetX: 0, offsetY: 2, color: "#000000", blur: 4, stroke: true, fill: true },
+  letterSpacing: 1,
+};
+
+const FLOAT_GOLD_STYLE = {
+  fontFamily: "system-ui, sans-serif",
+  fontSize: "18px",
+  fontStyle: "bold",
+  color: "#ffe08a",
+  stroke: "#120d12",
+  strokeThickness: 3,
+  shadow: { offsetX: 0, offsetY: 1, color: "#000000", blur: 3, stroke: true, fill: true },
+};
+
+/** Visual feedback keyed off {@link GAME_EVENT}s. Singleton; attach a scene once it exists. */
+
+const BANNER_FADE_MS = 170;
+const BANNER_GAP_MS = 120;
+
+class FeedbackManager {
+  constructor() {
+    /** @type {import("phaser").Scene | null} */ this._scene = null;
+    /** Timestamp (scene.time.now ms) at which the next banner is free to start. */
+    this._bannerFreeAt = 0;
+    this._bindEvents();
+  }
+
+  /** @param {import("phaser").Scene} scene */
+  attachToScene(scene) {
+    this._scene = scene;
+    if (!scene.textures.exists("__WHITE")) {
+      scene.textures.generate("__WHITE", { data: ["1"], pixelWidth: 1, pixelHeight: 1 });
+    }
+  }
+
+  /** @returns {{ x: number, y: number } | null} */
+  _worldFromEnemy(p) {
+    const s = p?.enemy?.sprite;
+    return s != null && Number.isFinite(s.x) && Number.isFinite(s.y) ? { x: s.x, y: s.y } : null;
+  }
+
+  /** @returns {{ x: number, y: number } | null} */
+  _worldFromTower(tower) {
+    if (!tower) {
+      return null;
+    }
+    if (tower.sprite != null && Number.isFinite(tower.sprite.x)) {
+      return { x: tower.sprite.x, y: tower.sprite.y };
+    }
+    return Number.isFinite(tower.x) && Number.isFinite(tower.y) ? { x: tower.x, y: tower.y } : null;
+  }
+
+  /** @param {boolean} light */
+  _shake(light) {
+    const scene = this._scene;
+    if (!scene || prefersReducedMotion()) {
+      return;
+    }
+    const cam = scene.cameras?.main;
+    if (!cam?.shake) {
+      return;
+    }
+    cam.shake(light ? 160 : 240, light ? 0.004 : 0.007, true);
+  }
+
+  /** @param {string} headline @param {string} hex @param {number} hold */
+  _banner(headline, hex, hold) {
+    const scene = this._scene;
+    if (!scene) {
+      return;
+    }
+    const totalLifeMs = BANNER_FADE_MS * 2 + hold;
+    const now = scene.time.now;
+    const startInMs = Math.max(0, this._bannerFreeAt - now);
+    this._bannerFreeAt = now + startInMs + totalLifeMs + BANNER_GAP_MS;
+
+    if (startInMs > 0) {
+      scene.time.delayedCall(startInMs, () => this._spawnBanner(headline, hex, hold));
+    } else {
+      this._spawnBanner(headline, hex, hold);
+    }
+  }
+
+  /** @param {string} headline @param {string} hex @param {number} hold */
+  _spawnBanner(headline, hex, hold) {
+    const scene = this._scene;
+    if (!scene) {
+      return;
+    }
+    const { width, height } = scene.scale;
+    const reduced = prefersReducedMotion();
+    const anchorY = Math.min(height * 0.16, 108);
+
+    const txt = scene.add.text(0, 0, headline, {
+      ...BANNER_TEXT_STYLE,
+      color: hex,
+    });
+    txt.setOrigin(0.5);
+
+    const padX = 24;
+    const padY = 12;
+    const pillW = txt.width + padX * 2;
+    const pillH = txt.height + padY * 2;
+    const radius = 10;
+
+    const gfx = scene.add.graphics();
+    gfx.fillStyle(darkFantasyPalette.trayBase, 0.88);
+    gfx.fillRoundedRect(-pillW * 0.5, -pillH * 0.5, pillW, pillH, radius);
+    gfx.lineStyle(2, cozyTheme.colors.panelBorder, 1);
+    gfx.strokeRoundedRect(-pillW * 0.5, -pillH * 0.5, pillW, pillH, radius);
+
+    const container = scene.add.container(width * 0.5, anchorY, [gfx, txt]);
+    container.setScrollFactor(0).setDepth(9800).setAlpha(0);
+
+    const tweenProps = {
+      targets: container,
+      alpha: { from: 0, to: 1 },
+      duration: BANNER_FADE_MS,
+      hold,
+      ease: "Cubic.Out",
+      yoyo: true,
+      onComplete: () => container.destroy(true),
+    };
+
+    if (reduced) {
+      scene.tweens.add(tweenProps);
+      return;
+    }
+
+    container.setY(anchorY + 8);
+    scene.tweens.add({ ...tweenProps, y: anchorY });
+  }
+
+  /** @param {number} gx @param {number} gy @param {number} amt */
+  _floatGold(gx, gy, amt) {
+    const scene = this._scene;
+    if (!scene || !(amt > 0)) {
+      return;
+    }
+    const t = scene.add
+      .text(gx, gy - 40, `+${Math.round(amt)} G`, FLOAT_GOLD_STYLE)
+      .setDepth(9550)
+      .setOrigin(0.5, 1);
+    scene.tweens.add({
+      targets: t,
+      y: t.y - 44,
+      alpha: 0,
+      duration: 520,
+      ease: "Quad.Out",
+      onComplete: () => t.destroy(),
+    });
+  }
+
+  /** @param {number} x @param {number} y */
+  _sparkles(x, y) {
+    const scene = this._scene;
+    if (!scene || !scene.textures.exists("__WHITE")) {
+      return;
+    }
+    const p = scene.add.particles(x, y, "__WHITE", {
+      lifespan: { min: 260, max: 520 },
+      speed: { min: 40, max: 150 },
+      angle: { min: 0, max: 360 },
+      gravityY: -42,
+      scale: { start: 1.1, end: 0 },
+      alpha: { start: 0.9, end: 0 },
+      tint: [0xfff2a7, 0xffe066, 0xffffff],
+      emitting: false,
+      blendMode: Phaser.BlendModes.ADD,
+    });
+    p.setDepth(9520);
+    p.explode(22);
+    scene.time.delayedCall(680, () => p.destroy());
+  }
+
+  /**
+   * @param {number} a
+   * @param {number} b
+   * @param {number} t01
+   */
+  _lerpRgb(a, b, t01) {
+    const ca = Phaser.Display.Color.IntegerToColor(a);
+    const cb = Phaser.Display.Color.IntegerToColor(b);
+    const i = Phaser.Display.Color.Interpolate.ColorWithColor(ca, cb, 100, Math.round(t01 * 100));
+    return Phaser.Display.Color.GetColor(i.r, i.g, i.b);
+  }
+
+  /** @param {unknown} payload */
+  _hitFlash(payload) {
+    const sp =
+      typeof payload === "object" && payload && "enemy" in payload && payload.enemy && typeof payload.enemy === "object"
+        ? /** @type {{ sprite?: unknown }} */ (payload.enemy).sprite
+        : null;
+    const scene = this._scene;
+    if (!scene || !sp?.active || !sp.scene) {
+      return;
+    }
+    const reduced = prefersReducedMotion();
+    const dur = reduced ? 1 : 130;
+
+    if ("fillColor" in sp && typeof sp.setFillStyle === "function") {
+      const prevFill = /** @type {number} */ (sp.fillColor);
+      const flash = 0xff9a9a;
+      const g = { t: 0 };
+      scene.tweens.add({
+        targets: g,
+        t: 1,
+        duration: dur,
+        ease: "Quad.Out",
+        onUpdate: () => {
+          if (!sp.active) {
+            return;
+          }
+          sp.setFillStyle(this._lerpRgb(flash, prevFill ?? 0xcf3f3f, g.t));
+        },
+        onComplete: () => {
+          try {
+            if (sp.active && typeof sp.setFillStyle === "function") {
+              sp.setFillStyle(prevFill ?? 0xcf3f3f);
+            }
+          } catch {
+            /* noop */
+          }
+        },
+      });
+      return;
+    }
+
+    if (typeof sp.setTint === "function") {
+      const endTint = "tintTopLeft" in sp && typeof sp.tintTopLeft === "number" ? sp.tintTopLeft : 0xffffff;
+      const flash = 0xff9999;
+      const g = { t: 0 };
+      scene.tweens.add({
+        targets: g,
+        t: 1,
+        duration: dur,
+        ease: "Quad.Out",
+        onUpdate: () => {
+          if (!sp.active) {
+            return;
+          }
+          sp.setTint(this._lerpRgb(flash, endTint, g.t));
+        },
+        onComplete: () => {
+          try {
+            if (!sp.active) {
+              return;
+            }
+            if (endTint === 0xffffff && typeof sp.clearTint === "function") {
+              sp.clearTint();
+            } else {
+              sp.setTint(endTint);
+            }
+          } catch {
+            /* noop */
+          }
+        },
+      });
+    }
+  }
+
+  /** @param {unknown} payload */
+  _deathAndGold(payload) {
+    const scene = this._scene;
+    const p = /** @type {{ enemy?: object, gold?: number }} */ (payload);
+    if (!scene) {
+      return;
+    }
+    const xy = this._worldFromEnemy(p);
+    const cam = scene.cameras.main;
+    const gx = xy?.x ?? cam?.worldView?.centerX ?? 0;
+    const gy = xy?.y ?? cam?.worldView?.centerY ?? 0;
+
+    if (xy && !prefersReducedMotion()) {
+      const pop = scene.add.circle(xy.x, xy.y, 16, 0xffffff, 0.45).setDepth(9530);
+      scene.tweens.add({
+        targets: pop,
+        scaleX: 2.35,
+        scaleY: 2.35,
+        alpha: 0,
+        duration: 240,
+        ease: "Quad.Out",
+        onComplete: () => pop.destroy(),
+      });
+    }
+
+    const g = Number(p?.gold);
+    if (Number.isFinite(g) && g > 0) {
+      this._floatGold(gx, gy, g);
+    }
+  }
+
+  _leakVignette() {
+    const scene = this._scene;
+    if (!scene) {
+      return;
+    }
+    const { width, height } = scene.scale;
+    const v = scene.add
+      .rectangle(width * 0.5, height * 0.5, width, height, 0x460016, 1)
+      .setScrollFactor(0)
+      .setDepth(9700)
+      .setAlpha(0);
+    scene.tweens.add({
+      targets: v,
+      alpha: { from: 0, to: 0.52 },
+      duration: 120,
+      yoyo: true,
+      repeat: 1,
+      ease: "Sine.Out",
+      onComplete: () => v.destroy(),
+    });
+  }
+
+  /** @param {unknown} payload */
+  _waveLine(payload) {
+    const o = /** @type {{ wave?: number, waveIndex?: number }} */ (payload);
+    const wi = Number(o?.wave ?? o?.waveIndex);
+    return Number.isFinite(wi) && wi >= 1 ? `Wave ${wi}` : "";
+  }
+
+  _bindEvents() {
+    gameEvents.on(GAME_EVENT.ENEMY_HIT, (p) => this._hitFlash(p));
+    gameEvents.on(GAME_EVENT.ENEMY_KILLED, (p) => this._deathAndGold(p));
+    gameEvents.on(GAME_EVENT.ENEMY_LEAK, () => {
+      this._shake(false);
+      this._leakVignette();
+    });
+    gameEvents.on(GAME_EVENT.BOSS_ALERT, () => this._shake(true));
+    gameEvents.on(GAME_EVENT.WAVE_STARTED, (p) => {
+      const line = this._waveLine(p);
+      this._banner(line ? line.toUpperCase() : "WAVE START", "#ffdfb5", 720);
+    });
+    gameEvents.on(GAME_EVENT.WAVE_CLEARED, (p) => {
+      const base = this._waveLine(p);
+      const headline = `${base ? `${base.toUpperCase()} — ` : ""}CLEARED`;
+      this._banner(headline, "#bdf8dc", 900);
+    });
+    gameEvents.on(GAME_EVENT.TOWER_UPGRADED, (payload) => {
+      const t = typeof payload === "object" && payload && "tower" in payload ? payload.tower : undefined;
+      const xy = this._worldFromTower(t);
+      if (xy) {
+        this._sparkles(xy.x, xy.y);
+      }
+    });
+    gameEvents.on(GAME_EVENT.TOWER_CONVERTED, (payload) => {
+      const t = typeof payload === "object" && payload && "tower" in payload ? payload.tower : undefined;
+      const xy = this._worldFromTower(t);
+      if (xy) {
+        this._sparkles(xy.x, xy.y);
+      }
+    });
+  }
+}
+
+export const feedbackManager = new FeedbackManager();

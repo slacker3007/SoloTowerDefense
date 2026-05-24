@@ -1,6 +1,7 @@
 import { cellToWorld } from "../maps/tileRules";
 import { findGridPath } from "./pathfinding";
 import { isEnemyWalkableCellIgnoringOccupancyKey } from "../maps/walkability";
+import { GAME_EVENT, gameEvents } from "../events.js";
 
 const BUILD_SECONDS = 5;
 /** World units per second — fast cross-map travel */
@@ -118,6 +119,7 @@ export class BuilderSystem {
     };
 
     this.jobs.push(job);
+    gameEvents.emit(GAME_EVENT.TOWER_BUILD_STARTED, { cellX, cellY, towerType });
     return true;
   }
 
@@ -177,6 +179,7 @@ export class BuilderSystem {
         job.phase = "runHome";
         this._setRunVisual(job);
         this._initReturnPath(job);
+        gameEvents.emit(GAME_EVENT.TOWER_BUILT, { cellX: job.cellX, cellY: job.cellY, towerType: job.towerType });
         this.onAfterJobComplete?.();
       }
       return true;

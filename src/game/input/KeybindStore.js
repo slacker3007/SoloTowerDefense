@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 
-/** @typedef {"selectBlueBarracks"|"backOrClose"|"grid_r1c1"|"grid_r1c2"|"grid_r1c3"|"grid_r1c4"|"grid_r1c5"|"grid_r1c6"|"grid_r1c7"|"grid_r1c8"|"grid_r1c9"|"grid_r1c10"} KeybindActionId */
+/** @typedef {"selectBlueBarracks"|"pause"|"cycleSpeed"|"cancelPlacement"|"backOrClose"|"grid_r1c1"|"grid_r1c2"|"grid_r1c3"|"grid_r1c4"|"grid_r1c5"|"grid_r1c6"|"grid_r1c7"|"grid_r1c8"|"grid_r1c9"|"grid_r1c10"} KeybindActionId */
 
 export const GRID_KEYBIND_ACTION_IDS = /** @type {const} */ ([
   "grid_r1c1",
@@ -17,6 +17,9 @@ export const GRID_KEYBIND_ACTION_IDS = /** @type {const} */ ([
 
 export const KEYBIND_ACTION_IDS = /** @type {const} */ ([
   "selectBlueBarracks",
+  "pause",
+  "cycleSpeed",
+  "cancelPlacement",
   ...GRID_KEYBIND_ACTION_IDS,
   "backOrClose",
 ]);
@@ -24,6 +27,9 @@ export const KEYBIND_ACTION_IDS = /** @type {const} */ ([
 /** @type {Record<KeybindActionId, string>} */
 export const KEYBIND_DESCRIPTIONS = {
   selectBlueBarracks: "Select blue barracks",
+  pause: "Pause / resume",
+  cycleSpeed: "Cycle game speed",
+  cancelPlacement: "Cancel placement",
   grid_r1c1: "Action slot 1 (1)",
   grid_r1c2: "Action slot 2 (2)",
   grid_r1c3: "Action slot 3 (3)",
@@ -55,6 +61,9 @@ const NUMBER_KEY_CODES = [
 /** @type {Record<KeybindActionId, number>} */
 const DEFAULT_CODES = {
   selectBlueBarracks: Phaser.Input.Keyboard.KeyCodes.B,
+  pause: Phaser.Input.Keyboard.KeyCodes.P,
+  cycleSpeed: Phaser.Input.Keyboard.KeyCodes.SPACE,
+  cancelPlacement: Phaser.Input.Keyboard.KeyCodes.ESC,
   grid_r1c1: NUMBER_KEY_CODES[0],
   grid_r1c2: NUMBER_KEY_CODES[1],
   grid_r1c3: NUMBER_KEY_CODES[2],

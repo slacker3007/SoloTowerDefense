@@ -7,6 +7,7 @@ import {
   getScriptedWave,
   getWaveStep,
 } from "../balance";
+import { GAME_EVENT, gameEvents } from "../events.js";
 
 const ROLE_VISUALS = {
   normal: { textureKey: "redWarriorRunSheet", animationKey: "red-warrior-run", scale: 0.5 },
@@ -240,10 +241,14 @@ export class WaveSystem {
     const spawned = this.enemySystem.spawnEnemy(definition);
     if (spawned) {
       this.spawner.totalSpawned += 1;
+      if (!this.spawner.bossAlerted && Array.isArray(definition?.tags) && definition.tags.includes("boss")) {
+        this.spawner.bossAlerted = true;
+        gameEvents.emit(GAME_EVENT.BOSS_ALERT, { wave: this.waveIndex, archetype: definition.archetype });
+      }
     }
 
     const triggeredSpawns = this.enemySystem.consumeTriggeredSpawns?.() ?? [];
-    if (triggeredSpawns.length > 0) {
+    if (triggeredSpawns.length > 0 && Array.isArray(this.spawner.spawnQueue)) {
       for (const trigger of triggeredSpawns) {
         const count = Math.max(0, Number(trigger.count) || 0);
         const ordBase = this.spawner.spawnQueue.length;

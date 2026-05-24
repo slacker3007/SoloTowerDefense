@@ -22,6 +22,7 @@ import {
   MAP_TILE_LAYER_COUNT,
   normalizeLayerTile,
 } from "../maps/tileOverrideSchema";
+import { devWarn } from "../devMode.js";
 
 const MAP_JSON_VERSION = 1;
 const MAP_STORAGE_KEY = "solo-td:map-editor:map001";
@@ -640,7 +641,7 @@ export class MapEditor {
       );
       this._markSaved();
     } catch (err) {
-      console.warn("Failed to save map to local storage", err);
+      devWarn("Failed to save map to local storage", err);
     }
   }
 
@@ -670,7 +671,7 @@ export class MapEditor {
           ? new Date(parsed.savedAt)
           : new Date();
     } catch (err) {
-      console.warn("Failed to load saved map from local storage", err);
+      devWarn("Failed to load saved map from local storage", err);
     }
   }
 
@@ -733,7 +734,7 @@ export class MapEditor {
           this._markDirty();
         }
       } catch (err) {
-        console.warn("Map import failed", err);
+        devWarn("Map import failed", err);
       }
     };
     reader.readAsText(file);
@@ -749,11 +750,11 @@ export class MapEditor {
     }
     const d = /** @type {Record<string, unknown>} */ (data);
     if (d.version !== MAP_JSON_VERSION) {
-      console.warn("Unsupported map JSON version");
+      devWarn("Unsupported map JSON version");
       return false;
     }
     if (d.width !== this.map.width || d.height !== this.map.height) {
-      console.warn("Map size mismatch");
+      devWarn("Map size mismatch");
       return false;
     }
     if (!Array.isArray(d.elevation) || !Array.isArray(d.stairs) || !Array.isArray(d.buildings)) {

@@ -11,6 +11,7 @@ import {
   getWaveGoldIncomeMultiplier,
   STATUS_PRIORITY,
 } from "../balance";
+import { devWarn } from "../devMode";
 
 const ENEMY_HP_BAR_Y_OFFSET = 52;
 const STATUS_RING_OFFSET_Y = 12;
@@ -30,6 +31,8 @@ export class EnemySystem {
     this.pendingTriggeredSpawns = [];
     this._warnedNoPath = false;
     this._warnedBfs = false;
+    /** @type {((enemy: object) => void) | null} */
+    this.onUnattributedKill = typeof options.onUnattributedKill === "function" ? options.onUnattributedKill : null;
     if (this.map) {
       this.syncFromMap(this.map);
     }
@@ -59,7 +62,7 @@ export class EnemySystem {
       this._manualPathCells = null;
       if (!this._warnedBfs) {
         this._warnedBfs = true;
-        console.warn(
+        devWarn(
           "No enemy route: paint a continuous path mask (1) from next to red barracks to blue; routing uses only painted cells.",
         );
       }
@@ -69,7 +72,7 @@ export class EnemySystem {
   spawnEnemy(definition) {
     if (!this._manualPathCells || this._manualPathCells.length < 2) {
       if (!this._warnedNoPath) {
-        console.warn("Enemy spawn skipped: no path.");
+        devWarn("Enemy spawn skipped: no path.");
         this._warnedNoPath = true;
       }
       return null;
@@ -271,18 +274,16 @@ export class EnemySystem {
       const absorbed = Math.min(enemy.shieldHp, hpDamage);
       enemy.shieldHp -= absorbed;
       hpDamage -= absorbed;
+      if (enemy.shieldHp > 0) {
+        const postShield = Number.isFinite(enemy.postShieldDamageMultiplier) ? enemy.postShieldDamageMultiplier : 1;
+        hpDamage *= postShield;
+      }
     }
-    const postShield = Number.isFinite(enemy.postShieldDamageMultiplier) ? enemy.postShieldDamageMultiplier : 1;
-    hpDamage *= postShield;
     enemy.hp -= hpDamage;
     this._triggerHpThresholdSpawns(enemy);
     enemy.hpBar?.setRatio(enemy.hp / enemy.maxHp);
     if (enemy.hp <= 0) {
-      enemy.alive = false;
-      enemy.hpBar?.destroy();
-      this._destroyStatusFx(enemy);
-      enemy.sprite.destroy();
-      this._triggerSplitSpawns(enemy);
+      this._destroyEnemyEntity(enemy);
       return true;
     }
 
@@ -381,11 +382,7 @@ export class EnemySystem {
       enemy.ccWindowTimer = Math.max(0, enemy.ccWindowTimer - deltaSeconds);
       this._updateStatusFx(enemy);
       if (enemy.hp <= 0) {
-        enemy.alive = false;
-        enemy.hpBar?.destroy();
-        this._destroyStatusFx(enemy);
-        enemy.sprite.destroy();
-        this._triggerSplitSpawns(enemy);
+        this._finalizeUnattributedDeath(enemy);
       }
       return;
     }
@@ -467,12 +464,24 @@ export class EnemySystem {
     enemy.hpBar?.setRatio(enemy.hp / enemy.maxHp);
     this._updateStatusFx(enemy);
     if (enemy.hp <= 0) {
-      enemy.alive = false;
-      enemy.hpBar?.destroy();
-      this._destroyStatusFx(enemy);
-      enemy.sprite.destroy();
-      this._triggerSplitSpawns(enemy);
+      this._finalizeUnattributedDeath(enemy);
     }
+  }
+
+  _destroyEnemyEntity(enemy) {
+    enemy.alive = false;
+    enemy.hpBar?.destroy();
+    this._destroyStatusFx(enemy);
+    enemy.sprite.destroy();
+    this._triggerSplitSpawns(enemy);
+  }
+
+  _finalizeUnattributedDeath(enemy) {
+    if (!enemy || !enemy.alive) {
+      return;
+    }
+    this._destroyEnemyEntity(enemy);
+    this.onUnattributedKill?.(enemy);
   }
 
   _getEnemyPathProgress(enemy) {

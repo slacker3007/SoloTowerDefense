@@ -7,6 +7,8 @@ import {
   renderMenuTerrainBackdrop,
 } from "../game/maps/menuTerrainBackdrop";
 import { cozyTheme, createCozyButton, createCozyPanel } from "../game/ui/CozyTheme";
+import { audioManager } from "../game/systems/AudioManager.js";
+import { getBestHighScore } from "../game/settings/highScoreSettings.js";
 
 /** Scale for menu water texture tiling and island tilemap (terrain, foam, buildings, units). */
 /** Was 3×; 25% smaller → 3 × 0.75 */
@@ -20,6 +22,12 @@ const DEPTH_LETTERBOX = 25;
 const DEPTH_VIGNETTE = 12;
 const DEPTH_LOGO = 48;
 const DEPTH_UI = 40;
+const MENU_TIPS = [
+  "Tip: Home Barracks is selected when you start. Press 1 to build your first tower.",
+  "Tip: Convert Basic towers into specialized roles once the first waves are stable.",
+  "Tip: Ice and Earth towers slow the path so high-damage towers can finish enemies.",
+  "Tip: Boss waves reward layered damage types, not just raw tower count.",
+];
 
 export class MainMenuScene extends Phaser.Scene {
   constructor() {
@@ -34,6 +42,8 @@ export class MainMenuScene extends Phaser.Scene {
 
   create() {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.shutdown, this);
+    audioManager.attachToScene(this);
+    audioManager.playMusic("menu");
     if (this._menuBackdropSeed == null) {
       this._menuBackdropSeed = `${Date.now()}-${Phaser.Math.RND.integer()}`;
     }
@@ -191,7 +201,10 @@ export class MainMenuScene extends Phaser.Scene {
     settingsBtn.setDepth(DEPTH_UI + 1);
     quitBtn.setDepth(DEPTH_UI + 1);
 
-    const hint = this.add.text(panel.x, panel.y + panel.height * 0.36, "Tip: Home Barracks is selected when you start. Press 1 to build your first tower.", {
+    const tipIx = Math.abs(Number.parseInt(String(this._menuBackdropSeed), 10) || 0) % MENU_TIPS.length;
+    const best = getBestHighScore("campaign");
+    const bestLine = best ? ` Best score: ${best.score}.` : "";
+    const hint = this.add.text(panel.x, panel.y + panel.height * 0.36, `${MENU_TIPS[tipIx]}${bestLine}`, {
       fontFamily: cozyTheme.typography.bodyFamily,
       fontSize: "15px",
       color: cozyTheme.colors.textMuted,
